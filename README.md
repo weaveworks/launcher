@@ -2,7 +2,7 @@
 
 ## WIP Notes
 
-- User will be asked to run: `curl https://get.weave.works/install | sh -s TOKEN_HERE`
+- User will be asked to run: `curl https://get.weave.works | sh -s TOKEN_HERE`
 
 ### install.sh
 
