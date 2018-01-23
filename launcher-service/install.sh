@@ -18,4 +18,4 @@ curl -L "https://get.weave.works/bootstrap?dist=$(uname)" >> "$TMPFILE"
 chmod +x "$TMPFILE"
 
 # Execute the boostrap binary
-"$TMPFILE" "$1"
+"$TMPFILE" "$@"
