@@ -1,9 +1,21 @@
 version: 2
+
+defaults: &defaults
+  working_directory: /go/src/github.com/weaveworks/launcher
+  docker:
+    - image: circleci/golang:latest
+
 jobs:
+  bootstrap:
+    <<: *defaults
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: go get -u github.com/golang/dep/cmd/dep
+      - run: cd bootstrap && dep ensure && go test
+
   service:
-    working_directory: /go/src/github.com/weaveworks/launcher
-    docker:
-      - image: circleci/golang:latest
+    <<: *defaults
     steps:
       - checkout
       - setup_remote_docker
@@ -11,9 +23,7 @@ jobs:
       - run: cd service && dep ensure && go test
 
   agent:
-    working_directory: /go/src/github.com/weaveworks/launcher
-    docker:
-      - image: circleci/golang:latest
+    <<: *defaults
     steps:
       - checkout
       - setup_remote_docker
@@ -34,4 +44,5 @@ workflows:
   build_deploy:
     jobs:
       - agent
+      - bootstrap
       - service
