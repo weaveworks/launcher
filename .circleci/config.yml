@@ -1,0 +1,16 @@
+version: 2
+jobs:
+  launcher_service_test:
+    working_directory: /go/src/github.com/weaveworks/launcher
+    docker:
+      - image: circleci/golang:latest
+    steps:
+      - checkout
+      - run: go get -u github.com/golang/dep/cmd/dep
+      - run: cd launcher-service && dep ensure && go test
+
+workflows:
+  version: 2
+  launcher_service:
+    jobs:
+      - launcher_service_test
