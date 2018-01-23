@@ -1,0 +1,7 @@
+FROM alpine:3.7
+LABEL maintainer="Weaveworks Inc <help@weave.works>"
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+COPY ./agent /usr/bin/launcher-agent
+COPY ./kubectl /usr/bin/kubectl
+ENTRYPOINT ["/usr/bin/launcher-agent"]
+CMD ["-help"]
