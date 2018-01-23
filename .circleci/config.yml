@@ -6,9 +6,12 @@ jobs:
       - image: circleci/golang:latest
     steps:
       - checkout
+      - setup_remote_docker
+
       - run: go get -u github.com/golang/dep/cmd/dep
       - run: cd launcher-service && dep ensure && go test
-      - run: cd launcher && dep ensure && go test
+      - run: cd agent && dep ensure && go test
+      - run: make
 
 workflows:
   version: 2
