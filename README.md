@@ -1,5 +1,7 @@
 # Weave Cloud Launcher (WIP)
 
+[![Circle CI](https://circleci.com/gh/weaveworks/launcher/tree/master.svg?style=shield)](https://circleci.com/gh/weaveworks/launcher/tree/master)
+
 ## WIP Notes
 
 - User will be asked to run: `curl -L https://get.weave.works | sh -s TOKEN_HERE`
