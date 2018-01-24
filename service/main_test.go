@@ -49,8 +49,8 @@ func TestBootstrapHandler(t *testing.T) {
 		expectedLocation   string
 	}{
 		{"", 400, ""},
-		{"?dist=darwin", 301, "https://weaveworks-launcher.s3.amazonaws.com/launcher-bootstrap/aaa000/bootstrap-darwin-amd64"},
-		{"?dist=linux", 301, "https://weaveworks-launcher.s3.amazonaws.com/launcher-bootstrap/aaa000/bootstrap-linux-amd64"},
+		{"?dist=darwin", 301, "https://weaveworks-launcher.s3.amazonaws.com/bootstrap/aaa000/bootstrap-darwin-amd64"},
+		{"?dist=linux", 301, "https://weaveworks-launcher.s3.amazonaws.com/bootstrap/aaa000/bootstrap-linux-amd64"},
 		{"?dist=other", 400, ""},
 	}
 
