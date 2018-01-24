@@ -1,4 +1,4 @@
-.PHONY: all clean agent
+.PHONY: all clean agent service
 
 DOCKER ?= docker
 
@@ -10,18 +10,24 @@ DOCKER ?= docker
 #  `make -W $PWD/registry/registry.go`
 godeps=$(shell go list -f '{{join .Deps "\n"}}' $1 | grep -v /vendor/ | xargs go list -f '{{if not .Standard}}{{ $$dep := . }}{{range .GoFiles}}{{$$dep.Dir}}/{{.}} {{end}}{{end}}')
 
-AGENT_DEPS := $(call godeps,./agent)
+AGENT_DEPS   := $(call godeps,./agent)
+SERVICE_DEPS := $(call godeps,./service)
 
 IMAGE_TAG:=$(shell ./docker/image-tag)
 
-all: agent
+all: agent service
 agent: build/.agent.done
+service: build/.service.done
 
 build/.%.done: docker/Dockerfile.%
 	mkdir -p ./build/docker/$*
 	cp $^ ./build/docker/$*/
 	${DOCKER} build -t quay.io/weaveworks/launcher-$* -t quay.io/weaveworks/launcher-$*:$(IMAGE_TAG) -f build/docker/$*/Dockerfile.$* ./build/docker/$*
 	touch $@
+
+#
+# Agent
+#
 
 build/.agent.done: build/agent build/kubectl
 
@@ -39,6 +45,16 @@ build/kubectl: cache/kubectl-$(KUBECTL_VERSION) docker/kubectl.version
 cache/kubectl-$(KUBECTL_VERSION):
 	mkdir -p cache
 	curl -L -o $@ "https://storage.googleapis.com/kubernetes-release/release/$(KUBECTL_VERSION)/bin/linux/amd64/kubectl"
+
+#
+# Service
+#
+
+build/.service.done: build/service
+
+build/service: $(SERVICE_DEPS)
+build/service: service/*.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o $@ $(LDFLAGS) ./service
 
 clean:
 	rm -rf build cache
