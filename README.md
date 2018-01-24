@@ -4,7 +4,7 @@
 
 ## WIP Notes
 
-- User will be asked to run: `curl -L https://get.weave.works | sh -s TOKEN_HERE`
+- User will be asked to run: `curl -L https://get.weave.works | sh -s --token=XXXXXX`
 
 ### launcher-agent
 
