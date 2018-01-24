@@ -19,12 +19,6 @@ const (
 	defaultPollURL = "https://cloud.weave.works/k8s.yaml?k8s-version={{.KubernetesVersion}}&t={{.Token}}"
 )
 
-type operation int
-
-const (
-	opPoll operation = iota
-)
-
 type urlContext struct {
 	KubernetesVersion string
 	Token             string
