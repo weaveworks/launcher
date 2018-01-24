@@ -1,6 +1,6 @@
-FROM alpine:3.6
+FROM alpine:3.7
 MAINTAINER Weaveworks Inc <help@weave.works>
 WORKDIR /
-COPY launcher-service /
+COPY service /launcher-service
 EXPOSE 80
 ENTRYPOINT ["/launcher-service", "--bootstrap-version=5d95af2"]
