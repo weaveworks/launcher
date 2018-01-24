@@ -76,5 +76,5 @@ func (h *Handlers) bootstrap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("%s/launcher-bootstrap/%s/%s", s3Bucket, h.bootstrapVersion, filename), 301)
+	http.Redirect(w, r, fmt.Sprintf("%s/bootstrap/%s/%s", s3Bucket, h.bootstrapVersion, filename), 301)
 }
