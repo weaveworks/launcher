@@ -1,3 +1,5 @@
+.PHONY: all clean
+
 DOCKER ?= docker
 
 # Inspiration taken from https://github.com/weaveworks/flux/blob/master/Makefile
@@ -39,5 +41,3 @@ cache/kubectl-$(KUBECTL_VERSION):
 
 clean:
 	rm -rf build cache
-
-.PHONY: all clean
