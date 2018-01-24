@@ -3,4 +3,4 @@ MAINTAINER Weaveworks Inc <help@weave.works>
 WORKDIR /
 COPY service /launcher-service
 EXPOSE 80
-ENTRYPOINT ["/launcher-service", "--bootstrap-version=5d95af2"]
+ENTRYPOINT ["/launcher-service", "--bootstrap-version=@@GIT_HASH@@"]

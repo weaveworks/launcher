@@ -19,7 +19,7 @@ jobs:
           command: |
             if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
               sudo apt-get -y -qq install awscli
-              aws s3 cp build/bootstrap/ s3://weaveworks-launcher/bootstrap/$(echo $CIRCLE_SHA1 | cut -c -8)/ --recursive
+              aws s3 cp build/bootstrap/ s3://weaveworks-launcher/bootstrap/${CIRCLE_SHA1}/ --recursive
             fi
 
   service:

@@ -1,3 +1,4 @@
 /build
 /cache
+/docker/Dockerfile.service
 vendor/
