@@ -13,6 +13,14 @@ jobs:
       - setup_remote_docker
       - run: go get -u github.com/golang/dep/cmd/dep
       - run: cd bootstrap && dep ensure && go test
+      - run: make bootstrap
+      - deploy:
+          name: Maybe push binaries to S3
+          command: |
+            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
+              sudo apt-get -y -qq install awscli
+              aws s3 cp build/bootstrap/ s3://weaveworks-launcher/bootstrap/$(echo $CIRCLE_SHA1 | cut -c -8)/ --recursive
+            fi
 
   service:
     <<: *defaults
