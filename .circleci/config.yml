@@ -1,16 +1,37 @@
 version: 2
 jobs:
-  launcher_service_test:
+  service:
     working_directory: /go/src/github.com/weaveworks/launcher
     docker:
       - image: circleci/golang:latest
     steps:
       - checkout
+      - setup_remote_docker
       - run: go get -u github.com/golang/dep/cmd/dep
       - run: cd launcher-service && dep ensure && go test
 
+  agent:
+    working_directory: /go/src/github.com/weaveworks/launcher
+    docker:
+      - image: circleci/golang:latest
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: go get -u github.com/golang/dep/cmd/dep
+      - run: cd agent && dep ensure && go test
+      - run: make agent
+      - deploy:
+          name: Maybe push master image
+          command: |
+            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
+              docker login -u "$DOCKER_REGISTRY_USER" -p "$DOCKER_REGISTRY_PASSWORD" quay.io
+              docker push "quay.io/weaveworks/launcher-agent:$(docker/image-tag)"
+              docker push "quay.io/weaveworks/launcher-agent"
+            fi
+
 workflows:
   version: 2
-  launcher_service:
+  build_deploy:
     jobs:
-      - launcher_service_test
+      - agent
+      - service
