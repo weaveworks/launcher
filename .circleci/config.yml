@@ -9,6 +9,15 @@ jobs:
       - setup_remote_docker
       - run: go get -u github.com/golang/dep/cmd/dep
       - run: cd service && dep ensure && go test
+      - run: make service
+      - deploy:
+          name: Maybe push master image
+          command: |
+            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
+              docker login -u "$DOCKER_REGISTRY_USER" -p "$DOCKER_REGISTRY_PASSWORD" quay.io
+              docker push "quay.io/weaveworks/launcher-service:$(docker/image-tag)"
+              docker push "quay.io/weaveworks/launcher-service"
+            fi
 
   agent:
     working_directory: /go/src/github.com/weaveworks/launcher
