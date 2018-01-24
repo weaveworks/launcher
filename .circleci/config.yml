@@ -1,18 +1,25 @@
 version: 2
 jobs:
-  launcher_service_test:
+  service:
     working_directory: /go/src/github.com/weaveworks/launcher
     docker:
       - image: circleci/golang:latest
     steps:
       - checkout
       - setup_remote_docker
-
       - run: go get -u github.com/golang/dep/cmd/dep
       - run: cd launcher-service && dep ensure && go test
-      - run: cd agent && dep ensure && go test
-      - run: make
 
+  agent:
+    working_directory: /go/src/github.com/weaveworks/launcher
+    docker:
+      - image: circleci/golang:latest
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: go get -u github.com/golang/dep/cmd/dep
+      - run: cd agent && dep ensure && go test
+      - run: make agent
       - deploy:
           name: Maybe push master image
           command: |
@@ -24,6 +31,7 @@ jobs:
 
 workflows:
   version: 2
-  launcher_service:
+  build_deploy:
     jobs:
-      - launcher_service_test
+      - agent
+      - service

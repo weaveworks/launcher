@@ -1,4 +1,4 @@
-.PHONY: all clean
+.PHONY: all clean agent
 
 DOCKER ?= docker
 
@@ -14,7 +14,8 @@ AGENT_DEPS := $(call godeps,./agent)
 
 IMAGE_TAG:=$(shell ./docker/image-tag)
 
-all: build/.agent.done
+all: agent
+agent: build/.agent.done
 
 build/.%.done: docker/Dockerfile.%
 	mkdir -p ./build/docker/$*
