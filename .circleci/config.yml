@@ -13,6 +13,15 @@ jobs:
       - run: cd agent && dep ensure && go test
       - run: make
 
+      - deploy:
+          name: Maybe push master image
+          command: |
+            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
+              docker login -u "$DOCKER_REGISTRY_USER" -p "$DOCKER_REGISTRY_PASSWORD" quay.io
+              docker push "quay.io/weaveworks/launcher-agent:$(docker/image-tag)"
+              docker push "quay.io/weaveworks/launcher-agent"
+            fi
+
 workflows:
   version: 2
   launcher_service:
