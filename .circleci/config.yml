@@ -7,7 +7,7 @@ jobs:
     steps:
       - checkout
       - run: go get -u github.com/golang/dep/cmd/dep
-      - run: cd launcher-service && dep ensure && go test
+      - run: cd service && dep ensure && go test
 
 workflows:
   version: 2
