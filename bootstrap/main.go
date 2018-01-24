@@ -43,10 +43,24 @@ func main() {
 		return
 	}
 
+	fmt.Println("Storing the instance token in the weave-cloud secret...")
+	_, err = executeKubectlCommand(
+		append([]string{
+			"create",
+			"secret",
+			"generic",
+			"weave-cloud",
+			fmt.Sprintf("--from-literal=token=%s", opts.Token),
+		}, otherArgs...),
+	)
+	if err != nil {
+		die("There was an error creating the secret: %s\n", err)
+	}
+
 	fmt.Println("Applying the agent...")
 	_, err = executeKubectlCommand(append([]string{"apply", "-f", agentK8sURL}, otherArgs...))
 	if err != nil {
-		die("There was an error applying the agent to the cluster: %s\n", err)
+		die("There was an error applying the agent: %s\n", err)
 	}
 }
 
