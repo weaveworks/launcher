@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -67,7 +66,7 @@ func main() {
 	}
 
 	if *wcToken == "" {
-		log.Fatal(errors.New(" provide a Weave Cloud instance token with -wc.token"))
+		log.Fatal("missing Weave Cloud instance token, provide one with -wc.token")
 	}
 
 	wcPollURL, err := resolveURL(*wcPollURLTemplate, urlContext{
