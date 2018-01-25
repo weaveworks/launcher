@@ -6,6 +6,12 @@ defaults: &defaults
     - image: circleci/golang:latest
 
 jobs:
+  lint:
+    <<: *defaults
+    steps:
+      - checkout
+      - run: make lint
+
   bootstrap:
     <<: *defaults
     steps:
@@ -60,6 +66,7 @@ workflows:
   version: 2
   build_deploy:
     jobs:
+      - lint
       - agent
       - bootstrap
       - service
