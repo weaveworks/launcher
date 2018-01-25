@@ -29,7 +29,7 @@ docker/Dockerfile.service: docker/Dockerfile.service.in Makefile
 
 build/.%.done: docker/Dockerfile.%
 	mkdir -p ./build/docker/$*
-	cp $^ ./build/docker/$*/
+	cp -r $^ ./build/docker/$*/
 	${DOCKER} build -t quay.io/weaveworks/launcher-$* -t quay.io/weaveworks/launcher-$*:$(IMAGE_TAG) -f build/docker/$*/Dockerfile.$* ./build/docker/$*
 	touch $@
 
@@ -86,14 +86,20 @@ build/.bootstrap.done: bootstrap/*.go
 # Service
 #
 
-build/.service.done: build/service build/install.sh
+build/.service.done: build/service build/static
 
 build/service: $(SERVICE_DEPS)
 build/service: service/*.go
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o $@ $(LDFLAGS) ./service
 
-build/install.sh: service/install.sh
-	cp $< $@
+service/static/agent.yaml: service/static/agent.yaml.in
+	@echo Generating $@
+	@sed -e 's/@@IMAGE_TAG@@/$(IMAGE_TAG)/g' < $< > $@.tmp && mv $@.tmp $@
+
+build/static: service/static/* service/static/agent.yaml
+	mkdir -p $@
+	cp $^ $@
 
 clean:
 	rm -rf build cache vendor
+	rm -f docker/Dockerfile.service service/static/agent.yaml

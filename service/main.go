@@ -29,15 +29,20 @@ func main() {
 		log.Fatal("a bootstrap version is required")
 	}
 
-	// Load install.sh into memory
-	installScriptData, err := ioutil.ReadFile("./install.sh")
+	// Load install.sh and agent.yaml into memory
+	installScriptData, err := ioutil.ReadFile("./static/install.sh")
 	if err != nil {
-		log.Fatal("error reading install.sh file:", err)
+		log.Fatal("error reading static/install.sh file:", err)
+	}
+	agentYAMLData, err := ioutil.ReadFile("./static/agent.yaml")
+	if err != nil {
+		log.Fatal("error reading static/agent.yaml file:", err)
 	}
 
 	handlers := &Handlers{
 		bootstrapVersion:  *bootstrapVersion,
 		installScriptData: installScriptData,
+		agentYAMLData:     agentYAMLData,
 	}
 
 	server, err := server.New(serverCfg)
@@ -48,6 +53,7 @@ func main() {
 
 	server.HTTP.HandleFunc("/", handlers.install).Methods("GET").Name("install")
 	server.HTTP.HandleFunc("/bootstrap", handlers.bootstrap).Methods("GET").Name("bootstrap")
+	server.HTTP.HandleFunc("/k8s/agent.yaml", handlers.agentYAML).Methods("GET").Name("agentYAML")
 	server.Run()
 }
 
@@ -55,6 +61,7 @@ func main() {
 type Handlers struct {
 	bootstrapVersion  string
 	installScriptData []byte
+	agentYAMLData     []byte
 }
 
 func (h *Handlers) install(w http.ResponseWriter, r *http.Request) {
@@ -77,4 +84,8 @@ func (h *Handlers) bootstrap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, fmt.Sprintf("%s/bootstrap/%s/%s", s3Bucket, h.bootstrapVersion, filename), 301)
+}
+
+func (h *Handlers) agentYAML(w http.ResponseWriter, r *http.Request) {
+	http.ServeContent(w, r, "agent.yaml", time.Time{}, bytes.NewReader(h.agentYAMLData))
 }
