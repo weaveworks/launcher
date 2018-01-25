@@ -1,4 +1,5 @@
-.PHONY: all clean agent bootstrap service
+.PHONY: all clean dep agent bootstrap service
+.SUFFIXES:
 
 DOCKER ?= docker
 
@@ -8,7 +9,7 @@ DOCKER ?= docker
 # if you're testing out the Makefile with `-W` (pretend a file is
 # new); use the full path to the pretend-new file, e.g.,
 #  `make -W $PWD/registry/registry.go`
-godeps=$(shell go list -f '{{join .Deps "\n"}}' $1 | grep -v /vendor/ | xargs go list -f '{{if not .Standard}}{{ $$dep := . }}{{range .GoFiles}}{{$$dep.Dir}}/{{.}} {{end}}{{end}}')
+godeps=$(shell go list -f '{{join .Deps "\n"}}' $1 | grep -v /vendor/ | xargs go list -f '{{if not .Standard}}{{ $$dep := . }}{{range .GoFiles}}{{$$dep.Dir}}/{{.}} {{end}}{{end}}' 2>/dev/null)
 
 AGENT_DEPS   := $(call godeps,./agent)
 BOOTSTRAP_DEPS := $(call godeps,./bootstrap)
@@ -17,7 +18,7 @@ SERVICE_DEPS := $(call godeps,./service)
 GIT_HASH :=$(shell git rev-parse HEAD)
 IMAGE_TAG:=$(shell ./docker/image-tag)
 
-all: agent bootstrap service
+all: dep agent bootstrap service
 agent: build/.agent.done
 bootstrap: build/.bootstrap.done
 service: build/.service.done
@@ -30,6 +31,16 @@ build/.%.done: docker/Dockerfile.%
 	mkdir -p ./build/docker/$*
 	cp $^ ./build/docker/$*/
 	${DOCKER} build -t quay.io/weaveworks/launcher-$* -t quay.io/weaveworks/launcher-$*:$(IMAGE_TAG) -f build/docker/$*/Dockerfile.$* ./build/docker/$*
+	touch $@
+
+#
+# Vendoring
+#
+dep: build/dep.done
+build/dep.done:
+	go get -u github.com/golang/dep/cmd/dep
+	dep ensure
+	mkdir -p ./build
 	touch $@
 
 #
@@ -79,4 +90,4 @@ build/install.sh: service/install.sh
 	cp $< $@
 
 clean:
-	rm -rf build cache
+	rm -rf build cache vendor
