@@ -69,11 +69,14 @@ build/.bootstrap.done: bootstrap/*.go
 # Service
 #
 
-build/.service.done: build/service
+build/.service.done: build/service build/install.sh
 
 build/service: $(SERVICE_DEPS)
 build/service: service/*.go
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o $@ $(LDFLAGS) ./service
+
+build/install.sh: service/install.sh
+	cp $< $@
 
 clean:
 	rm -rf build cache
