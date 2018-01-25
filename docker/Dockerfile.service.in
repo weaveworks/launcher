@@ -2,5 +2,6 @@ FROM alpine:3.7
 MAINTAINER Weaveworks Inc <help@weave.works>
 WORKDIR /
 COPY service /launcher-service
+COPY install.sh /
 EXPOSE 80
 ENTRYPOINT ["/launcher-service", "--bootstrap-version=@@GIT_HASH@@"]
