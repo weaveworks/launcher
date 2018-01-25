@@ -11,8 +11,8 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
-      - run: go get -u github.com/golang/dep/cmd/dep
-      - run: cd bootstrap && dep ensure && go test
+      - run: make dep
+      - run: go test ./bootstrap
       - run: make bootstrap
       - deploy:
           name: Maybe push binaries to S3
@@ -27,8 +27,8 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
-      - run: go get -u github.com/golang/dep/cmd/dep
-      - run: cd service && dep ensure && go test
+      - run: make dep
+      - run: go test ./service
       - run: make service
       - deploy:
           name: Maybe push master image
@@ -44,8 +44,8 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
-      - run: go get -u github.com/golang/dep/cmd/dep
-      - run: cd agent && dep ensure && go test
+      - run: make dep
+      - run: go test ./agent
       - run: make agent
       - deploy:
           name: Maybe push master image
