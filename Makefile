@@ -1,4 +1,4 @@
-.PHONY: all clean dep agent bootstrap service
+.PHONY: all clean dep lint agent bootstrap service
 .SUFFIXES:
 
 DOCKER ?= docker
@@ -42,6 +42,12 @@ build/dep.done:
 	dep ensure
 	mkdir -p ./build
 	touch $@
+
+#
+# lint
+#
+lint:
+	@./scripts/go-lint.sh
 
 #
 # Agent
