@@ -14,12 +14,17 @@ AGENT_DEPS   := $(call godeps,./agent)
 BOOTSTRAP_DEPS := $(call godeps,./bootstrap)
 SERVICE_DEPS := $(call godeps,./service)
 
+GIT_HASH :=$(shell git rev-parse HEAD)
 IMAGE_TAG:=$(shell ./docker/image-tag)
 
 all: agent bootstrap service
 agent: build/.agent.done
 bootstrap: build/.bootstrap.done
 service: build/.service.done
+
+docker/Dockerfile.service: docker/Dockerfile.service.in Makefile
+	@echo Generating $@
+	@sed -e 's/@@GIT_HASH@@/$(GIT_HASH)/g' < $< > $@.tmp && mv $@.tmp $@
 
 build/.%.done: docker/Dockerfile.%
 	mkdir -p ./build/docker/$*
