@@ -1,4 +1,5 @@
 .PHONY: all clean agent bootstrap service
+.SUFFIXES:
 
 DOCKER ?= docker
 
