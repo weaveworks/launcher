@@ -9,7 +9,7 @@ DOCKER ?= docker
 # if you're testing out the Makefile with `-W` (pretend a file is
 # new); use the full path to the pretend-new file, e.g.,
 #  `make -W $PWD/registry/registry.go`
-godeps=$(shell go list -f '{{join .Deps "\n"}}' $1 | grep -v /vendor/ | xargs go list -f '{{if not .Standard}}{{ $$dep := . }}{{range .GoFiles}}{{$$dep.Dir}}/{{.}} {{end}}{{end}}')
+godeps=$(shell go list -f '{{join .Deps "\n"}}' $1 | grep -v /vendor/ | xargs go list -f '{{if not .Standard}}{{ $$dep := . }}{{range .GoFiles}}{{$$dep.Dir}}/{{.}} {{end}}{{end}}' 2>/dev/null)
 
 AGENT_DEPS   := $(call godeps,./agent)
 BOOTSTRAP_DEPS := $(call godeps,./bootstrap)
