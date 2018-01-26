@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/weaveworks/common/server"
+	"github.com/weaveworks/launcher/text"
 )
 
 const s3Bucket = "https://weaveworks-launcher.s3.amazonaws.com"
@@ -31,11 +32,16 @@ func main() {
 	}
 
 	// Load install.sh and agent.yaml into memory
-	installScriptData, err := ioutil.ReadFile("./static/install.sh")
+	tmplData, err := ioutil.ReadFile("./static/install.sh")
 	if err != nil {
 		log.Fatal("error reading static/install.sh file:", err)
 	}
-	installScriptData = replaceHostname(installScriptData, *hostname)
+	data, err := text.ResolveString(string(tmplData), struct{ Hostname string }{*hostname})
+	if err != nil {
+		log.Fatal("error resolving static/install.sh template:", err)
+	}
+	installScriptData := []byte(data)
+
 	agentYAMLData, err := ioutil.ReadFile("./static/agent.yaml")
 	if err != nil {
 		log.Fatal("error reading static/agent.yaml file:", err)
@@ -57,10 +63,6 @@ func main() {
 	server.HTTP.HandleFunc("/bootstrap", handlers.bootstrap).Methods("GET").Name("bootstrap")
 	server.HTTP.HandleFunc("/k8s/agent.yaml", handlers.agentYAML).Methods("GET").Name("agentYAML")
 	server.Run()
-}
-
-func replaceHostname(data []byte, hostname string) []byte {
-	return bytes.Replace(data, []byte("@@HOSTNAME@@"), []byte(hostname), 1)
 }
 
 // Handlers contains the configuration for serving launcher related binaries

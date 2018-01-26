@@ -1,17 +1,16 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
-	"text/template"
 	"time"
 
 	"github.com/oklog/run"
 	log "github.com/sirupsen/logrus"
+	"github.com/weaveworks/launcher/text"
 )
 
 const (
@@ -21,20 +20,6 @@ const (
 type urlContext struct {
 	KubernetesVersion string
 	Token             string
-}
-
-func resolveURL(urlTmpl string, ctx urlContext) (string, error) {
-	tmpl, err := template.New("URL").Parse(urlTmpl)
-	if err != nil {
-		return "", err
-	}
-
-	var result bytes.Buffer
-	if err := tmpl.Execute(&result, ctx); err != nil {
-		return "", err
-	}
-
-	return result.String(), nil
 }
 
 func applyManifest(kubectl interface{}, URL string) {
@@ -69,7 +54,7 @@ func main() {
 		log.Fatal("missing Weave Cloud instance token, provide one with -wc.token")
 	}
 
-	wcPollURL, err := resolveURL(*wcPollURLTemplate, urlContext{
+	wcPollURL, err := text.ResolveString(*wcPollURLTemplate, urlContext{
 		KubernetesVersion: "1.8", // TODO: ask the API server
 		Token:             *wcToken,
 	})
