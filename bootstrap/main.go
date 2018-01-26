@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/jessevdk/go-flags"
+	"github.com/weaveworks/launcher/pkg/kubectl"
 )
 
 const (
@@ -25,7 +26,7 @@ func main() {
 	}
 
 	// Ask the user to confirm the cluster
-	cluster, err := getClusterInfo(otherArgs)
+	cluster, err := kubectl.GetClusterInfo(otherArgs)
 	if err != nil {
 		die("There was an error fetching the current cluster info: %s\n", err)
 	}
@@ -44,7 +45,7 @@ func main() {
 	}
 
 	fmt.Println("Storing the instance token in the weave-cloud secret...")
-	_, err = executeKubectlCommand(
+	_, err = kubectl.ExecuteCommand(
 		append([]string{
 			"create",
 			"secret",
@@ -58,7 +59,7 @@ func main() {
 	}
 
 	fmt.Println("Applying the agent...")
-	_, err = executeKubectlCommand(append([]string{"apply", "-f", agentK8sURL}, otherArgs...))
+	_, err = kubectl.ExecuteCommand(append([]string{"apply", "-f", agentK8sURL}, otherArgs...))
 	if err != nil {
 		die("There was an error applying the agent: %s\n", err)
 	}
