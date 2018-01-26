@@ -18,5 +18,5 @@ spec:
     spec:
       containers:
         - name: agent
-          image: quay.io/weaveworks/launcher-agent:master-@@IMAGE_TAG@@
+          image: quay.io/weaveworks/launcher-agent:@@IMAGE_TAG@@
           imagePullPolicy: IfNotPresent
