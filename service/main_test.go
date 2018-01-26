@@ -34,6 +34,11 @@ func TestInstallHandler(t *testing.T) {
 	if installScript != string(actual) {
 		t.Errorf("Expected body '%s', got: '%s'", installScript, actual)
 	}
+
+	contentDisposition := resp.Header.Get("Content-Disposition")
+	if contentDisposition != "attachment; filename=\"install-weave-cloud.sh\"" {
+		t.Errorf("Expected Content-Disposition: attachment, got: '%s'", contentDisposition)
+	}
 }
 
 func TestBootstrapHandler(t *testing.T) {
@@ -49,8 +54,8 @@ func TestBootstrapHandler(t *testing.T) {
 		expectedLocation   string
 	}{
 		{"", 400, ""},
-		{"?dist=darwin", 301, "https://weaveworks-launcher.s3.amazonaws.com/bootstrap/aaa000/bootstrap-darwin-amd64"},
-		{"?dist=linux", 301, "https://weaveworks-launcher.s3.amazonaws.com/bootstrap/aaa000/bootstrap-linux-amd64"},
+		{"?dist=darwin", 301, "https://weaveworks-launcher.s3.amazonaws.com/bootstrap/aaa000/bootstrap_darwin_amd64"},
+		{"?dist=linux", 301, "https://weaveworks-launcher.s3.amazonaws.com/bootstrap/aaa000/bootstrap_linux_amd64"},
 		{"?dist=other", 400, ""},
 	}
 
@@ -108,5 +113,10 @@ func TestAgentYAMLHandler(t *testing.T) {
 	}
 	if agentYAML != string(actual) {
 		t.Errorf("Expected body '%s', got: '%s'", agentYAML, actual)
+	}
+
+	contentDisposition := resp.Header.Get("Content-Disposition")
+	if contentDisposition != "attachment" {
+		t.Errorf("Expected Content-Disposition: attachment, got: '%s'", contentDisposition)
 	}
 }
