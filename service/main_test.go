@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -109,22 +108,5 @@ func TestAgentYAMLHandler(t *testing.T) {
 	}
 	if agentYAML != string(actual) {
 		t.Errorf("Expected body '%s', got: '%s'", agentYAML, actual)
-	}
-}
-
-func TestReplaceHostname(t *testing.T) {
-	tests := []struct {
-		data     []byte
-		hostname string
-		expected []byte
-	}{
-		{[]byte(""), "get.weave.works", []byte("")},
-		{[]byte("Hello world!\nHostname: @@HOSTNAME@@\n"), "get.weave.works", []byte("Hello world!\nHostname: get.weave.works\n")},
-	}
-
-	for _, tc := range tests {
-		if output := replaceHostname(tc.data, tc.hostname); !bytes.Equal(output, tc.expected) {
-			t.Errorf("Expected '%s', got: '%s'", tc.expected, output)
-		}
 	}
 }
