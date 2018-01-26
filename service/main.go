@@ -17,6 +17,7 @@ const s3Bucket = "https://weaveworks-launcher.s3.amazonaws.com"
 func main() {
 	var (
 		bootstrapVersion = flag.String("bootstrap-version", "", "Bootstrap version used for S3 binaries (short commit hash)")
+		hostname         = flag.String("hostname", "get.weave.works", "Hostname for external launcher service")
 		serverCfg        = server.Config{
 			MetricsNamespace:        "launcher",
 			RegisterInstrumentation: true,
@@ -34,6 +35,7 @@ func main() {
 	if err != nil {
 		log.Fatal("error reading static/install.sh file:", err)
 	}
+	installScriptData = replaceHostname(installScriptData, *hostname)
 	agentYAMLData, err := ioutil.ReadFile("./static/agent.yaml")
 	if err != nil {
 		log.Fatal("error reading static/agent.yaml file:", err)
@@ -55,6 +57,10 @@ func main() {
 	server.HTTP.HandleFunc("/bootstrap", handlers.bootstrap).Methods("GET").Name("bootstrap")
 	server.HTTP.HandleFunc("/k8s/agent.yaml", handlers.agentYAML).Methods("GET").Name("agentYAML")
 	server.Run()
+}
+
+func replaceHostname(data []byte, hostname string) []byte {
+	return bytes.Replace(data, []byte("@@HOSTNAME@@"), []byte(hostname), 1)
 }
 
 // Handlers contains the configuration for serving launcher related binaries
