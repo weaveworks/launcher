@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/getsentry/raven-go"
 	"github.com/oklog/run"
 	log "github.com/sirupsen/logrus"
 	"github.com/weaveworks/launcher/pkg/kubectl"
@@ -20,9 +22,14 @@ const (
 	defaultWCPollURL    = "https://cloud.weave.works/k8s.yaml?k8s-version={{.KubernetesVersion}}&t={{.Token}}"
 )
 
-type urlContext struct {
+type agentContext struct {
 	KubernetesVersion string
 	Token             string
+}
+
+func init() {
+	// https://sentry.io/weaveworks/launcher-agent/
+	raven.SetDSN("https://a31e98421db8457a8c85fb42afcfc6fa:ec43815dbf4e440ca69f53b683bb81da@sentry.io/278297")
 }
 
 func setLogLevel(logLevel string) error {
@@ -34,12 +41,21 @@ func setLogLevel(logLevel string) error {
 	return nil
 }
 
-func updateAgents(agentPollURL, wcPollURL string) {
+func logError(msg string, err error, ctx agentContext) {
+	log.Errorf("%s: %s", msg, err)
+	ravenTags := map[string]string{
+		// TODO: #25 - include instance identifier (token not suitable due to security concerns)
+		"kubernetes": ctx.KubernetesVersion,
+	}
+	raven.CaptureErrorAndWait(err, ravenTags)
+}
+
+func updateAgents(agentPollURL, wcPollURL string, agentCtx agentContext) {
 	// Self-update
 	log.Info("Updating self from ", agentPollURL)
 	output, err := kubectl.ExecuteCommand([]string{"apply", "-f", agentPollURL})
 	if err != nil {
-		log.Errorf("Failed to execute kubectl apply: %s", err)
+		logError("Failed to execute kubectl apply", err, agentCtx)
 		return
 	}
 
@@ -51,7 +67,7 @@ func updateAgents(agentPollURL, wcPollURL string) {
 	if strings.Contains(output, "configured") {
 		time.Sleep(5 * time.Minute)
 
-		log.Error("Deployment of the new agent failed. Rolling back...")
+		logError("Deployment of the new agent failed. Rolling back...", errors.New("Deployment failed"), agentCtx)
 		_, err := kubectl.ExecuteCommand([]string{
 			"rollout",
 			"undo",
@@ -59,12 +75,12 @@ func updateAgents(agentPollURL, wcPollURL string) {
 			"deployment/weave-agent",
 		})
 		if err != nil {
-			log.Errorf("Failed rolling back agent. Will continue to check for updates.")
+			logError("Failed rolling back agent. Will continue to check for updates.", err, agentCtx)
 			return
 		}
 
 		// Return so we continue updating the agent until success
-		log.Info("The new agent was rolled back.")
+		logError("The new agent was rolled back.", errors.New("Rollback success"), agentCtx)
 		return
 	}
 
@@ -72,7 +88,7 @@ func updateAgents(agentPollURL, wcPollURL string) {
 	log.Info("Updating WC from ", wcPollURL)
 	_, err = kubectl.ExecuteCommand([]string{"apply", "-f", wcPollURL})
 	if err != nil {
-		log.Errorf("Failed to execute kubectl apply: %s", err)
+		logError("Failed to execute kubectl apply", err, agentCtx)
 		return
 	}
 }
@@ -95,10 +111,12 @@ func main() {
 		log.Fatal("missing Weave Cloud instance token, provide one with -wc.token")
 	}
 
-	wcPollURL, err := text.ResolveString(*wcPollURLTemplate, urlContext{
+	agentCtx := agentContext{
 		KubernetesVersion: "1.8", // TODO: ask the API server
 		Token:             *wcToken,
-	})
+	}
+
+	wcPollURL, err := text.ResolveString(*wcPollURLTemplate, agentCtx)
 	if err != nil {
 		log.Fatal("invalid URL template:", err)
 	}
@@ -112,7 +130,7 @@ func main() {
 			func() error {
 				for {
 
-					updateAgents(*agentPollURL, wcPollURL)
+					updateAgents(*agentPollURL, wcPollURL, agentCtx)
 
 					select {
 					case <-time.After(*wcPollInterval):
@@ -146,7 +164,7 @@ func main() {
 	}
 
 	if err := g.Run(); err != nil {
-		log.Error(err)
+		logError("Agent error", err, agentCtx)
 		os.Exit(1)
 	}
 }
