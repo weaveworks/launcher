@@ -1,4 +1,6 @@
 /build
 /cache
-/docker/Dockerfile.service
 /vendor
+
+/docker/Dockerfile.service
+/service/static/agent.yaml
