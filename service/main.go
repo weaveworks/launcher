@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/weaveworks/common/server"
+	"github.com/weaveworks/launcher/text"
 )
 
 const s3Bucket = "https://weaveworks-launcher.s3.amazonaws.com"
@@ -17,6 +18,7 @@ const s3Bucket = "https://weaveworks-launcher.s3.amazonaws.com"
 func main() {
 	var (
 		bootstrapVersion = flag.String("bootstrap-version", "", "Bootstrap version used for S3 binaries (short commit hash)")
+		hostname         = flag.String("hostname", "get.weave.works", "Hostname for external launcher service")
 		serverCfg        = server.Config{
 			MetricsNamespace:        "launcher",
 			RegisterInstrumentation: true,
@@ -30,10 +32,16 @@ func main() {
 	}
 
 	// Load install.sh and agent.yaml into memory
-	installScriptData, err := ioutil.ReadFile("./static/install.sh")
+	tmplData, err := ioutil.ReadFile("./static/install.sh")
 	if err != nil {
 		log.Fatal("error reading static/install.sh file:", err)
 	}
+	data, err := text.ResolveString(string(tmplData), struct{ Hostname string }{*hostname})
+	if err != nil {
+		log.Fatal("error resolving static/install.sh template:", err)
+	}
+	installScriptData := []byte(data)
+
 	agentYAMLData, err := ioutil.ReadFile("./static/agent.yaml")
 	if err != nil {
 		log.Fatal("error reading static/agent.yaml file:", err)
