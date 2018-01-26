@@ -65,6 +65,7 @@ type Handlers struct {
 }
 
 func (h *Handlers) install(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Disposition", "attachment; filename=\"install-weave-cloud.sh\"")
 	http.ServeContent(w, r, "install.sh", time.Time{}, bytes.NewReader(h.installScriptData))
 }
 
@@ -75,9 +76,9 @@ func (h *Handlers) bootstrap(w http.ResponseWriter, r *http.Request) {
 
 	switch dist {
 	case "darwin":
-		filename = "bootstrap-darwin-amd64"
+		filename = "bootstrap_darwin_amd64"
 	case "linux":
-		filename = "bootstrap-linux-amd64"
+		filename = "bootstrap_linux_amd64"
 	default:
 		http.Error(w, "Invalid dist query parameter", http.StatusBadRequest)
 		return
@@ -87,5 +88,6 @@ func (h *Handlers) bootstrap(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) agentYAML(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Disposition", "attachment")
 	http.ServeContent(w, r, "agent.yaml", time.Time{}, bytes.NewReader(h.agentYAMLData))
 }
