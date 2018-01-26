@@ -81,3 +81,32 @@ func TestBootstrapHandler(t *testing.T) {
 		}
 	}
 }
+
+func TestAgentYAMLHandler(t *testing.T) {
+	agentYAML := "---\napiVersion: extensions/v1beta1"
+	handlers := &Handlers{
+		bootstrapVersion: "aaa000",
+		agentYAMLData:    []byte(agentYAML),
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(handlers.agentYAML))
+	defer server.Close()
+
+	resp, err := http.Get(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("Expected 200 status code, got: %d", resp.StatusCode)
+	}
+
+	// Check install script data in body
+	actual, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if agentYAML != string(actual) {
+		t.Errorf("Expected body '%s', got: '%s'", agentYAML, actual)
+	}
+}
