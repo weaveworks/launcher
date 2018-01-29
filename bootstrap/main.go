@@ -3,27 +3,35 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"syscall"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/weaveworks/launcher/pkg/kubectl"
+	"github.com/weaveworks/launcher/pkg/text"
 )
 
 const (
-	agentK8sURL = "https://get.weave.works/k8s/agent.yaml"
+	agentK8sURLTemplate = "https://{{.Hostname}}/k8s/agent.yaml"
 )
 
 func main() {
 	// Parse arguments with go-flags so we can forward unknown arguments to kubectl
 	var opts struct {
-		Token string `long:"token" description:"Weave Cloud token" required:"true"`
+		Hostname string `long:"hostname" description:"Weave Cloud hostname" default:"get.weave.works"`
+		Token    string `long:"token" description:"Weave Cloud token" required:"true"`
 	}
 	parser := flags.NewParser(&opts, flags.IgnoreUnknown)
 	otherArgs, err := parser.Parse()
 	if err != nil {
 		die("%s\n", err)
+	}
+
+	agentK8sURL, err := text.ResolveString(agentK8sURLTemplate, opts)
+	if err != nil {
+		log.Fatal("invalid URL template:", err)
 	}
 
 	// Restore stdin, making fd 0 point at the terminal
