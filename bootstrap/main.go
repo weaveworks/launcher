@@ -51,17 +51,13 @@ func main() {
 	}
 
 	fmt.Println("Storing the instance token in the weave-cloud secret...")
-	_, err = kubectl.ExecuteCommand(
-		append([]string{
-			"create",
-			"secret",
-			"generic",
-			"weave-cloud",
-			fmt.Sprintf("--from-literal=token=%s", opts.Token),
-		}, otherArgs...),
-	)
+	secretCreated, err := createWCSecret(opts.Token, otherArgs)
 	if err != nil {
 		die("There was an error creating the secret: %s\n", err)
+	}
+	if !secretCreated {
+		fmt.Println("Cancelled.")
+		return
 	}
 
 	fmt.Println("Applying the agent...")
@@ -74,6 +70,50 @@ func main() {
 func die(msg string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, msg, args...)
 	os.Exit(1)
+}
+
+func createWCSecret(token string, otherArgs []string) (bool, error) {
+	secretExists, err := kubectl.SecretExists("weave-cloud", otherArgs)
+	if err != nil {
+		return false, err
+	}
+
+	if secretExists {
+		confirmed, err := askForConfirmation("A weave-cloud secret already exists. Would you like to continue and replace the secret?")
+		if err != nil {
+			return false, err
+		}
+		if !confirmed {
+			return false, nil
+		}
+
+		// Delete the secret
+		_, err = kubectl.ExecuteCommand(
+			append([]string{
+				"delete",
+				"secret",
+				"weave-cloud",
+			}, otherArgs...),
+		)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	// Create the secret
+	_, err = kubectl.ExecuteCommand(
+		append([]string{
+			"create",
+			"secret",
+			"generic",
+			"weave-cloud",
+			fmt.Sprintf("--from-literal=token=%s", token),
+		}, otherArgs...),
+	)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func askForConfirmation(s string) (bool, error) {
