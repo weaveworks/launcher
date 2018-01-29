@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -118,5 +119,17 @@ func TestAgentYAMLHandler(t *testing.T) {
 	contentDisposition := resp.Header.Get("Content-Disposition")
 	if contentDisposition != "attachment" {
 		t.Errorf("Expected Content-Disposition: attachment, got: '%s'", contentDisposition)
+	}
+}
+
+func TestLoadInstallScript(t *testing.T) {
+	installScriptData, err := loadInstallScript("hostname.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	installScript := string(installScriptData)
+
+	if !strings.Contains(installScript, "https://hostname.test/bootstrap?dist=$dist") {
+		t.Errorf("Expected 'https://hostname.test/bootstrap?dist=$dist' in install.sh")
 	}
 }

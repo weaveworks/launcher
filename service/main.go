@@ -32,16 +32,10 @@ func main() {
 	}
 
 	// Load install.sh and agent.yaml into memory
-	tmplData, err := ioutil.ReadFile("./static/install.sh")
+	installScriptData, err := loadInstallScript(*hostname)
 	if err != nil {
 		log.Fatal("error reading static/install.sh file:", err)
 	}
-	data, err := text.ResolveString(string(tmplData), struct{ Hostname string }{*hostname})
-	if err != nil {
-		log.Fatal("error resolving static/install.sh template:", err)
-	}
-	installScriptData := []byte(data)
-
 	agentYAMLData, err := ioutil.ReadFile("./static/agent.yaml")
 	if err != nil {
 		log.Fatal("error reading static/agent.yaml file:", err)
@@ -63,6 +57,18 @@ func main() {
 	server.HTTP.HandleFunc("/bootstrap", handlers.bootstrap).Methods("GET").Name("bootstrap")
 	server.HTTP.HandleFunc("/k8s/agent.yaml", handlers.agentYAML).Methods("GET").Name("agentYAML")
 	server.Run()
+}
+
+func loadInstallScript(hostname string) ([]byte, error) {
+	tmplData, err := ioutil.ReadFile("./static/install.sh")
+	if err != nil {
+		return []byte{}, err
+	}
+	data, err := text.ResolveString(string(tmplData), struct{ Hostname string }{hostname})
+	if err != nil {
+		return []byte{}, err
+	}
+	return []byte(data), nil
 }
 
 // Handlers contains the configuration for serving launcher related binaries
