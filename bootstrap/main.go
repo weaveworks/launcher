@@ -116,6 +116,7 @@ func createWCSecret(token string, otherArgs []string) (bool, error) {
 			"generic",
 			"weave-cloud",
 			fmt.Sprintf("--from-literal=token=%s", token),
+			"--namespace=weave",
 		}, otherArgs...),
 	)
 	if err != nil {
