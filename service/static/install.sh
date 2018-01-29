@@ -2,7 +2,7 @@
 set -e
 
 # Create a temporary file for the bootstrap binary
-TMPFILE="$(mktemp -qt weave_bootstrap)" || exit 1
+TMPFILE="$(mktemp -qt weave_bootstrap.XXXXXXXXXX)" || exit 1
 
 # Arrange for the bootstrap binary to be deleted when the script terminates
 trap 'rm -f "$TMPFILE"' 0
