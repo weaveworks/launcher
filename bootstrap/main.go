@@ -3,27 +3,35 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"syscall"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/weaveworks/launcher/pkg/kubectl"
+	"github.com/weaveworks/launcher/pkg/text"
 )
 
 const (
-	agentK8sURL = "https://raw.githubusercontent.com/weaveworks/config/master/agent.yaml"
+	agentK8sURLTemplate = "https://{{.Hostname}}/k8s/agent.yaml"
 )
 
 func main() {
 	// Parse arguments with go-flags so we can forward unknown arguments to kubectl
 	var opts struct {
-		Token string `long:"token" description:"Weave Cloud token" required:"true"`
+		Hostname string `long:"hostname" description:"Weave Cloud hostname" default:"get.weave.works"`
+		Token    string `long:"token" description:"Weave Cloud token" required:"true"`
 	}
 	parser := flags.NewParser(&opts, flags.IgnoreUnknown)
 	otherArgs, err := parser.Parse()
 	if err != nil {
 		die("%s\n", err)
+	}
+
+	agentK8sURL, err := text.ResolveString(agentK8sURLTemplate, opts)
+	if err != nil {
+		log.Fatal("invalid URL template:", err)
 	}
 
 	// Restore stdin, making fd 0 point at the terminal
@@ -51,17 +59,13 @@ func main() {
 	}
 
 	fmt.Println("Storing the instance token in the weave-cloud secret...")
-	_, err = kubectl.ExecuteCommand(
-		append([]string{
-			"create",
-			"secret",
-			"generic",
-			"weave-cloud",
-			fmt.Sprintf("--from-literal=token=%s", opts.Token),
-		}, otherArgs...),
-	)
+	secretCreated, err := createWCSecret(opts.Token, otherArgs)
 	if err != nil {
 		die("There was an error creating the secret: %s\n", err)
+	}
+	if !secretCreated {
+		fmt.Println("Cancelled.")
+		return
 	}
 
 	fmt.Println("Applying the agent...")
@@ -74,6 +78,50 @@ func main() {
 func die(msg string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, msg, args...)
 	os.Exit(1)
+}
+
+func createWCSecret(token string, otherArgs []string) (bool, error) {
+	secretExists, err := kubectl.SecretExists("weave-cloud", otherArgs)
+	if err != nil {
+		return false, err
+	}
+
+	if secretExists {
+		confirmed, err := askForConfirmation("A weave-cloud secret already exists. Would you like to continue and replace the secret?")
+		if err != nil {
+			return false, err
+		}
+		if !confirmed {
+			return false, nil
+		}
+
+		// Delete the secret
+		_, err = kubectl.ExecuteCommand(
+			append([]string{
+				"delete",
+				"secret",
+				"weave-cloud",
+			}, otherArgs...),
+		)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	// Create the secret
+	_, err = kubectl.ExecuteCommand(
+		append([]string{
+			"create",
+			"secret",
+			"generic",
+			"weave-cloud",
+			fmt.Sprintf("--from-literal=token=%s", token),
+		}, otherArgs...),
+	)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func askForConfirmation(s string) (bool, error) {
