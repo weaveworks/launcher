@@ -1,25 +1,25 @@
-# Weave Cloud Launcher (WIP)
+# Weave Cloud Launcher
 
 [![Circle CI](https://circleci.com/gh/weaveworks/launcher/tree/master.svg?style=shield)](https://circleci.com/gh/weaveworks/launcher/tree/master)
 
-## WIP Notes
+<h3 align="center">
+  <code>curl -L https://get.weave.works | sh -s -- --token=XXXXXX</code>
+</h3>
 
-- User will be asked to run: `curl -L https://get.weave.works | sh -s --token=XXXXXX`
+## Overview
 
-### launcher-agent
-
-- The launcher which manages the Weave Cloud agents, making sure they are running and configured correctly.
-
-### launcher-bootstrap
-
-- Applies the latest `launcher-agent` k8s config to the cluster using the host's kubectl.
-- Fetches the config from https://github.com/weaveworks/config
-- CircleCI uploads compiled binaries to S3
-
-### launcher-service
-
-- https://get.weave.works/
-  - serves install.sh which downloads and executes the correct bootstrap binary
-    for the host's distribution, passing the token as an argument.
-- https://get.weave.works/bootstrap?dist=`uname`
-  - serves the bootstrap binary for the provided distribution from S3
+- `curl -L https://get.weave.works | sh -s -- --token=XXXXXX` (on the host)
+  - https://get.weave.works serves [install.sh](service/static/install.sh)
+  - Downloads and executes the bootstrap binary
+- [Bootstrap](bootstrap) binary (on the host)
+  - Confirms the current k8s cluster with the user
+  - Applies the Agent to the cluster via the host's `kubectl`
+- [Agent](agent) (in the cluster)
+  - Checks for updates once an hour
+  - Self updates with the latest [agent.yaml](service/static/agent.yaml.in)
+    - RollingUpdate with **auto recovery** if the new version fails
+  - Creates/Updates Weave Cloud agents currently using the [Launch Generator](https://github.com/weaveworks/launch-generator/) (internal)
+- [Service](service) (get.weave.works)
+  - `/` - [install.sh](service/static/install.sh)
+  - `/bootstrap?dist=...` - [bootstrap](bootstrap)
+  - `/k8s/agent.yaml` - [agent.yaml.in](service/static/agent.yaml.in)
