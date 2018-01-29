@@ -24,4 +24,4 @@ curl -Ls "https://{{.Hostname}}/bootstrap?dist=$dist" >> "$TMPFILE"
 chmod +x "$TMPFILE"
 
 # Execute the boostrap binary
-"$TMPFILE" "$@"
+"$TMPFILE" "$@" "--hostname={{.Hostname}}"
