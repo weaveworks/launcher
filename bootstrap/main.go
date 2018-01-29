@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"syscall"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/weaveworks/launcher/pkg/kubectl"
@@ -23,6 +24,11 @@ func main() {
 	otherArgs, err := parser.Parse()
 	if err != nil {
 		die("%s\n", err)
+	}
+
+	// Restore stdin, making fd 0 point at the terminal
+	if err := syscall.Dup2(1, 0); err != nil {
+		die("Could not restore stdin\n", err)
 	}
 
 	// Ask the user to confirm the cluster
