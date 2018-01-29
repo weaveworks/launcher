@@ -127,6 +127,8 @@ func main() {
 
 	eventsReportInterval := flag.Duration("events.report-interval", 3*time.Second, "Minimal time interval between two reports")
 
+	featureInstall := flag.Bool("feature.install-agents", true, "Whether the agent should install anything in the cluster or not")
+
 	flag.Parse()
 
 	if err := setLogLevel(*logLevel); err != nil {
@@ -150,8 +152,9 @@ func main() {
 	var g run.Group
 
 	// Poll for new manifests every wcPollInterval.
-	{
+	if *featureInstall {
 		cancel := make(chan interface{})
+
 		g.Add(
 			func() error {
 				for {
