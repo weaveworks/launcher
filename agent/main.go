@@ -100,7 +100,7 @@ func updateAgents(agentPollURL, wcPollURL string, agentCtx agentContext, cancel 
 func main() {
 	logLevel := flag.String("log.level", "info", "verbosity of log output - one of 'debug', 'info' (default), 'warning', 'error', 'fatal'")
 
-	agentPollURL := flag.String("wc.poll-url", defaultAgentPollURL, "URL to poll for the agent manifest")
+	agentPollURL := flag.String("agent.poll-url", defaultAgentPollURL, "URL to poll for the agent manifest")
 	wcToken := flag.String("wc.token", "", "Weave Cloud instance token")
 	wcPollInterval := flag.Duration("wc.poll-interval", 1*time.Hour, "Polling interval to check WC manifests")
 	wcPollURLTemplate := flag.String("wc.poll-url", defaultWCPollURL, "URL to poll for WC manifests")
