@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	agentK8sURL = "https://raw.githubusercontent.com/weaveworks/config/master/agent.yaml"
+	agentK8sURL = "https://get.weave.works/k8s/agent.yaml"
 )
 
 func main() {
