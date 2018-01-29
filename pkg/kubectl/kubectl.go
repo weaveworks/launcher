@@ -63,3 +63,17 @@ func GetClusterInfo(otherArgs []string) (ClusterInfo, error) {
 		ServerAddress: serverAddress,
 	}, nil
 }
+
+// SecretExists return true if the secret exists
+func SecretExists(name string, otherArgs []string) (bool, error) {
+	cmdOut, err := ExecuteCommand(
+		append([]string{"get", "secret", name}, otherArgs...),
+	)
+	if err != nil {
+		if strings.Contains(cmdOut, "NotFound") {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}

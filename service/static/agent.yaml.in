@@ -13,7 +13,6 @@ items:
       namespace: weave
     spec:
       replicas: 1
-      revisionHistoryLimit: 2
       # Wait 30 seconds to see if new version crashes before rolling next pod
       minReadySeconds: 30
       # Rolling update with 1 new instance added before removing any old instances

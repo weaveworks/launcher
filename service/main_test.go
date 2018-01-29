@@ -132,4 +132,8 @@ func TestLoadInstallScript(t *testing.T) {
 	if !strings.Contains(installScript, "https://hostname.test/bootstrap?dist=$dist") {
 		t.Errorf("Expected 'https://hostname.test/bootstrap?dist=$dist' in install.sh")
 	}
+
+	if !strings.Contains(installScript, "--hostname=hostname.test") {
+		t.Errorf("Expected '--hostname=hostname.test' in install.sh")
+	}
 }
