@@ -122,8 +122,9 @@ func TestAgentYAMLHandler(t *testing.T) {
 	}
 }
 
-func TestLoadInstallScript(t *testing.T) {
-	installScriptData, err := loadInstallScript("hostname.test")
+func TestLoadData(t *testing.T) {
+	// install.sh
+	installScriptData, err := loadData("./static/install.sh", "hostname.test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,8 +133,18 @@ func TestLoadInstallScript(t *testing.T) {
 	if !strings.Contains(installScript, "https://hostname.test/bootstrap?dist=$dist") {
 		t.Errorf("Expected 'https://hostname.test/bootstrap?dist=$dist' in install.sh")
 	}
-
 	if !strings.Contains(installScript, "--hostname=hostname.test") {
 		t.Errorf("Expected '--hostname=hostname.test' in install.sh")
+	}
+
+	// agent.yaml
+	agentYAMLData, err := loadData("./static/agent.yaml.in", "hostname.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	agentYAML := string(agentYAMLData)
+
+	if !strings.Contains(agentYAML, "-agent.poll-url=https://hostname.test/k8s/agent.yaml") {
+		t.Errorf("Expected '-agent.poll-url=https://hostname.test/k8s/agent.yaml' in agent.yaml")
 	}
 }
