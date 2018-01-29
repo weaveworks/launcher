@@ -32,11 +32,11 @@ func main() {
 	}
 
 	// Load install.sh and agent.yaml into memory
-	installScriptData, err := loadInstallScript(*hostname)
+	installScriptData, err := loadData("./static/install.sh", *hostname)
 	if err != nil {
 		log.Fatal("error reading static/install.sh file:", err)
 	}
-	agentYAMLData, err := ioutil.ReadFile("./static/agent.yaml")
+	agentYAMLData, err := loadData("./static/agent.yaml", *hostname)
 	if err != nil {
 		log.Fatal("error reading static/agent.yaml file:", err)
 	}
@@ -59,8 +59,8 @@ func main() {
 	server.Run()
 }
 
-func loadInstallScript(hostname string) ([]byte, error) {
-	tmplData, err := ioutil.ReadFile("./static/install.sh")
+func loadData(filename, hostname string) ([]byte, error) {
+	tmplData, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return []byte{}, err
 	}

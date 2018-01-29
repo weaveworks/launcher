@@ -31,3 +31,12 @@ items:
             - name: agent
               image: quay.io/weaveworks/launcher-agent:@@IMAGE_TAG@@
               imagePullPolicy: IfNotPresent
+              env:
+                - name: WEAVE_CLOUD_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: weave-cloud
+                      key: token
+              args:
+              - -agent.poll-url=https://{{.Hostname}}/k8s/agent.yaml
+              - -wc.token=$(WEAVE_CLOUD_TOKEN)
