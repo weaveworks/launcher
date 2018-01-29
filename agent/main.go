@@ -64,7 +64,8 @@ func updateAgents(agentPollURL, wcPollURL string, agentCtx agentContext, cancel 
 	// agent is ready.
 	// If we are not killed after 5 minutes, assume the new agent did not become
 	// ready so recover by rolling back.
-	if strings.Contains(output, "configured") {
+	// TODO: Issue #27 - use event listening instead of kubectl stdout
+	if strings.Contains(output, "deployment \"weave-agent\" configured") {
 		select {
 		case <-time.After(5 * time.Minute):
 		case <-cancel:
