@@ -66,6 +66,8 @@ func updateAgents(agentPollURL, wcPollURL string, agentCtx agentContext, cancel 
 	// ready so recover by rolling back.
 	// TODO: Issue #27 - use event listening instead of kubectl stdout
 	if strings.Contains(output, "deployment \"weave-agent\" configured") {
+		log.Info("Agent self updated. Waiting 5 minutes in case of rollback.")
+
 		select {
 		case <-time.After(5 * time.Minute):
 		case <-cancel:
