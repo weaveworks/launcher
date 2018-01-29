@@ -10,7 +10,7 @@ import (
 
 	"github.com/oklog/run"
 	log "github.com/sirupsen/logrus"
-	"github.com/weaveworks/launcher/text"
+	"github.com/weaveworks/launcher/pkg/text"
 )
 
 const (
