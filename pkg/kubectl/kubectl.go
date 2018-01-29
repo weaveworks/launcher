@@ -1,4 +1,4 @@
-package main
+package kubectl
 
 import (
 	"fmt"
@@ -6,7 +6,8 @@ import (
 	"strings"
 )
 
-func executeKubectlCommand(args []string) (string, error) {
+// ExecuteCommand executes kubectl <args> and returns the formatted output or error
+func ExecuteCommand(args []string) (string, error) {
 	cmdOut, err := exec.Command("kubectl", args...).CombinedOutput()
 	if err != nil {
 		// Kubectl error messages output to stdOut
@@ -19,21 +20,23 @@ func formatCmdOutput(output []byte) string {
 	return strings.TrimPrefix(strings.TrimSuffix(strings.TrimSpace(string(output)), "'"), "'")
 }
 
-type clusterInfo struct {
+// ClusterInfo describes a Kubernetes cluster
+type ClusterInfo struct {
 	Name          string
 	ServerAddress string
 }
 
-func getClusterInfo(otherArgs []string) (clusterInfo, error) {
-	currentContext, err := executeKubectlCommand(
+// GetClusterInfo gets the current Kubernetes cluster information
+func GetClusterInfo(otherArgs []string) (ClusterInfo, error) {
+	currentContext, err := ExecuteCommand(
 		append([]string{"config", "current-context"}, otherArgs...),
 	)
 
 	if err != nil {
-		return clusterInfo{}, err
+		return ClusterInfo{}, err
 	}
 
-	name, err := executeKubectlCommand(
+	name, err := ExecuteCommand(
 		append([]string{
 			"config",
 			"view",
@@ -41,10 +44,10 @@ func getClusterInfo(otherArgs []string) (clusterInfo, error) {
 		}, otherArgs...),
 	)
 	if err != nil {
-		return clusterInfo{}, err
+		return ClusterInfo{}, err
 	}
 
-	serverAddress, err := executeKubectlCommand(
+	serverAddress, err := ExecuteCommand(
 		append([]string{
 			"config",
 			"view",
@@ -52,10 +55,10 @@ func getClusterInfo(otherArgs []string) (clusterInfo, error) {
 		}, otherArgs...),
 	)
 	if err != nil {
-		return clusterInfo{}, err
+		return ClusterInfo{}, err
 	}
 
-	return clusterInfo{
+	return ClusterInfo{
 		Name:          name,
 		ServerAddress: serverAddress,
 	}, nil
