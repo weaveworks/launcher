@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/weaveworks/common/server"
-	"github.com/weaveworks/launcher/text"
+	"github.com/weaveworks/launcher/pkg/text"
 )
 
 const s3Bucket = "https://weaveworks-launcher.s3.amazonaws.com"
