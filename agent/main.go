@@ -50,7 +50,7 @@ func logError(msg string, err error, ctx agentContext) {
 	raven.CaptureErrorAndWait(err, ravenTags)
 }
 
-func updateAgents(agentPollURL, wcPollURL string, agentCtx agentContext) {
+func updateAgents(agentPollURL, wcPollURL string, agentCtx agentContext, cancel <-chan interface{}) {
 	// Self-update
 	log.Info("Updating self from ", agentPollURL)
 	output, err := kubectl.ExecuteCommand([]string{"apply", "-f", agentPollURL})
@@ -65,7 +65,11 @@ func updateAgents(agentPollURL, wcPollURL string, agentCtx agentContext) {
 	// If we are not killed after 5 minutes, assume the new agent did not become
 	// ready so recover by rolling back.
 	if strings.Contains(output, "configured") {
-		time.Sleep(5 * time.Minute)
+		select {
+		case <-time.After(5 * time.Minute):
+		case <-cancel:
+			return
+		}
 
 		logError("Deployment of the new agent failed. Rolling back...", errors.New("Deployment failed"), agentCtx)
 		_, err := kubectl.ExecuteCommand([]string{
@@ -130,7 +134,7 @@ func main() {
 			func() error {
 				for {
 
-					updateAgents(*agentPollURL, wcPollURL, agentCtx)
+					updateAgents(*agentPollURL, wcPollURL, agentCtx, cancel)
 
 					select {
 					case <-time.After(*wcPollInterval):
