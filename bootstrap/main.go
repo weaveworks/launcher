@@ -81,7 +81,7 @@ func die(msg string, args ...interface{}) {
 }
 
 func createWCSecret(token string, otherArgs []string) (bool, error) {
-	secretExists, err := kubectl.SecretExists("weave-cloud", otherArgs)
+	secretExists, err := kubectl.ResourceExists("secret", "weave-cloud", "weave", otherArgs)
 	if err != nil {
 		return false, err
 	}
@@ -101,6 +101,7 @@ func createWCSecret(token string, otherArgs []string) (bool, error) {
 				"delete",
 				"secret",
 				"weave-cloud",
+				"--namespace=weave",
 			}, otherArgs...),
 		)
 		if err != nil {
@@ -108,7 +109,11 @@ func createWCSecret(token string, otherArgs []string) (bool, error) {
 		}
 	}
 
-	// Create the secret
+	// Create the weave namespace and the weave-cloud secret
+	_, err = kubectl.CreateNamespace("weave", otherArgs)
+	if err != nil {
+		return false, err
+	}
 	_, err = kubectl.ExecuteCommand(
 		append([]string{
 			"create",

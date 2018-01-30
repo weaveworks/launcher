@@ -64,13 +64,36 @@ func GetClusterInfo(otherArgs []string) (ClusterInfo, error) {
 	}, nil
 }
 
-// SecretExists return true if the secret exists
-func SecretExists(name string, otherArgs []string) (bool, error) {
-	cmdOut, err := ExecuteCommand(
-		append([]string{"get", "secret", name}, otherArgs...),
+// CreateNamespace creates a new namespace and returns whether it was created or not
+func CreateNamespace(namespace string, otherArgs []string) (bool, error) {
+	_, err := ExecuteCommand(
+		append([]string{
+			"create",
+			"namespace",
+			namespace,
+		}, otherArgs...),
 	)
 	if err != nil {
-		if strings.Contains(cmdOut, "NotFound") {
+		if strings.Contains(err.Error(), "AlreadyExists") {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+// ResourceExists return true if the resource exists
+func ResourceExists(resourceType, resourceName, namespace string, otherArgs []string) (bool, error) {
+	_, err := ExecuteCommand(
+		append([]string{
+			"get",
+			resourceType,
+			resourceName,
+			fmt.Sprintf("--namespace=%s", namespace),
+		}, otherArgs...),
+	)
+	if err != nil {
+		if strings.Contains(err.Error(), "NotFound") {
 			return false, nil
 		}
 		return false, err
