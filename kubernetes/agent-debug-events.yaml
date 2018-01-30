@@ -1,0 +1,37 @@
+---
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: weave
+  - apiVersion: extensions/v1beta1
+    kind: Deployment
+    metadata:
+      name: weave-agent
+      namespace: weave
+    spec:
+      replicas: 1
+      # Wait 30 seconds to see if new version crashes before rolling next pod
+      minReadySeconds: 30
+      # Rolling update with 1 new instance added before removing any old instances
+      strategy:
+        rollingUpdate:
+          maxUnavailable: 0
+          maxSurge: 1
+
+      revisionHistoryLimit: 2
+      template:
+        metadata:
+          labels:
+            name: weave-agent
+        spec:
+          containers:
+            - name: agent
+              image: quay.io/weaveworks/launcher-agent:latest
+              imagePullPolicy: IfNotPresent
+              args:
+              - -feature.install-agents=false
+              - -wc.token=foo
+              - -log.level=debug
