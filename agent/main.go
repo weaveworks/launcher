@@ -221,9 +221,6 @@ func main() {
 					select {
 					case <-time.After(*eventsReportInterval):
 						events := eventSource.GetNewEvents()
-						if len(events) == 0 {
-							continue
-						}
 						for _, event := range events {
 							log.WithFields(log.Fields{
 								"name": event.InvolvedObject.Name,
