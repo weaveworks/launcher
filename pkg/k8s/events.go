@@ -19,14 +19,6 @@ const (
 )
 
 var (
-	// Last time of event since unix epoch in seconds
-	lastEventTimestamp = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Namespace: "launcher",
-			Subsystem: "events",
-			Name:      "last_time_seconds",
-			Help:      "Last time of event since unix epoch in seconds.",
-		})
 	totalEventsNum = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Namespace: "launcher",
@@ -34,19 +26,10 @@ var (
 			Name:      "total",
 			Help:      "The total number of events.",
 		})
-	scrapEventsDuration = prometheus.NewSummary(
-		prometheus.SummaryOpts{
-			Namespace: "launcher",
-			Subsystem: "events",
-			Name:      "scrape_duration_milliseconds",
-			Help:      "Time spent scraping events in milliseconds.",
-		})
 )
 
 func init() {
-	prometheus.MustRegister(lastEventTimestamp)
 	prometheus.MustRegister(totalEventsNum)
-	prometheus.MustRegister(scrapEventsDuration)
 }
 
 // EventSource produces kubernetes events.
@@ -59,12 +42,6 @@ type EventSource struct {
 // GetNewEvents returns the kubernetes events that have been fired since the
 // previous invocation of the function.
 func (source *EventSource) GetNewEvents() []*apiv1.Event {
-	startTime := time.Now()
-	defer func() {
-		lastEventTimestamp.Set(float64(time.Now().Unix()))
-		scrapEventsDuration.Observe(float64(time.Since(startTime)) / float64(time.Millisecond))
-	}()
-
 	// Get all data from the buffer.
 	events := []*apiv1.Event{}
 event_loop:
