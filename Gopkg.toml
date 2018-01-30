@@ -45,6 +45,14 @@
   branch = "master"
   name = "github.com/weaveworks/common"
 
+[[constraint]]
+  name = "k8s.io/client-go"
+  version = "v6.0.0"
+
+[[constraint]]
+  name = "k8s.io/apimachinery"
+  branch = "release-1.9"
+
 [prune]
   go-tests = true
   unused-packages = true

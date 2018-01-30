@@ -10,9 +10,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/getsentry/raven-go"
+	raven "github.com/getsentry/raven-go"
 	"github.com/oklog/run"
 	log "github.com/sirupsen/logrus"
+
+	apiv1 "k8s.io/api/core/v1"
+	kubeclient "k8s.io/client-go/kubernetes"
+
+	"github.com/weaveworks/launcher/pkg/k8s"
 	"github.com/weaveworks/launcher/pkg/kubectl"
 	"github.com/weaveworks/launcher/pkg/text"
 )
@@ -100,6 +105,20 @@ func updateAgents(agentPollURL, wcPollURL string, agentCtx agentContext, cancel 
 	}
 }
 
+func setupEventSource() (*k8s.EventSource, error) {
+	kubeConfig, err := k8s.GetClientConfig(&k8s.ClientConfig{})
+	if err != nil {
+		return nil, fmt.Errorf("client config: %s", err)
+	}
+
+	kubeClient, err := kubeclient.NewForConfig(kubeConfig)
+	if err != nil {
+		log.Fatal("kubernetes client:", err)
+	}
+
+	return k8s.NewEventSource(kubeClient, apiv1.NamespaceAll), nil
+}
+
 func main() {
 	logLevel := flag.String("log.level", "info", "verbosity of log output - one of 'debug', 'info' (default), 'warning', 'error', 'fatal'")
 
@@ -107,6 +126,10 @@ func main() {
 	wcToken := flag.String("wc.token", "", "Weave Cloud instance token")
 	wcPollInterval := flag.Duration("wc.poll-interval", 1*time.Hour, "Polling interval to check WC manifests")
 	wcPollURLTemplate := flag.String("wc.poll-url", defaultWCPollURL, "URL to poll for WC manifests")
+
+	eventsReportInterval := flag.Duration("events.report-interval", 3*time.Second, "Minimal time interval between two reports")
+
+	featureInstall := flag.Bool("feature.install-agents", true, "Whether the agent should install anything in the cluster or not")
 
 	flag.Parse()
 
@@ -131,8 +154,9 @@ func main() {
 	var g run.Group
 
 	// Poll for new manifests every wcPollInterval.
-	{
+	if *featureInstall {
 		cancel := make(chan interface{})
+
 		g.Add(
 			func() error {
 				for {
@@ -163,6 +187,52 @@ func main() {
 				<-term
 				log.Info("received SIGTERM")
 				return nil
+			},
+			func(err error) {
+				close(cancel)
+			},
+		)
+	}
+
+	eventSource, err := setupEventSource()
+	if err != nil {
+		logError("error creating event source", err, agentCtx)
+		os.Exit(1)
+	}
+
+	// Capture Kubernetes events
+	{
+		cancel := make(chan interface{})
+		g.Add(
+			func() error {
+				eventSource.Start(cancel)
+				return nil
+			},
+			func(err error) {
+				close(cancel)
+			},
+		)
+	}
+
+	// Report Kubernetes events
+	{
+		cancel := make(chan interface{})
+		g.Add(
+			func() error {
+				for {
+					select {
+					case <-time.After(*eventsReportInterval):
+						events := eventSource.GetNewEvents()
+						for _, event := range events {
+							log.WithFields(log.Fields{
+								"name": event.InvolvedObject.Name,
+								"kind": event.InvolvedObject.Kind,
+							}).Debug(event.Message)
+						}
+					case <-cancel:
+						return nil
+					}
+				}
 			},
 			func(err error) {
 				close(cancel)
