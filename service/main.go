@@ -15,10 +15,16 @@ import (
 
 const s3Bucket = "https://weaveworks-launcher.s3.amazonaws.com"
 
+type templateData struct {
+	Scheme   string
+	Hostname string
+}
+
 func main() {
 	var (
 		bootstrapVersion = flag.String("bootstrap-version", "", "Bootstrap version used for S3 binaries (short commit hash)")
 		hostname         = flag.String("hostname", "get.weave.works", "Hostname for external launcher service")
+		scheme           = flag.String("scheme", "https", "URL scheme for external launcher service")
 		serverCfg        = server.Config{
 			MetricsNamespace:        "launcher",
 			RegisterInstrumentation: true,
@@ -32,11 +38,15 @@ func main() {
 	}
 
 	// Load install.sh and agent.yaml into memory
-	installScriptData, err := loadData("./static/install.sh", *hostname)
+	data := &templateData{
+		Scheme:   *scheme,
+		Hostname: *hostname,
+	}
+	installScriptData, err := loadData("./static/install.sh", data)
 	if err != nil {
 		log.Fatal("error reading static/install.sh file:", err)
 	}
-	agentYAMLData, err := loadData("./static/agent.yaml", *hostname)
+	agentYAMLData, err := loadData("./static/agent.yaml", data)
 	if err != nil {
 		log.Fatal("error reading static/agent.yaml file:", err)
 	}
@@ -59,12 +69,12 @@ func main() {
 	server.Run()
 }
 
-func loadData(filename, hostname string) ([]byte, error) {
+func loadData(filename string, ctx *templateData) ([]byte, error) {
 	tmplData, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return []byte{}, err
 	}
-	data, err := text.ResolveString(string(tmplData), struct{ Hostname string }{hostname})
+	data, err := text.ResolveString(string(tmplData), ctx)
 	if err != nil {
 		return []byte{}, err
 	}

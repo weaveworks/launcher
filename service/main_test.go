@@ -123,8 +123,12 @@ func TestAgentYAMLHandler(t *testing.T) {
 }
 
 func TestLoadData(t *testing.T) {
+	ctx := &templateData{
+		Scheme:   "https",
+		Hostname: "hostname.test",
+	}
 	// install.sh
-	installScriptData, err := loadData("./static/install.sh", "hostname.test")
+	installScriptData, err := loadData("./static/install.sh", ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +142,7 @@ func TestLoadData(t *testing.T) {
 	}
 
 	// agent.yaml
-	agentYAMLData, err := loadData("./static/agent.yaml.in", "hostname.test")
+	agentYAMLData, err := loadData("./static/agent.yaml.in", ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
