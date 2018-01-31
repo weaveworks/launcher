@@ -106,6 +106,9 @@ jobs:
       - run:
           name: Wait for launcher/service to be fully reachable
           command: until curl $(minikube service service --url); do sleep 1; done
+      - run:
+          name: Install Weave Cloud on the minikube cluster
+          command: curl -L $(minikube service service --url) | sh -s -- --token=${WEAVE_CLOUD_TOKEN}
 
 workflows:
   version: 2
