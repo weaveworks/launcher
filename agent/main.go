@@ -58,7 +58,7 @@ func logError(msg string, err error, ctx agentContext) {
 func updateAgents(agentPollURL, wcPollURL string, agentCtx agentContext, cancel <-chan interface{}) {
 	// Self-update
 	log.Info("Updating self from ", agentPollURL)
-	output, err := kubectl.ExecuteCommand([]string{"apply", "-f", agentPollURL})
+	output, err := kubectl.Execute("apply", "-f", agentPollURL)
 	if err != nil {
 		logError("Failed to execute kubectl apply", err, agentCtx)
 		return
@@ -80,12 +80,7 @@ func updateAgents(agentPollURL, wcPollURL string, agentCtx agentContext, cancel 
 		}
 
 		logError("Deployment of the new agent failed. Rolling back...", errors.New("Deployment failed"), agentCtx)
-		_, err := kubectl.ExecuteCommand([]string{
-			"rollout",
-			"undo",
-			"--namespace=weave",
-			"deployment/weave-agent",
-		})
+		_, err := kubectl.Execute("rollout", "undo", "--namespace=weave", "deployment/weave-agent")
 		if err != nil {
 			logError("Failed rolling back agent. Will continue to check for updates.", err, agentCtx)
 			return
@@ -98,7 +93,7 @@ func updateAgents(agentPollURL, wcPollURL string, agentCtx agentContext, cancel 
 
 	// Update Weave Cloud agents
 	log.Info("Updating WC from ", wcPollURL)
-	_, err = kubectl.ExecuteCommand([]string{"apply", "-f", wcPollURL})
+	_, err = kubectl.Execute("apply", "-f", wcPollURL)
 	if err != nil {
 		logError("Failed to execute kubectl apply", err, agentCtx)
 		return
