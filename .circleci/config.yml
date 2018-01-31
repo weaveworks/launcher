@@ -98,7 +98,7 @@ jobs:
       - run:
           name: Start launcher/service on minikube
           command: |
-            sed -e "s#@@IMAGE@@#quay.io/weaveworks/build-tmp:launcher-service-$(docker/image-tag)#g" -e "s#@@HOSTNAME@@#$(minikube ip)#g" ./integration-tests/k8s/service.yaml.in > ./integration-tests/k8s/service.yaml
+            sed -e "s#@@IMAGE@@#quay.io/weaveworks/build-tmp:launcher-service-$(docker/image-tag)#g" -e "s#@@HOSTNAME@@#$(minikube ip):30080#g" ./integration-tests/k8s/service.yaml.in > ./integration-tests/k8s/service.yaml
             kubectl apply -f ./integration-tests/k8s/service.yaml
       - run:
           name: Wait for launcher/service pod to become ready
