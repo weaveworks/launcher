@@ -50,7 +50,7 @@ func main() {
 
 	fmt.Printf("\nThis will install Weave Cloud on the following cluster:\n")
 	fmt.Printf("    Name: %s\n    Server: %s\n\n", cluster.Name, cluster.ServerAddress)
-	fmt.Printf("Please run 'kubectl config use-context' or pass '--kubeconf' if you would like to change this.\n\n")
+	fmt.Printf("Please run 'kubectl config use-context' or pass '--kubeconfig' if you would like to change this.\n\n")
 
 	confirmed, err := askForConfirmation("Would you like to continue?", opts.AssumeYes)
 	if err != nil {
