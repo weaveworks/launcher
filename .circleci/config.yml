@@ -81,26 +81,28 @@ jobs:
       - run:
           name: Start minikube
           command: sudo minikube start --vm-driver=none
+      - run: sudo chown -R $USER.$USER ~/.minikube
+      - run: sudo chown -R $USER.$USER ~/.kube
       - run:
           name: Set context for kubectl
-          command: sudo minikube update-context
+          command: minikube update-context
       - run:
           name: Wait for nodes to become ready
-          command: JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until sudo kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1; done
+          command: JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1; done
       - run:
           name: Get cluster information
-          command: sudo kubectl cluster-info
+          command: kubectl cluster-info
       - run:
           name: Create docker-registry quay.io secret
-          command: sudo kubectl create secret docker-registry regsecret --docker-server=quay.io --docker-username=$DOCKER_REGISTRY_USER  --docker-password=$DOCKER_REGISTRY_PASSWORD --docker-email=$(DOCKER_REGISTRY_USER)@weave.works
+          command: kubectl create secret docker-registry regsecret --docker-server=quay.io --docker-username=$DOCKER_REGISTRY_USER  --docker-password=$DOCKER_REGISTRY_PASSWORD --docker-email=$(DOCKER_REGISTRY_USER)@weave.works
       - run:
           name: Start launcher/service on minikube
           command: |
-            sed -e "s#@@IMAGE_TAG@@#launcher-service-$(docker/image-tag)#g" -e "s#@@HOSTNAME@@#$(sudo minikube ip)#g" ./integration-tests/k8s/service.yaml.in > ./integration-tests/k8s/service.yaml
-            sudo kubectl apply -f ./integration-tests/k8s/service.yaml
+            sed -e "s#@@IMAGE_TAG@@#launcher-service-$(docker/image-tag)#g" -e "s#@@HOSTNAME@@#$(minikube ip)#g" ./integration-tests/k8s/service.yaml.in > ./integration-tests/k8s/service.yaml
+            kubectl apply -f ./integration-tests/k8s/service.yaml
       - run:
           name: Wait for launcher/service pod to become ready
-          command: JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until sudo kubectl get pods -l name=service -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1; done
+          command: JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl get pods -l name=service -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1; done
       - run:
           name: Install bats
           command: git clone https://github.com/sstephenson/bats.git && cd bats && sudo ./install.sh /usr/local
@@ -109,7 +111,7 @@ jobs:
           command: bats --tap ./integration-tests/basic.bats
       - run:
           name: Curl endpoint
-          command: curl $(sudo minikube service service --url)
+          command: curl $(minikube service service --url)
 
 workflows:
   version: 2
