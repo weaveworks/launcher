@@ -104,12 +104,6 @@ jobs:
           name: Wait for launcher/service pod to become ready
           command: JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl get pods -l name=service -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1; done
       - run:
-          name: Install bats
-          command: git clone https://github.com/sstephenson/bats.git && cd bats && sudo ./install.sh /usr/local
-      - run:
-          name: Run integration tests
-          command: bats --tap ./integration-tests/basic.bats
-      - run:
           name: Curl endpoint
           command: curl $(minikube service service --url)
 
