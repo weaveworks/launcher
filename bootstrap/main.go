@@ -14,11 +14,12 @@ import (
 )
 
 const (
-	agentK8sURLTemplate = "https://{{.Hostname}}/k8s/agent.yaml"
+	agentK8sURLTemplate = "{{.Scheme}}://{{.Hostname}}/k8s/agent.yaml"
 )
 
 type options struct {
 	AssumeYes bool   `short:"y" long:"assume-yes" description:"Install without user confirmation"`
+	Scheme    string `long:"scheme" description:"Weave Cloud scheme" default:"https"`
 	Hostname  string `long:"hostname" description:"Weave Cloud hostname" default:"get.weave.works"`
 	Token     string `long:"token" description:"Weave Cloud token" required:"true"`
 }
