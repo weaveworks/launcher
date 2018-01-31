@@ -27,7 +27,7 @@ spec:
       - name: service
         image:  quay.io/weaveworks/build-tmp:@@IMAGE_TAG@@
         args:
-        - -hostname=@@HOSTANME@@
+        - -hostname=@@HOSTNAME@@
         ports:
         - containerPort: 80
       imagePullSecrets:
