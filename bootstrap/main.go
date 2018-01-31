@@ -17,12 +17,15 @@ const (
 	agentK8sURLTemplate = "https://{{.Hostname}}/k8s/agent.yaml"
 )
 
+type options struct {
+	AssumeYes bool   `short:"y" long:"assume-yes" description:"Install without user confirmation"`
+	Hostname  string `long:"hostname" description:"Weave Cloud hostname" default:"get.weave.works"`
+	Token     string `long:"token" description:"Weave Cloud token" required:"true"`
+}
+
 func main() {
+	opts := options{}
 	// Parse arguments with go-flags so we can forward unknown arguments to kubectl
-	var opts struct {
-		Hostname string `long:"hostname" description:"Weave Cloud hostname" default:"get.weave.works"`
-		Token    string `long:"token" description:"Weave Cloud token" required:"true"`
-	}
 	parser := flags.NewParser(&opts, flags.IgnoreUnknown)
 	otherArgs, err := parser.Parse()
 	if err != nil {
@@ -49,7 +52,7 @@ func main() {
 	fmt.Printf("    Name: %s\n    Server: %s\n\n", cluster.Name, cluster.ServerAddress)
 	fmt.Printf("Please run 'kubectl config use-context' or pass '--kubeconf' if you would like to change this.\n\n")
 
-	confirmed, err := askForConfirmation("Would you like to continue?")
+	confirmed, err := askForConfirmation("Would you like to continue?", opts.AssumeYes)
 	if err != nil {
 		die("There was an error: %s\n", err)
 	}
@@ -59,7 +62,7 @@ func main() {
 	}
 
 	fmt.Println("Storing the instance token in the weave-cloud secret...")
-	secretCreated, err := createWCSecret(opts.Token, otherArgs)
+	secretCreated, err := createWCSecret(opts, otherArgs)
 	if err != nil {
 		die("There was an error creating the secret: %s\n", err)
 	}
@@ -80,14 +83,14 @@ func die(msg string, args ...interface{}) {
 	os.Exit(1)
 }
 
-func createWCSecret(token string, otherArgs []string) (bool, error) {
+func createWCSecret(opts options, otherArgs []string) (bool, error) {
 	secretExists, err := kubectl.ResourceExists("secret", "weave-cloud", "weave", otherArgs)
 	if err != nil {
 		return false, err
 	}
 
 	if secretExists {
-		confirmed, err := askForConfirmation("A weave-cloud secret already exists. Would you like to continue and replace the secret?")
+		confirmed, err := askForConfirmation("A weave-cloud secret already exists. Would you like to continue and replace the secret?", opts.AssumeYes)
 		if err != nil {
 			return false, err
 		}
@@ -120,7 +123,7 @@ func createWCSecret(token string, otherArgs []string) (bool, error) {
 			"secret",
 			"generic",
 			"weave-cloud",
-			fmt.Sprintf("--from-literal=token=%s", token),
+			fmt.Sprintf("--from-literal=token=%s", opts.Token),
 			"--namespace=weave",
 		}, otherArgs...),
 	)
@@ -130,7 +133,11 @@ func createWCSecret(token string, otherArgs []string) (bool, error) {
 	return true, nil
 }
 
-func askForConfirmation(s string) (bool, error) {
+func askForConfirmation(s string, assumeYes bool) (bool, error) {
+	if assumeYes {
+		return true, nil
+	}
+
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Printf("%s [y/n]: ", s)
