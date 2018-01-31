@@ -110,14 +110,8 @@ func createWCSecret(opts options, otherArgs []string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	_, err = kubectl.ExecuteWithGlobalArgs(otherArgs,
-		"create",
-		"secret",
-		"generic",
-		"weave-cloud",
-		fmt.Sprintf("--from-literal=token=%s", opts.Token),
-		"--namespace=weave",
-	)
+
+	_, err = kubectl.CreateSecretFromLiteral("weave", "weave-cloud", "token", opts.Token, otherArgs)
 	if err != nil {
 		return false, err
 	}

@@ -79,6 +79,18 @@ func CreateNamespace(namespace string, otherArgs []string) (bool, error) {
 	return true, nil
 }
 
+// CreateSecretFromLiteral creates a new secret with a single (key,value) pair.
+func CreateSecretFromLiteral(namespace, secretName, key, value string, otherArgs []string) (string, error) {
+	return ExecuteWithGlobalArgs(otherArgs,
+		fmt.Sprintf("--namespace=%s", namespace),
+		"create",
+		"secret",
+		"generic",
+		secretName,
+		fmt.Sprintf("--from-literal=%s=%s", key, value),
+	)
+}
+
 // ResourceExists return true if the resource exists
 func ResourceExists(resourceType, resourceName, namespace string, otherArgs []string) (bool, error) {
 	_, err := ExecuteWithGlobalArgs(otherArgs, "get", resourceType, resourceName, fmt.Sprintf("--namespace=%s", namespace))
