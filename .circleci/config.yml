@@ -104,8 +104,8 @@ jobs:
           name: Wait for launcher/service pod to become ready
           command: JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl get pods -l name=service -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1; done
       - run:
-          name: Curl endpoint
-          command: curl $(minikube service service --url)
+          name: Wait for launcher/service to be fully reachable
+          command: until curl $(minikube service service --url); do sleep 1; done
 
 workflows:
   version: 2
