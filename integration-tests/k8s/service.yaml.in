@@ -25,7 +25,7 @@ spec:
       - name: quay-secret
       containers:
       - name: service
-        image:  quay.io/weaveworks/build-tmp:@@IMAGE_TAG@@
+        image:  @@IMAGE@@
         args:
         - -hostname=@@HOSTNAME@@
         ports:
