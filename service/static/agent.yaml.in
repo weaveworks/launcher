@@ -6,6 +6,38 @@ items:
     kind: Namespace
     metadata:
       name: weave
+  - apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: weave-agent
+      namespace: weave
+  - apiVersion: rbac.authorization.k8s.io/v1beta1
+    kind: ClusterRole
+    metadata:
+      name: weave-agent
+    rules:
+      - apiGroups:
+          - '*'
+        resources:
+          - '*'
+        verbs:
+          - '*'
+      - nonResourceURLs:
+          - '*'
+        verbs:
+          - '*'
+  - apiVersion: rbac.authorization.k8s.io/v1beta1
+    kind: ClusterRoleBinding
+    metadata:
+      name: weave-agent
+    roleRef:
+      kind: ClusterRole
+      name: weave-agent
+      apiGroup: rbac.authorization.k8s.io
+    subjects:
+      - kind: ServiceAccount
+        name: weave-agent
+        namespace: weave
   - apiVersion: extensions/v1beta1
     kind: Deployment
     metadata:
@@ -27,6 +59,7 @@ items:
           labels:
             name: weave-agent
         spec:
+          serviceAccountName: weave-agent
           containers:
             - name: agent
               image: quay.io/weaveworks/launcher-agent:@@IMAGE_TAG@@
