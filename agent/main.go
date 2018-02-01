@@ -116,7 +116,16 @@ func setupKubeClient() (*kubeclient.Clientset, error) {
 	return kubeclient.NewForConfig(kubeConfig)
 }
 
+func handleAnyPanic() {
+	if e := recover(); e != nil {
+		raven.CaptureErrorAndWait(fmt.Errorf("%s", e), nil)
+		panic(e)
+	}
+}
+
 func main() {
+	defer handleAnyPanic()
+
 	logLevel := flag.String("log.level", "info", "verbosity of log output - one of 'debug', 'info' (default), 'warning', 'error', 'fatal'")
 
 	agentPollURL := flag.String("agent.poll-url", defaultAgentPollURL, "URL to poll for the agent manifest")
