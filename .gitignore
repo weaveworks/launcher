@@ -4,3 +4,4 @@
 
 /docker/Dockerfile.service
 /service/static/agent.yaml
+./integration-tests/k8s/service.yaml
