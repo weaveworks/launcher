@@ -138,19 +138,24 @@ func main() {
 		log.Fatal("missing Weave Cloud instance token, provide one with -wc.token")
 	}
 
+	kubeClient, err := setupKubeClient()
+	if err != nil {
+		log.Fatal("kubernetes client:", err)
+	}
+
+	version, err := kubeClient.Discovery().ServerVersion()
+	if err != nil {
+		log.Fatal("get server version:", err)
+	}
+
 	agentCtx := agentContext{
-		KubernetesVersion: "1.8", // TODO: ask the API server
+		KubernetesVersion: fmt.Sprintf("%s.%s", version.Major, version.Minor),
 		Token:             *wcToken,
 	}
 
 	wcPollURL, err := text.ResolveString(*wcPollURLTemplate, agentCtx)
 	if err != nil {
 		log.Fatal("invalid URL template:", err)
-	}
-
-	kubeClient, err := setupKubeClient()
-	if err != nil {
-		log.Fatal("kubernetes client:", err)
 	}
 
 	var g run.Group
