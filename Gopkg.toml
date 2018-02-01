@@ -53,6 +53,22 @@
   name = "k8s.io/apimachinery"
   branch = "release-1.9"
 
+[[constraint]]
+name = "k8s.io/kubernetes"
+branch = "release-1.9"
+
+[[override]]
+  name = "k8s.io/api"
+  branch = "release-1.9"
+
+[[override]]
+  name = "k8s.io/apiserver"
+  branch = "release-1.9"
+
+[[override]]
+  name = "k8s.io/apiextensions-apiserver"
+  branch = "release-1.9"
+
 [prune]
   go-tests = true
   unused-packages = true
@@ -60,3 +76,9 @@
 [[constraint]]
   branch = "master"
   name = "github.com/getsentry/raven-go"
+
+# To use reference package:
+#   vendor/k8s.io/kubernetes/pkg/util/parsers/parsers.go:36:16: undefined: reference.ParseNormalizedNamed
+[[override]]
+  name = "github.com/docker/distribution"
+  branch = "master"

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -55,23 +54,32 @@ func logError(msg string, err error, ctx agentContext) {
 	raven.CaptureErrorAndWait(err, ravenTags)
 }
 
-func updateAgents(agentPollURL, wcPollURL string, agentCtx agentContext, cancel <-chan interface{}) {
+func updateAgents(agentPollURL, wcPollURL string, agentCtx agentContext, kubeClient *kubeclient.Clientset, cancel <-chan interface{}) {
 	// Self-update
 	log.Info("Updating self from ", agentPollURL)
-	output, err := kubectl.Execute("apply", "-f", agentPollURL)
+
+	initialRevision, err := k8s.GetDeploymentReplicaSetRevision(kubeClient, "weave", "weave-agent")
+	if err != nil {
+		logError("Failed to fetch latest deployment replicateset revision", err, agentCtx)
+		return
+	}
+	_, err = kubectl.Execute("apply", "-f", agentPollURL)
 	if err != nil {
 		logError("Failed to execute kubectl apply", err, agentCtx)
 		return
 	}
+	updatedRevision, err := k8s.GetDeploymentReplicaSetRevision(kubeClient, "weave", "weave-agent")
+	if err != nil {
+		logError("Failed to fetch latest deployment replicateset revision", err, agentCtx)
+		return
+	}
 
-	// If the agent is updating, we will be killed via SIGTERM.
-	// Because of the rollingUpdate strategy, we are only killed when the new
-	// agent is ready.
-	// If we are not killed after 5 minutes, assume the new agent did not become
-	// ready so recover by rolling back.
-	// TODO: Issue #27 - use event listening instead of kubectl stdout
-	if strings.Contains(output, "deployment \"weave-agent\" configured") {
-		log.Info("Agent self updated. Waiting 5 minutes in case of rollback.")
+	// If the agent replica set is updating, we will be killed via SIGTERM.
+	// The agent uses a RollingUpdate strategy, so we are only killed when the
+	// new agent is ready. If we are not killed after 5 minutes we assume that
+	// the new agent did not become ready and so we recover by rolling back.
+	if updatedRevision > initialRevision {
+		log.Info("The agent replica set updated. Rollback if we are not killed within 5 minutes...")
 
 		select {
 		case <-time.After(5 * time.Minute):
@@ -79,7 +87,7 @@ func updateAgents(agentPollURL, wcPollURL string, agentCtx agentContext, cancel 
 			return
 		}
 
-		logError("Deployment of the new agent failed. Rolling back...", errors.New("Deployment failed"), agentCtx)
+		logError("Deployment of the new agent failed. Rolling back.", errors.New("Deployment failed"), agentCtx)
 		_, err := kubectl.Execute("rollout", "undo", "--namespace=weave", "deployment/weave-agent")
 		if err != nil {
 			logError("Failed rolling back agent. Will continue to check for updates.", err, agentCtx)
@@ -100,18 +108,12 @@ func updateAgents(agentPollURL, wcPollURL string, agentCtx agentContext, cancel 
 	}
 }
 
-func setupEventSource() (*k8s.EventSource, error) {
+func setupKubeClient() (*kubeclient.Clientset, error) {
 	kubeConfig, err := k8s.GetClientConfig(&k8s.ClientConfig{})
 	if err != nil {
 		return nil, fmt.Errorf("client config: %s", err)
 	}
-
-	kubeClient, err := kubeclient.NewForConfig(kubeConfig)
-	if err != nil {
-		log.Fatal("kubernetes client:", err)
-	}
-
-	return k8s.NewEventSource(kubeClient, apiv1.NamespaceAll), nil
+	return kubeclient.NewForConfig(kubeConfig)
 }
 
 func main() {
@@ -146,6 +148,11 @@ func main() {
 		log.Fatal("invalid URL template:", err)
 	}
 
+	kubeClient, err := setupKubeClient()
+	if err != nil {
+		log.Fatal("kubernetes client:", err)
+	}
+
 	var g run.Group
 
 	// Poll for new manifests every wcPollInterval.
@@ -156,7 +163,7 @@ func main() {
 			func() error {
 				for {
 
-					updateAgents(*agentPollURL, wcPollURL, agentCtx, cancel)
+					updateAgents(*agentPollURL, wcPollURL, agentCtx, kubeClient, cancel)
 
 					select {
 					case <-time.After(*wcPollInterval):
@@ -189,11 +196,7 @@ func main() {
 		)
 	}
 
-	eventSource, err := setupEventSource()
-	if err != nil {
-		logError("error creating event source", err, agentCtx)
-		os.Exit(1)
-	}
+	eventSource := k8s.NewEventSource(kubeClient, apiv1.NamespaceAll)
 
 	// Capture Kubernetes events
 	{
