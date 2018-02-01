@@ -26,10 +26,10 @@ spec:
       - name: quay-secret
       containers:
       - name: service
-        image:  @@IMAGE@@
+        image: {{.Service.Image}}
         args:
-        - -scheme=http
-        - -hostname=@@HOSTNAME@@
+        - -scheme={{.Service.Scheme}}
+        - -hostname={{.Service.Hostname}}
         ports:
         - containerPort: 80
       imagePullSecrets:
