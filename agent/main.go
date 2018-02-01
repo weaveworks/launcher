@@ -58,21 +58,23 @@ func updateAgents(agentPollURL, wcPollURL string, agentCtx agentContext, kubeCli
 	// Self-update
 	log.Info("Updating self from ", agentPollURL)
 
-	initialRevision, err := k8s.GetDeploymentReplicaSetRevision(kubeClient, "weave", "weave-agent")
+	initialRevision, err := k8s.GetLatestDeploymentReplicaSetRevision(kubeClient, "weave", "weave-agent")
 	if err != nil {
 		logError("Failed to fetch latest deployment replicateset revision", err, agentCtx)
 		return
 	}
+	log.Info("Revision before self-update: ", initialRevision)
 	_, err = kubectl.Execute("apply", "-f", agentPollURL)
 	if err != nil {
 		logError("Failed to execute kubectl apply", err, agentCtx)
 		return
 	}
-	updatedRevision, err := k8s.GetDeploymentReplicaSetRevision(kubeClient, "weave", "weave-agent")
+	updatedRevision, err := k8s.GetLatestDeploymentReplicaSetRevision(kubeClient, "weave", "weave-agent")
 	if err != nil {
 		logError("Failed to fetch latest deployment replicateset revision", err, agentCtx)
 		return
 	}
+	log.Info("Revision after self-update: ", updatedRevision)
 
 	// If the agent replica set is updating, we will be killed via SIGTERM.
 	// The agent uses a RollingUpdate strategy, so we are only killed when the
