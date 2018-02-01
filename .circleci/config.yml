@@ -97,7 +97,13 @@ jobs:
           command: kubectl create secret docker-registry regsecret --docker-server=quay.io --docker-username=$DOCKER_REGISTRY_USER  --docker-password=$DOCKER_REGISTRY_PASSWORD --docker-email=$(DOCKER_REGISTRY_USER)@weave.works
       - run:
           name: Execute integration tests
-          command: SERVICE_IMAGE=quay.io/weaveworks/build-tmp:launcher-service-$(docker/image-tag) ./integration-tests/run.sh
+          command: |
+            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
+              export SERVICE_IMAGE="quay.io/weaveworks/launcher-agent:$(docker/image-tag)"
+            else
+              export SERVICE_IMAGE=quay.io/weaveworks/build-tmp:launcher-service-$(docker/image-tag)
+            fi
+            ./integration-tests/run.sh
 
 workflows:
   version: 2
