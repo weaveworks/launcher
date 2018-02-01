@@ -3,12 +3,12 @@
 [![Circle CI](https://circleci.com/gh/weaveworks/launcher/tree/master.svg?style=shield)](https://circleci.com/gh/weaveworks/launcher/tree/master)
 
 <h3 align="center">
-  <code>curl -sL https://get.weave.works | sh -s -- --token=XXXXXX</code>
+  <code>curl -Ls https://get.weave.works | sh -s -- --token=XXXXXX</code>
 </h3>
 
 ## Overview
 
-- `curl -sL https://get.weave.works | sh -s -- --token=XXXXXX` (on the host)
+- `curl -Ls https://get.weave.works | sh -s -- --token=XXXXXX` (on the host)
   - https://get.weave.works serves [install.sh](service/static/install.sh)
   - Downloads and executes the bootstrap binary
 - [Bootstrap](bootstrap) binary (on the host)
