@@ -22,7 +22,7 @@ type templateData struct {
 
 func main() {
 	var (
-		bootstrapVersion = flag.String("bootstrap-version", "", "Bootstrap version used for S3 binaries (short commit hash)")
+		bootstrapVersion = flag.String("bootstrap-version", "", "Bootstrap version used for S3 binaries (commit hash)")
 		hostname         = flag.String("hostname", "get.weave.works", "Hostname for external launcher service")
 		scheme           = flag.String("scheme", "https", "URL scheme for external launcher service")
 		serverCfg        = server.Config{
