@@ -20,3 +20,7 @@ func TestFormatCmdOutput(t *testing.T) {
 		}
 	}
 }
+
+func ExampleExecute() {
+	Execute("apply", "-f", "service.yaml")
+}

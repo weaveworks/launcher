@@ -72,7 +72,7 @@ func main() {
 	}
 
 	fmt.Println("Applying the agent...")
-	_, err = kubectl.ExecuteCommand(append([]string{"apply", "-f", agentK8sURL}, otherArgs...))
+	_, err = kubectl.ExecuteWithGlobalArgs(otherArgs, "apply", "-f", agentK8sURL)
 	if err != nil {
 		die("There was an error applying the agent: %s\n", err)
 	}
@@ -99,14 +99,7 @@ func createWCSecret(opts options, otherArgs []string) (bool, error) {
 		}
 
 		// Delete the secret
-		_, err = kubectl.ExecuteCommand(
-			append([]string{
-				"delete",
-				"secret",
-				"weave-cloud",
-				"--namespace=weave",
-			}, otherArgs...),
-		)
+		_, err = kubectl.ExecuteWithGlobalArgs(otherArgs, "delete", "secret", "weave-cloud", "--namespace=weave")
 		if err != nil {
 			return false, err
 		}
@@ -117,16 +110,8 @@ func createWCSecret(opts options, otherArgs []string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	_, err = kubectl.ExecuteCommand(
-		append([]string{
-			"create",
-			"secret",
-			"generic",
-			"weave-cloud",
-			fmt.Sprintf("--from-literal=token=%s", opts.Token),
-			"--namespace=weave",
-		}, otherArgs...),
-	)
+
+	_, err = kubectl.CreateSecretFromLiteral("weave", "weave-cloud", "token", opts.Token, otherArgs)
 	if err != nil {
 		return false, err
 	}
