@@ -71,5 +71,5 @@ items:
                       name: weave-cloud
                       key: token
               args:
-              - -agent.poll-url=https://{{.Hostname}}/k8s/agent.yaml
+              - -agent.poll-url={{.Scheme}}://{{.Hostname}}/k8s/agent.yaml
               - -wc.token=$(WEAVE_CLOUD_TOKEN)

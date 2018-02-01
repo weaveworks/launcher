@@ -21,12 +21,10 @@ jobs:
       - run: go test ./bootstrap
       - run: make bootstrap
       - deploy:
-          name: Maybe push binaries to S3
+          name: Push binaries to S3
           command: |
-            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
-              sudo apt-get -y -qq install awscli
-              aws s3 cp build/bootstrap/ s3://weaveworks-launcher/bootstrap/${CIRCLE_SHA1}/ --recursive
-            fi
+            sudo apt-get -y -qq install awscli
+            aws s3 cp build/bootstrap/ s3://weaveworks-launcher/bootstrap/${CIRCLE_SHA1}/ --recursive
 
   service:
     <<: *defaults
@@ -37,12 +35,15 @@ jobs:
       - run: go test ./service
       - run: make service
       - deploy:
-          name: Maybe push master image
+          name: Push image
           command: |
+            docker login -u "$DOCKER_REGISTRY_USER" -p "$DOCKER_REGISTRY_PASSWORD" quay.io
             if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
-              docker login -u "$DOCKER_REGISTRY_USER" -p "$DOCKER_REGISTRY_PASSWORD" quay.io
               docker push "quay.io/weaveworks/launcher-service:$(docker/image-tag)"
               docker push "quay.io/weaveworks/launcher-service"
+            else
+              docker tag "quay.io/weaveworks/launcher-service:$(docker/image-tag)" "quay.io/weaveworks/build-tmp:launcher-service-$(docker/image-tag)"
+              docker push "quay.io/weaveworks/build-tmp:launcher-service-$(docker/image-tag)"
             fi
 
   agent:
@@ -54,13 +55,49 @@ jobs:
       - run: go test ./agent
       - run: make agent
       - deploy:
-          name: Maybe push master image
+          name: Push image
           command: |
+            docker login -u "$DOCKER_REGISTRY_USER" -p "$DOCKER_REGISTRY_PASSWORD" quay.io
             if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
-              docker login -u "$DOCKER_REGISTRY_USER" -p "$DOCKER_REGISTRY_PASSWORD" quay.io
               docker push "quay.io/weaveworks/launcher-agent:$(docker/image-tag)"
               docker push "quay.io/weaveworks/launcher-agent"
+            else
+              docker tag "quay.io/weaveworks/launcher-agent:$(docker/image-tag)" "quay.io/weaveworks/build-tmp:launcher-agent-$(docker/image-tag)"
+              docker push "quay.io/weaveworks/build-tmp:launcher-agent-$(docker/image-tag)"
             fi
+
+  integration:
+    machine: true
+    environment:
+      CHANGE_MINIKUBE_NONE_USER: true
+    steps:
+      - checkout
+      - run:
+          name: Install kubectl
+          command: curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.8.4/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+      - run:
+          name: Install minikube
+          command: curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+      - run:
+          name: Start minikube
+          command: sudo minikube start --vm-driver=none
+      - run: sudo chown -R $USER.$USER ~/.minikube
+      - run: sudo chown -R $USER.$USER ~/.kube
+      - run:
+          name: Set context for kubectl
+          command: minikube update-context
+      - run:
+          name: Wait for nodes to become ready
+          command: JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1; done
+      - run:
+          name: Get cluster information
+          command: kubectl cluster-info
+      - run:
+          name: Create docker-registry quay.io secret
+          command: kubectl create secret docker-registry regsecret --docker-server=quay.io --docker-username=$DOCKER_REGISTRY_USER  --docker-password=$DOCKER_REGISTRY_PASSWORD --docker-email=$(DOCKER_REGISTRY_USER)@weave.works
+      - run:
+          name: Execute integration tests
+          command: SERVICE_IMAGE=quay.io/weaveworks/build-tmp:launcher-service-$(docker/image-tag) ./integration-tests/run.sh
 
 workflows:
   version: 2
@@ -70,3 +107,8 @@ workflows:
       - agent
       - bootstrap
       - service
+      - integration:
+          requires:
+            - agent
+            - bootstrap
+            - service
