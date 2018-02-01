@@ -99,7 +99,7 @@ jobs:
           name: Execute integration tests
           command: |
             if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
-              export SERVICE_IMAGE="quay.io/weaveworks/launcher-agent:$(docker/image-tag)"
+              export SERVICE_IMAGE="quay.io/weaveworks/launcher-service:$(docker/image-tag)"
             else
               export SERVICE_IMAGE=quay.io/weaveworks/build-tmp:launcher-service-$(docker/image-tag)
             fi
