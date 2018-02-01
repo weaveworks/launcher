@@ -96,19 +96,8 @@ jobs:
           name: Create docker-registry quay.io secret
           command: kubectl create secret docker-registry regsecret --docker-server=quay.io --docker-username=$DOCKER_REGISTRY_USER  --docker-password=$DOCKER_REGISTRY_PASSWORD --docker-email=$(DOCKER_REGISTRY_USER)@weave.works
       - run:
-          name: Start launcher/service on minikube
-          command: |
-            sed -e "s#@@IMAGE@@#quay.io/weaveworks/build-tmp:launcher-service-$(docker/image-tag)#g" -e "s#@@HOSTNAME@@#$(minikube ip):30080#g" ./integration-tests/k8s/service.yaml.in > ./integration-tests/k8s/service.yaml
-            kubectl apply -f ./integration-tests/k8s/service.yaml
-      - run:
-          name: Wait for launcher/service pod to become ready
-          command: JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl get pods -l name=service -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1; done
-      - run:
-          name: Wait for launcher/service to be fully reachable
-          command: until curl $(minikube service service --url); do sleep 1; done
-      - run:
-          name: Install Weave Cloud on the minikube cluster
-          command: curl -L $(minikube service service --url) | sh -s -- --token=${WEAVE_CLOUD_TOKEN}
+          name: Execute integration tests
+          command: SERVICE_IMAGE=quay.io/weaveworks/build-tmp:launcher-service-$(docker/image-tag) ./integration-tests/run.sh
 
 workflows:
   version: 2
