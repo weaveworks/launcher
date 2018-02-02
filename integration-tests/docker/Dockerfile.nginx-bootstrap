@@ -1,0 +1,5 @@
+FROM nginx
+EXPOSE 80
+ARG version
+RUN mkdir -p /usr/share/nginx/html/bootstrap/${version}
+COPY ./bootstrap/* /usr/share/nginx/html/bootstrap/${version}/

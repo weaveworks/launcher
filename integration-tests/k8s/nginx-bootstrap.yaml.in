@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-bootstrap
+spec:
+  type: NodePort
+  ports:
+    - port: 80
+      nodePort: 30081
+  selector:
+    name: nginx-bootstrap
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: nginx-bootstrap
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  template:
+    metadata:
+      labels:
+        name: nginx-bootstrap
+    spec:
+      containers:
+      - name: nginx-bootstrap
+        image: {{.Bootstrap.Image}}
+        ports:
+        - containerPort: 80
