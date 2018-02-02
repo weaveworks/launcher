@@ -20,16 +20,18 @@ type templateData struct {
 	Hostname string
 }
 
+var (
+	bootstrapVersion = flag.String("bootstrap-version", "", "Bootstrap version used for S3 binaries (commit hash)")
+	hostname         = flag.String("hostname", "get.weave.works", "Hostname for external launcher service")
+	scheme           = flag.String("scheme", "https", "URL scheme for external launcher service")
+	bootstrapBaseURL = flag.String("bootstrap.base-url", s3Bucket, "Base URL the bootstrap binary should be fetched from")
+	serverCfg        = server.Config{
+		MetricsNamespace:        "service",
+		RegisterInstrumentation: true,
+	}
+)
+
 func main() {
-	var (
-		bootstrapVersion = flag.String("bootstrap-version", "", "Bootstrap version used for S3 binaries (commit hash)")
-		hostname         = flag.String("hostname", "get.weave.works", "Hostname for external launcher service")
-		scheme           = flag.String("scheme", "https", "URL scheme for external launcher service")
-		serverCfg        = server.Config{
-			MetricsNamespace:        "service",
-			RegisterInstrumentation: true,
-		}
-	)
 	serverCfg.RegisterFlags(flag.CommandLine)
 	flag.Parse()
 
@@ -108,7 +110,7 @@ func (h *Handlers) bootstrap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("%s/bootstrap/%s/%s", s3Bucket, h.bootstrapVersion, filename), 301)
+	http.Redirect(w, r, fmt.Sprintf("%s/bootstrap/%s/%s", *bootstrapBaseURL, h.bootstrapVersion, filename), 301)
 }
 
 func (h *Handlers) agentYAML(w http.ResponseWriter, r *http.Request) {
