@@ -24,7 +24,7 @@ import (
 
 const (
 	defaultAgentPollURL   = "https://get.weave.works/k8s/agent.yaml"
-	defaultWCPollURL      = "https://cloud.weave.works/k8s.yaml?k8s-version={{.KubernetesVersion}}&t={{.Token}}"
+	defaultWCPollURL      = "https://cloud.weave.works/k8s.yaml?k8s-version={{.KubernetesVersion}}&t={{.Token}}&omit-support-info=true"
 	defaultWCOrgLookupURL = "https://cloud.weave.works/api/users/org/lookup"
 )
 
