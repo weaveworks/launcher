@@ -26,7 +26,7 @@ func main() {
 		hostname         = flag.String("hostname", "get.weave.works", "Hostname for external launcher service")
 		scheme           = flag.String("scheme", "https", "URL scheme for external launcher service")
 		serverCfg        = server.Config{
-			MetricsNamespace:        "launcher",
+			MetricsNamespace:        "service",
 			RegisterInstrumentation: true,
 		}
 	)
