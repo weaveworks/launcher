@@ -66,7 +66,7 @@ items:
           serviceAccountName: weave-agent
           containers:
             - name: agent
-              image: quay.io/weaveworks/launcher-agent:@@IMAGE_TAG@@
+              image: @@IMAGE_URL@@
               imagePullPolicy: IfNotPresent
               env:
                 - name: WEAVE_CLOUD_TOKEN

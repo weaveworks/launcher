@@ -102,7 +102,14 @@ build/service: service/*.go
 
 service/static/agent.yaml: service/static/agent.yaml.in
 	@echo Generating $@
-	@sed -e 's/@@IMAGE_TAG@@/$(IMAGE_TAG)/g' < $< > $@.tmp && mv $@.tmp $@
+	# If we are not in CircleCI, we are local so use launcher-agent
+	# If we are in CircleCI, only use launcher-agent if we are building master, otherwise
+	# use build-tmp-public so we can run integration tests.
+	if [ -z "$${CIRCLECI}" -o -z "$${CIRCLE_TAG}" -a "$${CIRCLE_BRANCH}" == "master" ]; then \
+		sed -e 's|@@IMAGE_URL@@|quay.io/weaveworks/launcher-agent:$(IMAGE_TAG)|g' < $< > $@.tmp && mv $@.tmp $@; \
+	else \
+		sed -e 's|@@IMAGE_URL@@|quay.io/weaveworks/build-tmp-public:launcher-agent-$(IMAGE_TAG)|g' < $< > $@.tmp && mv $@.tmp $@; \
+	fi
 
 build/static: service/static/* service/static/agent.yaml
 	mkdir -p $@
