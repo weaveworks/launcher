@@ -40,6 +40,7 @@ The `setup-local-minikube.sh` script will setup the testing environment.
 `reset-local-minikube.sh` can be used to undo the changes to start again from
 a clean state .
 ```
+make
 ./integration-tests/setup-local-minikube.sh
 ```
 
