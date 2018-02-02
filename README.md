@@ -23,3 +23,32 @@
   - `/` - [install.sh](service/static/install.sh)
   - `/bootstrap?dist=...` - [bootstrap](bootstrap)
   - `/k8s/agent.yaml` - [agent.yaml.in](service/static/agent.yaml.in)
+
+## Running the integration tests locally
+
+Launcher has quite few components and we provide a way to test the full end to
+end flow in a local minukube:
+
+Start by setting up a minikube instance to run the tests on:
+
+```
+# minikube profile launcher-tests
+# minikube start
+```
+
+The `setup-local-minikube.sh` script will setup the testing environment.
+`reset-local-minikube.sh` can be used to undo the changes to start again from
+a clean state .
+```
+./integration-tests/setup-local-minikube.sh
+```
+
+At this point, we are ready to run the integration tests locally:
+```
+./integration-tests/run.sh
+```
+
+One can also use the local launcher service to provision a cluster:
+```
+curl -Ls $(minikube service service --url) | sh -s -- --token=${WEAVE_CLOUD_TOKEN}
+```
