@@ -10,10 +10,15 @@ GIT_HASH=$(git rev-parse HEAD)
 # minikube profile launcher-tests
 # minikube start
 
+eval $(minikube docker-env)
+
 ###
 echo "• Building service image on minikube"
-eval $(minikube docker-env)
 (cd $root/.. && rm -f ./build/.service.done && make service)
+
+###
+echo "• Building agent image on minikube"
+(cd $root/.. && rm -f ./build/.agent.done && make agent)
 
 ###
 echo "• Building nginx image serving bootstrap"
