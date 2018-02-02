@@ -23,5 +23,5 @@ curl -Ls "{{.Scheme}}://{{.Hostname}}/bootstrap?dist=$dist" >> "$TMPFILE"
 # Make the bootstrap binary executable
 chmod +x "$TMPFILE"
 
-# Execute the boostrap binary
+# Execute the bootstrap binary
 "$TMPFILE" "--scheme={{.Scheme}}" "--hostname={{.Hostname}}" "$@"
