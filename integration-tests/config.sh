@@ -4,6 +4,10 @@ root=$(dirname "$0")
 IMAGE_TAG=$($root/../docker/image-tag)
 DEFAULT_SERVICE_IMAGE="quay.io/weaveworks/launcher-service:${IMAGE_TAG}"
 DEFAULT_NGINX_BOOTSTRAP_IMAGE="quay.io/weaveworks/launcher-nginx-bootstrap:${IMAGE_TAG}"
+DEFAULT_BOOTSTRAP_BASE_URL="https://weaveworks-launcher.s3.amazonaws.com"
+
+# When run locally, we source bootstrap from a local nginx service
+[ -z "$CI" ] && BOOTSTRAP_BASE_URL="http://$(minikube ip):30081"
 
 cat <<EOF
 {
@@ -14,7 +18,7 @@ cat <<EOF
   },
   "Bootstrap" : {
     "Image": "${DEFAULT_NGINX_BOOTSTRAP_IMAGE}",
-    "BaseURL": "http://$(minikube ip):30081"
+    "BaseURL": "${BOOTSTRAP_BASE_URL-$DEFAULT_BOOTSTRAP_BASE_URL}"
   }
 }
 EOF
