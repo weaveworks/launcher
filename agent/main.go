@@ -19,16 +19,19 @@ import (
 	"github.com/weaveworks/launcher/pkg/k8s"
 	"github.com/weaveworks/launcher/pkg/kubectl"
 	"github.com/weaveworks/launcher/pkg/text"
+	"github.com/weaveworks/launcher/pkg/weavecloud"
 )
 
 const (
-	defaultAgentPollURL = "https://get.weave.works/k8s/agent.yaml"
-	defaultWCPollURL    = "https://cloud.weave.works/k8s.yaml?k8s-version={{.KubernetesVersion}}&t={{.Token}}"
+	defaultAgentPollURL   = "https://get.weave.works/k8s/agent.yaml"
+	defaultWCPollURL      = "https://cloud.weave.works/k8s.yaml?k8s-version={{.KubernetesVersion}}&t={{.Token}}"
+	defaultWCOrgLookupURL = "https://cloud.weave.works/api/users/org/lookup"
 )
 
 type agentContext struct {
 	KubernetesVersion string
 	Token             string
+	InstanceID        string
 }
 
 func init() {
@@ -48,8 +51,8 @@ func setLogLevel(logLevel string) error {
 func logError(msg string, err error, ctx agentContext) {
 	log.Errorf("%s: %s", msg, err)
 	ravenTags := map[string]string{
-		// TODO: #25 - include instance identifier (token not suitable due to security concerns)
 		"kubernetes": ctx.KubernetesVersion,
+		"instance":   ctx.InstanceID,
 	}
 	raven.CaptureErrorAndWait(err, ravenTags)
 }
@@ -134,6 +137,7 @@ func main() {
 	wcToken := flag.String("wc.token", "", "Weave Cloud instance token")
 	wcPollInterval := flag.Duration("wc.poll-interval", 1*time.Hour, "Polling interval to check WC manifests")
 	wcPollURLTemplate := flag.String("wc.poll-url", defaultWCPollURL, "URL to poll for WC manifests")
+	wcOrgLookupURL := flag.String("wc.org-lookup-url", defaultWCOrgLookupURL, "URL to lookup org external ID by token")
 
 	eventsReportInterval := flag.Duration("events.report-interval", 3*time.Second, "Minimal time interval between two reports")
 
@@ -159,9 +163,15 @@ func main() {
 		log.Fatal("get server version:", err)
 	}
 
+	instanceID, err := weavecloud.LookupInstanceByToken(*wcOrgLookupURL, *wcToken)
+	if err != nil {
+		logError("lookup instance by token", err, agentContext{})
+	}
+
 	agentCtx := agentContext{
 		KubernetesVersion: version.GitVersion,
 		Token:             *wcToken,
+		InstanceID:        instanceID,
 	}
 
 	wcPollURL, err := text.ResolveString(*wcPollURLTemplate, agentCtx)
