@@ -5,6 +5,9 @@
 echo "• Removing weave namespace"
 kubectl delete ns weave 2> /dev/null
 
+echo "• Removing cluster-wide role objects"
+kubectl delete clusterrole,clusterrolebinding -l 'name in (weave-agent, weave-flux, weave-cortex, weave-scope)'
+
 echo "• Removing service deployment"
 kubectl delete deployment service 2> /dev/null
 kubectl delete svc service 2> /dev/null
