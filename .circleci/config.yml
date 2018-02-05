@@ -42,8 +42,8 @@ jobs:
               docker push "quay.io/weaveworks/launcher-service:$(docker/image-tag)"
               docker push "quay.io/weaveworks/launcher-service"
             else
-              docker tag "quay.io/weaveworks/launcher-service:$(docker/image-tag)" "quay.io/weaveworks/build-tmp:launcher-service-$(docker/image-tag)"
-              docker push "quay.io/weaveworks/build-tmp:launcher-service-$(docker/image-tag)"
+              docker tag "quay.io/weaveworks/launcher-service:$(docker/image-tag)" "quay.io/weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)"
+              docker push "quay.io/weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)"
             fi
 
   agent:
@@ -62,8 +62,8 @@ jobs:
               docker push "quay.io/weaveworks/launcher-agent:$(docker/image-tag)"
               docker push "quay.io/weaveworks/launcher-agent"
             else
-              docker tag "quay.io/weaveworks/launcher-agent:$(docker/image-tag)" "quay.io/weaveworks/build-tmp:launcher-agent-$(docker/image-tag)"
-              docker push "quay.io/weaveworks/build-tmp:launcher-agent-$(docker/image-tag)"
+              docker tag "quay.io/weaveworks/launcher-agent:$(docker/image-tag)" "quay.io/weaveworks/build-tmp-public:launcher-agent-$(docker/image-tag)"
+              docker push "quay.io/weaveworks/build-tmp-public:launcher-agent-$(docker/image-tag)"
             fi
 
   integration:
@@ -93,15 +93,12 @@ jobs:
           name: Get cluster information
           command: kubectl cluster-info
       - run:
-          name: Create docker-registry quay.io secret
-          command: kubectl create secret docker-registry regsecret --docker-server=quay.io --docker-username=$DOCKER_REGISTRY_USER  --docker-password=$DOCKER_REGISTRY_PASSWORD --docker-email=$(DOCKER_REGISTRY_USER)@weave.works
-      - run:
           name: Execute integration tests
           command: |
             if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
               export SERVICE_IMAGE="quay.io/weaveworks/launcher-service:$(docker/image-tag)"
             else
-              export SERVICE_IMAGE=quay.io/weaveworks/build-tmp:launcher-service-$(docker/image-tag)
+              export SERVICE_IMAGE=quay.io/weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
             fi
             ./integration-tests/run.sh
 
