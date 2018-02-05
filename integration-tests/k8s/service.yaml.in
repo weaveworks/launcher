@@ -22,8 +22,6 @@ spec:
       labels:
         name: service
     spec:
-      imagePullSecrets:
-      - name: quay-secret
       containers:
       - name: service
         image: {{.Service.Image}}
@@ -33,5 +31,3 @@ spec:
         - -bootstrap.base-url={{.Bootstrap.BaseURL}}
         ports:
         - containerPort: 80
-      imagePullSecrets:
-        - name: regsecret

@@ -2,6 +2,9 @@
 
 root=$(dirname "$0")
 
+echo "• Set WEAVE_CLOUD_TOKEN if not already set"
+[ -z "$WEAVE_CLOUD_TOKEN" ] && WEAVE_CLOUD_TOKEN="abcd1234"
+
 ###
 echo "• Start launcher/service on minikube"
 service_yaml=$root/k8s/service.yaml
@@ -22,3 +25,13 @@ echo
 ###
 echo "• Install Weave Cloud on the minikube cluster"
 curl -Ls $(minikube service service --url) | sh -s -- --token=${WEAVE_CLOUD_TOKEN} --assume-yes
+
+###
+echo "• Wait for weave pods to become ready"
+for name in weave-agent kube-state-metrics prom-node-exporter prometheus weave-flux-agent weave-flux-memcached weave-scope-agent
+do
+    echo -n "    • Wait for weave/$name"
+    JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'
+    until kubectl get pods -n weave -l name=$name -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do echo -n .; sleep 1; done
+    echo
+done
