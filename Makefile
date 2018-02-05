@@ -115,6 +115,16 @@ build/static: service/static/* service/static/agent.yaml
 	mkdir -p $@
 	cp $^ $@
 
+
+#
+# Local integration tests
+#
+
+integration-tests: all
+	./integration-tests/reset-local-minikube.sh
+	./integration-tests/setup-local-minikube.sh
+	./integration-tests/run.sh
+
 clean:
 	rm -rf build cache vendor
 	rm -f docker/Dockerfile.service service/static/agent.yaml
