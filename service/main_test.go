@@ -89,10 +89,10 @@ func TestBootstrapHandler(t *testing.T) {
 }
 
 func TestAgentYAMLHandler(t *testing.T) {
-	agentYAML := "---\napiVersion: extensions/v1beta1"
+	agentManifest := "---\napiVersion: extensions/v1beta1"
 	handlers := &Handlers{
-		bootstrapVersion: "aaa000",
-		agentYAMLData:    []byte(agentYAML),
+		bootstrapVersion:  "aaa000",
+		agentManifestData: []byte(agentManifest),
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(handlers.agentYAML))
@@ -112,8 +112,8 @@ func TestAgentYAMLHandler(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if agentYAML != string(actual) {
-		t.Errorf("Expected body '%s', got: '%s'", agentYAML, actual)
+	if agentManifest != string(actual) {
+		t.Errorf("Expected body '%s', got: '%s'", agentManifest, actual)
 	}
 
 	contentDisposition := resp.Header.Get("Content-Disposition")

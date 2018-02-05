@@ -13,7 +13,11 @@ import (
 	"github.com/weaveworks/launcher/pkg/text"
 )
 
-const s3Bucket = "https://weaveworks-launcher.s3.amazonaws.com"
+const (
+	defaultAgentManifest = "./static/agent.yaml"
+	installScriptFile    = "./static/install.sh"
+	s3Bucket             = "https://weaveworks-launcher.s3.amazonaws.com"
+)
 
 type templateData struct {
 	Scheme   string
@@ -25,6 +29,7 @@ var (
 	hostname         = flag.String("hostname", "get.weave.works", "Hostname for external launcher service")
 	scheme           = flag.String("scheme", "https", "URL scheme for external launcher service")
 	bootstrapBaseURL = flag.String("bootstrap.base-url", s3Bucket, "Base URL the bootstrap binary should be fetched from")
+	agentManifest    = flag.String("agent-manifest", defaultAgentManifest, "File used to load agent k8s")
 	serverCfg        = server.Config{
 		MetricsNamespace:        "service",
 		RegisterInstrumentation: true,
@@ -44,19 +49,19 @@ func main() {
 		Scheme:   *scheme,
 		Hostname: *hostname,
 	}
-	installScriptData, err := loadData("./static/install.sh", data)
+	installScriptData, err := loadData(installScriptFile, data)
 	if err != nil {
-		log.Fatal("error reading static/install.sh file:", err)
+		log.Fatal("error reading installScriptFile:", err)
 	}
-	agentYAMLData, err := loadData("./static/agent.yaml", data)
+	agentManifestData, err := loadData(*agentManifest, data)
 	if err != nil {
-		log.Fatal("error reading static/agent.yaml file:", err)
+		log.Fatal("error reading agentYAMLFile:", err)
 	}
 
 	handlers := &Handlers{
 		bootstrapVersion:  *bootstrapVersion,
 		installScriptData: installScriptData,
-		agentYAMLData:     agentYAMLData,
+		agentManifestData: agentManifestData,
 	}
 
 	server, err := server.New(serverCfg)
@@ -87,7 +92,7 @@ func loadData(filename string, ctx *templateData) ([]byte, error) {
 type Handlers struct {
 	bootstrapVersion  string
 	installScriptData []byte
-	agentYAMLData     []byte
+	agentManifestData []byte
 }
 
 func (h *Handlers) install(w http.ResponseWriter, r *http.Request) {
@@ -115,5 +120,5 @@ func (h *Handlers) bootstrap(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) agentYAML(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", "attachment")
-	http.ServeContent(w, r, "agent.yaml", time.Time{}, bytes.NewReader(h.agentYAMLData))
+	http.ServeContent(w, r, "agent.yaml", time.Time{}, bytes.NewReader(h.agentManifestData))
 }
