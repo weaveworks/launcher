@@ -15,6 +15,8 @@ items:
     kind: ClusterRole
     metadata:
       name: weave-agent
+      labels:
+        name: weave-agent
     rules:
       - apiGroups:
           - '*'
@@ -30,6 +32,8 @@ items:
     kind: ClusterRoleBinding
     metadata:
       name: weave-agent
+      labels:
+        name: weave-agent
     roleRef:
       kind: ClusterRole
       name: weave-agent
