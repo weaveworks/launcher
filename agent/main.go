@@ -160,7 +160,7 @@ func main() {
 	}
 
 	agentCtx := agentContext{
-		KubernetesVersion: fmt.Sprintf("%s.%s", version.Major, version.Minor),
+		KubernetesVersion: version.GitVersion,
 		Token:             *wcToken,
 	}
 
