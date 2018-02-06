@@ -1,0 +1,550 @@
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: weave-flux
+      labels:
+        name: weave-flux
+  - apiVersion: rbac.authorization.k8s.io/v1beta1
+    kind: ClusterRole
+    metadata:
+      name: weave-flux
+      labels:
+        name: weave-flux
+    rules:
+      - apiGroups:
+          - '*'
+        resources:
+          - '*'
+        verbs:
+          - '*'
+      - nonResourceURLs:
+          - '*'
+        verbs:
+          - '*'
+  - apiVersion: rbac.authorization.k8s.io/v1beta1
+    kind: ClusterRoleBinding
+    metadata:
+      name: weave-flux
+      labels:
+        name: weave-flux
+    roleRef:
+      kind: ClusterRole
+      name: weave-flux
+      apiGroup: rbac.authorization.k8s.io
+    subjects:
+      - kind: ServiceAccount
+        name: weave-flux
+        namespace: kube-system
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: flux-git-deploy
+    type: Opaque
+  - apiVersion: apps/v1beta1
+    kind: Deployment
+    metadata:
+      name: weave-flux-memcached
+      labels:
+        name: weave-flux-memcached
+        app: weave-flux
+        weave-cloud-component: flux
+        weave-flux-component: memcached
+    spec:
+      replicas: 1
+      template:
+        metadata:
+          annotations:
+            prometheus.io.scrape: 'false'
+          labels:
+            name: weave-flux-memcached
+            app: weave-flux
+            weave-cloud-component: flux
+            weave-flux-component: memcached
+        spec:
+          containers:
+            - name: memcached
+              args:
+                - '-m 64'
+                - '-p 11211'
+              image: 'memcached:1.4.25'
+              imagePullPolicy: IfNotPresent
+              ports:
+                - name: clients
+                  containerPort: 11211
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: weave-flux-memcached
+      labels:
+        name: weave-flux-memcached
+        app: weave-flux
+        weave-cloud-component: flux
+        weave-flux-component: memcached
+    spec:
+      clusterIP: None
+      ports:
+        - name: memcached
+          port: 11211
+      selector:
+        name: weave-flux-memcached
+        app: weave-flux
+        weave-cloud-component: flux
+        weave-flux-component: memcached
+  - apiVersion: apps/v1beta1
+    kind: Deployment
+    metadata:
+      name: weave-flux-agent
+      labels:
+        name: weave-flux-agent
+        app: weave-flux
+        weave-cloud-component: flux
+        weave-flux-component: agent
+    spec:
+      replicas: 1
+      strategy:
+        type: Recreate
+      template:
+        metadata:
+          labels:
+            name: weave-flux-agent
+            app: weave-flux
+            weave-cloud-component: flux
+            weave-flux-component: agent
+        spec:
+          containers:
+            - name: agent
+              args:
+                - '--token={{.Token}}'
+                - '--connect=wss://cloud.weave.works./api/flux'
+                - >-
+                  --memcached-hostname=weave-flux-memcached.kube-system.svc.cluster.local
+              image: 'quay.io/weaveworks/flux:1.2.2'
+              imagePullPolicy: IfNotPresent
+              volumeMounts:
+                - name: git-key
+                  mountPath: /etc/fluxd/ssh
+          serviceAccountName: weave-flux
+          volumes:
+            - name: git-key
+              secret:
+                secretName: flux-git-deploy
+  - apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: weave-scope
+      labels:
+        name: weave-scope
+  - apiVersion: rbac.authorization.k8s.io/v1beta1
+    kind: ClusterRole
+    metadata:
+      name: weave-scope
+      labels:
+        name: weave-scope
+    rules:
+      - apiGroups:
+          - '*'
+        resources:
+          - '*'
+        verbs:
+          - '*'
+      - nonResourceURLs:
+          - '*'
+        verbs:
+          - '*'
+  - apiVersion: rbac.authorization.k8s.io/v1beta1
+    kind: ClusterRoleBinding
+    metadata:
+      name: weave-scope
+      labels:
+        name: weave-scope
+    roleRef:
+      kind: ClusterRole
+      name: weave-scope
+      apiGroup: rbac.authorization.k8s.io
+    subjects:
+      - kind: ServiceAccount
+        name: weave-scope
+        namespace: kube-system
+  - apiVersion: extensions/v1beta1
+    kind: DaemonSet
+    metadata:
+      name: weave-scope-agent
+      labels:
+        name: weave-scope-agent
+        app: weave-scope
+        weave-cloud-component: scope
+        weave-scope-component: agent
+    spec:
+      template:
+        metadata:
+          labels:
+            name: weave-scope-agent
+            app: weave-scope
+            weave-cloud-component: scope
+            weave-scope-component: agent
+        spec:
+          containers:
+            - name: agent
+              args:
+                - '--no-app'
+                - '--probe.docker.bridge=docker0'
+                - '--probe.docker=true'
+                - '--probe.kubernetes=true'
+                - '--service-token={{.Token}}'
+              image: 'weaveworks/scope:1.7.3'
+              imagePullPolicy: IfNotPresent
+              securityContext:
+                privileged: true
+              volumeMounts:
+                - name: docker-socket
+                  mountPath: /var/run/docker.sock
+                - name: scope-plugins
+                  mountPath: /var/run/scope/plugins
+                - name: sys-kernel-debug
+                  mountPath: /sys/kernel/debug
+          dnsPolicy: ClusterFirstWithHostNet
+          hostNetwork: true
+          hostPID: true
+          serviceAccountName: weave-scope
+          tolerations:
+            - effect: NoSchedule
+              operator: Exists
+          volumes:
+            - name: docker-socket
+              hostPath:
+                path: /var/run/docker.sock
+            - name: scope-plugins
+              hostPath:
+                path: /var/run/scope/plugins
+            - name: sys-kernel-debug
+              hostPath:
+                path: /sys/kernel/debug
+      updateStrategy:
+        type: RollingUpdate
+  - apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: weave-cortex
+      labels:
+        name: weave-cortex
+  - apiVersion: rbac.authorization.k8s.io/v1beta1
+    kind: ClusterRole
+    metadata:
+      name: weave-cortex
+      labels:
+        name: weave-cortex
+    rules:
+      - apiGroups:
+          - '*'
+        resources:
+          - '*'
+        verbs:
+          - '*'
+      - nonResourceURLs:
+          - '*'
+        verbs:
+          - '*'
+  - apiVersion: rbac.authorization.k8s.io/v1beta1
+    kind: ClusterRoleBinding
+    metadata:
+      name: weave-cortex
+      labels:
+        name: weave-cortex
+    roleRef:
+      kind: ClusterRole
+      name: weave-cortex
+      apiGroup: rbac.authorization.k8s.io
+    subjects:
+      - kind: ServiceAccount
+        name: weave-cortex
+        namespace: kube-system
+  - apiVersion: apps/v1beta1
+    kind: Deployment
+    metadata:
+      name: weave-cortex-agent
+      labels:
+        name: weave-cortex-agent
+        app: weave-cortex
+        weave-cloud-component: cortex
+        weave-cortex-component: agent
+    spec:
+      replicas: 1
+      template:
+        metadata:
+          annotations:
+            prometheus.io.scrape: 'true'
+          labels:
+            name: weave-cortex-agent
+            app: weave-cortex
+            weave-cloud-component: cortex
+            weave-cortex-component: agent
+        spec:
+          containers:
+            - name: agent
+              args:
+                - '-config.file=/etc/prometheus/prometheus.yml'
+                - '-web.listen-address=:8080'
+                - '-storage.local.engine=none'
+              image: 'prom/prometheus:v1.8.2'
+              imagePullPolicy: IfNotPresent
+              ports:
+                - containerPort: 8080
+                  protocol: TCP
+              volumeMounts:
+                - name: agent-config-volume
+                  mountPath: /etc/prometheus
+          serviceAccountName: weave-cortex
+          volumes:
+            - name: agent-config-volume
+              configMap:
+                name: weave-cortex-agent-config
+  - apiVersion: extensions/v1beta1
+    kind: DaemonSet
+    metadata:
+      name: weave-cortex-node-exporter
+      labels:
+        name: weave-cortex-node-exporter
+        app: weave-cortex
+        weave-cloud-component: cortex
+        weave-cortex-component: node-exporter
+    spec:
+      template:
+        metadata:
+          annotations:
+            prometheus.io.scrape: 'true'
+          labels:
+            name: weave-cortex-node-exporter
+            app: weave-cortex
+            weave-cloud-component: cortex
+            weave-cortex-component: node-exporter
+        spec:
+          containers:
+            - name: agent
+              image: 'prom/node-exporter:v0.14.0'
+              imagePullPolicy: IfNotPresent
+              ports:
+                - containerPort: 9100
+                  protocol: TCP
+              securityContext:
+                privileged: true
+          hostNetwork: true
+          hostPID: true
+          serviceAccountName: weave-cortex
+          tolerations:
+            - effect: NoSchedule
+              operator: Exists
+      updateStrategy:
+        type: RollingUpdate
+  - apiVersion: apps/v1beta1
+    kind: Deployment
+    metadata:
+      name: weave-cortex-state-metrics
+      labels:
+        name: weave-cortex-state-metrics
+        app: weave-cortex
+        weave-cloud-component: cortex
+        weave-cortex-component: state-metrics
+    spec:
+      replicas: 1
+      template:
+        metadata:
+          annotations:
+            prometheus.io.scrape: 'true'
+          labels:
+            name: weave-cortex-state-metrics
+            app: weave-cortex
+            weave-cloud-component: cortex
+            weave-cortex-component: state-metrics
+        spec:
+          containers:
+            - name: kube-state-metrics
+              image: 'quay.io/coreos/kube-state-metrics:v1.1.0'
+              ports:
+                - name: metrics
+                  containerPort: 8080
+          serviceAccountName: weave-cortex
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: weave-cortex-agent-config
+      labels:
+        name: weave-cortex-agent-config
+        app: weave-cortex
+        weave-cloud-component: cortex
+        weave-cortex-component: agent-config
+    data:
+      prometheus.yml: |
+        global:
+          scrape_interval: 15s
+        remote_write:
+          - url: 'https://cloud.weave.works./api/prom/push'
+            basic_auth:
+              password: {{.Token}}
+        remote_read:
+          - url: 'https://cloud.weave.works./api/prom/read'
+            basic_auth:
+              password: {{.Token}}
+        scrape_configs:
+          - job_name: kubernetes-apiservers
+            kubernetes_sd_configs:
+              - role: endpoints
+            scheme: https
+            tls_config:
+              ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            relabel_configs:
+              - source_labels:
+                  - __meta_kubernetes_namespace
+                  - __meta_kubernetes_service_name
+                  - __meta_kubernetes_endpoint_port_name
+                action: keep
+                regex: default;kubernetes;https
+              - source_labels:
+                  - __meta_kubernetes_namespace
+                target_label: _weave_namespace
+              - source_labels:
+                  - __meta_kubernetes_endpoints_name
+                target_label: _weave_service
+          - job_name: kubernetes-pods
+            kubernetes_sd_configs:
+              - role: pod
+            relabel_configs:
+              - source_labels:
+                  - __meta_kubernetes_pod_annotation_prometheus_io_scrape
+                action: drop
+                regex: 'false'
+              - source_labels:
+                  - __meta_kubernetes_pod_annotation_prometheus_io_scheme
+                action: replace
+                target_label: __scheme__
+                regex: ^(https?)$
+                replacement: $1
+              - source_labels:
+                  - __meta_kubernetes_pod_annotation_prometheus_io_path
+                action: replace
+                target_label: __metrics_path__
+                regex: ^(.+)$
+                replacement: $1
+              - source_labels:
+                  - __address__
+                  - __meta_kubernetes_pod_annotation_prometheus_io_port
+                action: replace
+                target_label: __address__
+                regex: '([^:]+)(?::\d+)?;(\d+)'
+                replacement: '$1:$2'
+              - source_labels:
+                  - __meta_kubernetes_namespace
+                target_label: _weave_namespace
+              - source_labels:
+                  - __meta_kubernetes_pod_name
+                  - __meta_kubernetes_pod_node_name
+                target_label: node
+                regex: ^weave-cortex-node-exporter-.+;(.+)$
+                replacement: $1
+              - source_labels:
+                  - _weave_service
+                  - __meta_kubernetes_pod_name
+                target_label: _weave_service
+                regex: '^;(kube-.*)-(?:ip|gke)-.*$'
+                replacement: $1
+              - source_labels:
+                  - _weave_service
+                  - __meta_kubernetes_pod_name
+                target_label: _weave_service
+                regex: '^;(.*?)(?:(?:-[0-9bcdf]+)?-[0-9a-z]{5})?$'
+                replacement: $1
+              - source_labels:
+                  - _weave_service
+                  - __meta_kubernetes_pod_name
+                regex: ^;(.+)$
+                target_label: _weave_service
+                replacement: $1
+          - job_name: kubernetes-nodes
+            kubernetes_sd_configs:
+              - role: node
+            tls_config:
+              insecure_skip_verify: true
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            relabel_configs:
+              - target_label: __scheme__
+                replacement: https
+              - target_label: __address__
+                replacement: 'kubernetes.default.svc:443'
+              - source_labels:
+                  - __meta_kubernetes_node_name
+                regex: (.+)
+                target_label: __metrics_path__
+                replacement: '/api/v1/nodes/${1}/proxy/metrics'
+              - target_label: _weave_namespace
+                replacement: default
+              - target_label: _weave_service
+                replacement: kubelet
+          - job_name: weave-net
+            kubernetes_sd_configs:
+              - role: pod
+            relabel_configs:
+              - source_labels:
+                  - __meta_kubernetes_namespace
+                  - __meta_kubernetes_pod_label_name
+                action: keep
+                regex: ^kube-system;weave-net$
+              - source_labels:
+                  - __meta_kubernetes_pod_container_name
+                  - __address__
+                action: replace
+                target_label: __address__
+                regex: '^weave;(.+?)(?::\d+)?$'
+                replacement: '$1:6782'
+              - source_labels:
+                  - __meta_kubernetes_pod_container_name
+                  - __address__
+                action: replace
+                target_label: __address__
+                regex: '^weave-npc;(.+?)(?::\d+)?$'
+                replacement: '$1:6781'
+              - source_labels:
+                  - __meta_kubernetes_namespace
+                target_label: _weave_namespace
+              - target_label: _weave_service
+                replacement: weave-net
+          - job_name: cadvisor
+            kubernetes_sd_configs:
+              - role: node
+            tls_config:
+              insecure_skip_verify: true
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            scheme: https
+            relabel_configs:
+              - target_label: __address__
+                replacement: 'kubernetes.default.svc:443'
+              - source_labels:
+                  - __meta_kubernetes_node_name
+                regex: (.+)
+                target_label: __metrics_path__
+                replacement: '/api/v1/nodes/${1}/proxy/metrics/cadvisor'
+              - target_label: _weave_namespace
+                replacement: default
+              - target_label: _weave_service
+                replacement: cadvisor
+            metric_relabel_configs:
+              - source_labels:
+                  - _weave_pod_name
+                  - pod_name
+                target_label: _weave_pod_name
+                regex: '^;(kube-.*)-(?:ip|gke)-.*$'
+                replacement: $1
+              - source_labels:
+                  - _weave_pod_name
+                  - pod_name
+                target_label: _weave_pod_name
+                regex: '^;(.*?)(?:(?:-[0-9bcdf]+)?-[0-9a-z]{5})?$'
+                replacement: $1
+              - source_labels:
+                  - _weave_pod_name
+                  - pod_name
+                regex: ^;(.+)$
+                target_label: _weave_pod_name
+                replacement: $1
