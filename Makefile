@@ -100,12 +100,12 @@ build/service: $(SERVICE_DEPS)
 build/service: service/*.go
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(BUILDFLAGS) -o $@ $(LDFLAGS) ./service
 
+# If we are not in CircleCI, we are local so use launcher-agent
+# If we are in CircleCI, only use launcher-agent if we are building master, otherwise
+# use build-tmp-public so we can run integration tests.
 service/static/agent.yaml: service/static/agent.yaml.in
 	@echo Generating $@
-	# If we are not in CircleCI, we are local so use launcher-agent
-	# If we are in CircleCI, only use launcher-agent if we are building master, otherwise
-	# use build-tmp-public so we can run integration tests.
-	if [ -z "$${CIRCLECI}" -o -z "$${CIRCLE_TAG}" -a "$${CIRCLE_BRANCH}" == "master" ]; then \
+	if [ -z "$${CIRCLECI}" -o \( -z "$${CIRCLE_TAG}" -a "$${CIRCLE_BRANCH}" = "master" \) ]; then \
 		sed -e 's|@@IMAGE_URL@@|quay.io/weaveworks/launcher-agent:$(IMAGE_TAG)|g' < $< > $@.tmp && mv $@.tmp $@; \
 	else \
 		sed -e 's|@@IMAGE_URL@@|quay.io/weaveworks/build-tmp-public:launcher-agent-$(IMAGE_TAG)|g' < $< > $@.tmp && mv $@.tmp $@; \
