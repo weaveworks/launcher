@@ -23,15 +23,20 @@ import (
 )
 
 const (
-	defaultAgentPollURL   = "https://get.weave.works/k8s/agent.yaml"
-	defaultWCPollURL      = "https://cloud.weave.works/k8s.yaml?k8s-version={{.KubernetesVersion}}&t={{.Token}}&omit-support-info=true"
-	defaultWCOrgLookupURL = "https://cloud.weave.works/api/users/org/lookup"
+	defaultAgentPollURL      = "https://get.weave.works/k8s/agent.yaml"
+	defaultAgentRecoveryWait = 5 * time.Minute
+	defaultWCPollURL         = "https://cloud.weave.works/k8s.yaml?k8s-version={{.KubernetesVersion}}&t={{.Token}}&omit-support-info=true"
+	defaultWCOrgLookupURL    = "https://cloud.weave.works/api/users/org/lookup"
 )
 
-type agentContext struct {
+type agentConfig struct {
 	KubernetesVersion string
 	Token             string
 	InstanceID        string
+	AgentPollURL      string
+	AgentRecoveryWait time.Duration
+	WCPollURL         string
+	KubeClient        *kubeclient.Clientset
 }
 
 func init() {
@@ -48,33 +53,33 @@ func setLogLevel(logLevel string) error {
 	return nil
 }
 
-func logError(msg string, err error, ctx agentContext) {
+func logError(msg string, err error, cfg agentConfig) {
 	log.Errorf("%s: %s", msg, err)
 	ravenTags := map[string]string{
-		"kubernetes": ctx.KubernetesVersion,
-		"instance":   ctx.InstanceID,
+		"kubernetes": cfg.KubernetesVersion,
+		"instance":   cfg.InstanceID,
 	}
 	raven.CaptureErrorAndWait(err, ravenTags)
 }
 
-func updateAgents(agentPollURL, wcPollURL string, agentCtx agentContext, kubeClient *kubeclient.Clientset, cancel <-chan interface{}) {
+func updateAgents(cfg agentConfig, cancel <-chan interface{}) {
 	// Self-update
-	log.Info("Updating self from ", agentPollURL)
+	log.Info("Updating self from ", cfg.AgentPollURL)
 
-	initialRevision, err := k8s.GetLatestDeploymentReplicaSetRevision(kubeClient, "weave", "weave-agent")
+	initialRevision, err := k8s.GetLatestDeploymentReplicaSetRevision(cfg.KubeClient, "weave", "weave-agent")
 	if err != nil {
-		logError("Failed to fetch latest deployment replicateset revision", err, agentCtx)
+		logError("Failed to fetch latest deployment replicateset revision", err, cfg)
 		return
 	}
 	log.Info("Revision before self-update: ", initialRevision)
-	_, err = kubectl.Execute("apply", "-f", agentPollURL)
+	_, err = kubectl.Execute("apply", "-f", cfg.AgentPollURL)
 	if err != nil {
-		logError("Failed to execute kubectl apply", err, agentCtx)
+		logError("Failed to execute kubectl apply", err, cfg)
 		return
 	}
-	updatedRevision, err := k8s.GetLatestDeploymentReplicaSetRevision(kubeClient, "weave", "weave-agent")
+	updatedRevision, err := k8s.GetLatestDeploymentReplicaSetRevision(cfg.KubeClient, "weave", "weave-agent")
 	if err != nil {
-		logError("Failed to fetch latest deployment replicateset revision", err, agentCtx)
+		logError("Failed to fetch latest deployment replicateset revision", err, cfg)
 		return
 	}
 	log.Info("Revision after self-update: ", updatedRevision)
@@ -84,31 +89,31 @@ func updateAgents(agentPollURL, wcPollURL string, agentCtx agentContext, kubeCli
 	// new agent is ready. If we are not killed after 5 minutes we assume that
 	// the new agent did not become ready and so we recover by rolling back.
 	if updatedRevision > initialRevision {
-		log.Info("The agent replica set updated. Rollback if we are not killed within 5 minutes...")
+		log.Infof("The agent replica set updated. Rollback if we are not killed within %s...", cfg.AgentRecoveryWait)
 
 		select {
-		case <-time.After(5 * time.Minute):
+		case <-time.After(cfg.AgentRecoveryWait):
 		case <-cancel:
 			return
 		}
 
-		logError("Deployment of the new agent failed. Rolling back.", errors.New("Deployment failed"), agentCtx)
+		logError("Deployment of the new agent failed. Rolling back.", errors.New("Deployment failed"), cfg)
 		_, err := kubectl.Execute("rollout", "undo", "--namespace=weave", "deployment/weave-agent")
 		if err != nil {
-			logError("Failed rolling back agent. Will continue to check for updates.", err, agentCtx)
+			logError("Failed rolling back agent. Will continue to check for updates.", err, cfg)
 			return
 		}
 
 		// Return so we continue updating the agent until success
-		logError("The new agent was rolled back.", errors.New("Rollback success"), agentCtx)
+		logError("The new agent was rolled back.", errors.New("Rollback success"), cfg)
 		return
 	}
 
 	// Update Weave Cloud agents
-	log.Info("Updating WC from ", wcPollURL)
-	_, err = kubectl.Execute("apply", "-f", wcPollURL)
+	log.Info("Updating WC from ", cfg.WCPollURL)
+	_, err = kubectl.Execute("apply", "-f", cfg.WCPollURL)
 	if err != nil {
-		logError("Failed to execute kubectl apply", err, agentCtx)
+		logError("Failed to execute kubectl apply", err, cfg)
 		return
 	}
 }
@@ -134,6 +139,7 @@ func main() {
 	logLevel := flag.String("log.level", "info", "verbosity of log output - one of 'debug', 'info' (default), 'warning', 'error', 'fatal'")
 
 	agentPollURL := flag.String("agent.poll-url", defaultAgentPollURL, "URL to poll for the agent manifest")
+	agentRecoveryWait := flag.Duration("agent.recovery-wait", defaultAgentRecoveryWait, "Duration to wait before recovering from a failed self update")
 	wcToken := flag.String("wc.token", "", "Weave Cloud instance token")
 	wcPollInterval := flag.Duration("wc.poll-interval", 1*time.Hour, "Polling interval to check WC manifests")
 	wcPollURLTemplate := flag.String("wc.poll-url", defaultWCPollURL, "URL to poll for WC manifests")
@@ -165,19 +171,23 @@ func main() {
 
 	instanceID, err := weavecloud.LookupInstanceByToken(*wcOrgLookupURL, *wcToken)
 	if err != nil {
-		logError("lookup instance by token", err, agentContext{})
+		logError("lookup instance by token", err, agentConfig{})
 	}
 
-	agentCtx := agentContext{
+	cfg := agentConfig{
 		KubernetesVersion: version.GitVersion,
 		Token:             *wcToken,
 		InstanceID:        instanceID,
+		AgentPollURL:      *agentPollURL,
+		AgentRecoveryWait: *agentRecoveryWait,
+		KubeClient:        kubeClient,
 	}
 
-	wcPollURL, err := text.ResolveString(*wcPollURLTemplate, agentCtx)
+	wcPollURL, err := text.ResolveString(*wcPollURLTemplate, cfg)
 	if err != nil {
 		log.Fatal("invalid URL template:", err)
 	}
+	cfg.WCPollURL = wcPollURL
 
 	var g run.Group
 
@@ -189,7 +199,7 @@ func main() {
 			func() error {
 				for {
 
-					updateAgents(*agentPollURL, wcPollURL, agentCtx, kubeClient, cancel)
+					updateAgents(cfg, cancel)
 
 					select {
 					case <-time.After(*wcPollInterval):
@@ -265,7 +275,7 @@ func main() {
 	}
 
 	if err := g.Run(); err != nil {
-		logError("Agent error", err, agentCtx)
+		logError("Agent error", err, cfg)
 		os.Exit(1)
 	}
 }
