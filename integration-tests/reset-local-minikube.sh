@@ -16,4 +16,9 @@ echo "• Removing bootstrap mock S3 server"
 kubectl delete deployment nginx-bootstrap 2> /dev/null
 kubectl delete svc nginx-bootstrap 2> /dev/null
 
+echo "• Wait for terminating pods"
+JSONPATH='{range .items[*]}{@.metadata.name}{end}'
+while [ $(kubectl get pods -l name=service -o jsonpath="$JSONPATH" 2>&1 | wc -c | tr -d '[:space:]') != 0 ]; do echo -n .; sleep 1; done
+while [ $(kubectl get pods -n weave -o jsonpath="$JSONPATH" 2>&1 | wc -c | tr -d '[:space:]') != 0 ]; do echo -n .; sleep 1; done
+
 exit 0
