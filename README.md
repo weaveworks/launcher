@@ -36,18 +36,15 @@ Start by setting up a minikube instance to run the tests on:
 # minikube start
 ```
 
-The `setup-local-minikube.sh` script will setup the testing environment.
-`reset-local-minikube.sh` can be used to undo the changes to start again from
-a clean state .
+Run the tests:
 ```
-make
-./integration-tests/setup-local-minikube.sh
+make integration-tests
 ```
 
-At this point, we are ready to run the integration tests locally:
-```
-./integration-tests/run.sh
-```
+This script will first ensure the dependencies are built and then run:
+- `reset-local-minikube.sh`
+- `setup-local-minikube.sh`
+- `run.sh`
 
 One can also use the local launcher service to provision a cluster:
 ```
