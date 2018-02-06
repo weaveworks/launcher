@@ -24,6 +24,28 @@ type options struct {
 	Token     string `long:"token" description:"Weave Cloud token" required:"true"`
 }
 
+// Delete old Weave Cloud objects and return if we have indeed deleted anything.
+func deleteKubeSystemObjects(globalArgs []string) bool {
+	deleted := false
+
+	out, _ := kubectl.ExecuteWithGlobalArgs(globalArgs, "delete", "--namespace=kube-system",
+		"deployments,pods,services,daemonsets,serviceaccounts,configmaps,secrets",
+		"--selector=app in (weave-flux, weave-cortex, weave-scope)")
+	// Used with a selector, kubectl 1.7.5 returns a 0 exit code with the message
+	// "No resources found" when there's no matching resources.
+	deleted = deleted || !strings.Contains(out, "No resources found")
+
+	out, _ = kubectl.ExecuteWithGlobalArgs(globalArgs, "delete", "--namespace=kube-system",
+		"deployments,pods,services,daemonsets,serviceaccounts,configmaps,secrets",
+		"--selector=name in (weave-flux, weave-cortex, weave-scope)")
+	deleted = deleted || !strings.Contains(out, "No resources found")
+
+	_, err := kubectl.ExecuteWithGlobalArgs(globalArgs, "--namespace=kube-system", "delete", "secret", "flux-git-deploy")
+	deleted = deleted || (err == nil)
+
+	return deleted
+}
+
 func main() {
 	opts := options{}
 	// Parse arguments with go-flags so we can forward unknown arguments to kubectl
@@ -60,6 +82,17 @@ func main() {
 	if !confirmed {
 		fmt.Println("Cancelled.")
 		return
+	}
+
+	// Users that have installed Weave Cloud manifests before January the 11th
+	// 2018, will have the agents installed in the kube-system namespace. If that's
+	// the case let's handle the migration to the weave namespace:
+	// 1. Delete our objects in the kube-system namespace
+	// 2. Let launcher-agent install the new ones in the weave namespace
+	fmt.Println("Executing migration from previous installation...")
+	deleted := deleteKubeSystemObjects(otherArgs)
+	if deleted {
+		fmt.Println("Removed old agents from the kube-system namespace. You will have to reconfigure Deploy.")
 	}
 
 	fmt.Println("Storing the instance token in the weave-cloud secret...")
