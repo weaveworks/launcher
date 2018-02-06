@@ -89,7 +89,7 @@ func main() {
 	// the case let's handle the migration to the weave namespace:
 	// 1. Delete our objects in the kube-system namespace
 	// 2. Let launcher-agent install the new ones in the weave namespace
-	fmt.Println("Executing migration from previous installation...")
+	fmt.Println("Checking for any previous installation...")
 	deleted := deleteKubeSystemObjects(otherArgs)
 	if deleted {
 		fmt.Println("Removed old agents from the kube-system namespace. You will have to reconfigure Deploy.")
