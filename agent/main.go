@@ -27,8 +27,10 @@ const (
 	defaultAgentRecoveryWait = 5 * time.Minute
 	defaultWCPollURL         = "https://cloud.weave.works/k8s.yaml" +
 		"?k8s-version={{.KubernetesVersion}}&t={{.Token}}&&omit-support-info=true" +
+		"{{if .FluxConfig}}" +
 		"&git-label={{.FluxConfig.GitLabel}}&git-url={{.FluxConfig.GitURL}}" +
-		"&git-path={{.FluxConfig.GitPath}}&git-branch={{.FluxConfig.GitBranch}}"
+		"&git-path={{.FluxConfig.GitPath}}&git-branch={{.FluxConfig.GitBranch}}" +
+		"{{end}}"
 	defaultWCOrgLookupURL = "https://cloud.weave.works/api/users/org/lookup"
 )
 
@@ -40,10 +42,11 @@ type agentConfig struct {
 	AgentRecoveryWait time.Duration
 	WCPollURL         string
 	KubeClient        *kubeclient.Clientset
-	FluxConfig        *fluxConfig
+	FluxConfig        *FluxConfig
 }
 
-type fluxConfig struct {
+// FluxConfig stores existing flux arguments which will be used when updating WC agents
+type FluxConfig struct {
 	GitLabel  string `long:"git-label"`
 	GitURL    string `long:"git-url"`
 	GitPath   string `long:"git-path"`
@@ -196,6 +199,9 @@ func main() {
 
 	// Migrate old versions and use any existing flux config
 	existingFluxCfg := migrate()
+	if existingFluxCfg != nil {
+		log.Infof("Using existing flux config: %+v", existingFluxCfg)
+	}
 
 	cfg := agentConfig{
 		KubernetesVersion: version.GitVersion,

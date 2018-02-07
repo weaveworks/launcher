@@ -8,7 +8,7 @@ import (
 	"github.com/weaveworks/launcher/pkg/kubectl"
 )
 
-func migrate() *fluxConfig {
+func migrate() *FluxConfig {
 	// Save and return any existing flux config in kube-system
 	fluxCfg, err := getFluxConfig("kube-system")
 	if err != nil {
@@ -29,14 +29,15 @@ func migrate() *fluxConfig {
 	return fluxCfg
 }
 
-func getFluxConfig(namespace string) (*fluxConfig, error) {
-	out, err := kubectl.Execute("get", "pod", "-n", namespace, "-l", "name=weave-flux-agent", "-o", "jsonpath='{.items[0].spec.containers[0].args[*]}'")
+func getFluxConfig(namespace string) (*FluxConfig, error) {
+	out, err := kubectl.Execute("get", "pod", "-n", namespace, "-l", "name=weave-flux-agent", "-o", "jsonpath='{.items[?(@.metadata.labels.name==\"weave-flux-agent\")].spec.containers[?(@.name==\"agent\")].args[*]}'")
 	if err != nil {
 		return nil, err
 	}
 
-	cfg := &fluxConfig{}
-	_, err = flags.ParseArgs(cfg, strings.Split(out, " "))
+	cfg := &FluxConfig{}
+	parser := flags.NewParser(cfg, flags.IgnoreUnknown)
+	_, err = parser.ParseArgs(strings.Split(out, " "))
 	if err != nil {
 		return nil, err
 	}

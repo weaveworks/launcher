@@ -121,6 +121,10 @@ items:
                 - '--connect=wss://cloud.weave.works./api/flux'
                 - >-
                   --memcached-hostname=weave-flux-memcached.kube-system.svc.cluster.local
+                - '--git-url=git@github.com:weaveworks/example'
+                - '--git-path=k8s/example'
+                - '--git-branch=master'
+                - '--git-label=example'
               image: 'quay.io/weaveworks/flux:1.2.2'
               imagePullPolicy: IfNotPresent
               volumeMounts:
