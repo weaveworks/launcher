@@ -19,6 +19,7 @@ cat <<EOF
   "Bootstrap" : {
     "Image": "${DEFAULT_NGINX_BOOTSTRAP_IMAGE}",
     "BaseURL": "${BOOTSTRAP_BASE_URL-$DEFAULT_BOOTSTRAP_BASE_URL}"
-  }
+  },
+  "Token": "abc123"
 }
 EOF

@@ -121,9 +121,9 @@ build/static: service/static/* service/static/agent.yaml
 #
 
 integration-tests: all
-	./integration-tests/reset-local-minikube.sh
-	./integration-tests/setup-local-minikube.sh
-	./integration-tests/run.sh
+	./integration-tests/setup/reset-local-minikube.sh
+	./integration-tests/setup/setup-local-minikube.sh
+	./integration-tests/tests/install-update-flow.sh
 
 clean:
 	rm -rf build cache vendor
