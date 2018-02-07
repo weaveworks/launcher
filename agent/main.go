@@ -25,8 +25,11 @@ import (
 const (
 	defaultAgentPollURL      = "https://get.weave.works/k8s/agent.yaml"
 	defaultAgentRecoveryWait = 5 * time.Minute
-	defaultWCPollURL         = "https://cloud.weave.works/k8s.yaml?k8s-version={{.KubernetesVersion}}&t={{.Token}}&omit-support-info=true"
-	defaultWCOrgLookupURL    = "https://cloud.weave.works/api/users/org/lookup"
+	defaultWCPollURL         = "https://cloud.weave.works/k8s.yaml" +
+		"?k8s-version={{.KubernetesVersion}}&t={{.Token}}&&omit-support-info=true" +
+		"&git-label={{.FluxConfig.GitLabel}}&git-url={{.FluxConfig.GitURL}}" +
+		"&git-path={{.FluxConfig.GitPath}}&git-branch={{.FluxConfig.GitBranch}}"
+	defaultWCOrgLookupURL = "https://cloud.weave.works/api/users/org/lookup"
 )
 
 type agentConfig struct {
@@ -37,6 +40,14 @@ type agentConfig struct {
 	AgentRecoveryWait time.Duration
 	WCPollURL         string
 	KubeClient        *kubeclient.Clientset
+	FluxConfig        *fluxConfig
+}
+
+type fluxConfig struct {
+	GitLabel  string `long:"git-label"`
+	GitURL    string `long:"git-url"`
+	GitPath   string `long:"git-path"`
+	GitBranch string `long:"git-branch"`
 }
 
 func init() {
@@ -109,6 +120,15 @@ func updateAgents(cfg agentConfig, cancel <-chan interface{}) {
 		return
 	}
 
+	// Get existing flux config
+	fluxCfg, err := getFluxConfig("weave")
+	if err != nil {
+		logError("Failed getting existing flux config", err, cfg)
+	}
+	if fluxCfg != nil {
+		cfg.FluxConfig = fluxCfg
+	}
+
 	// Update Weave Cloud agents
 	log.Info("Updating WC from ", cfg.WCPollURL)
 	_, err = kubectl.Execute("apply", "-f", cfg.WCPollURL)
@@ -174,6 +194,9 @@ func main() {
 		logError("lookup instance by token", err, agentConfig{})
 	}
 
+	// Migrate old versions and use any existing flux config
+	existingFluxCfg := migrate()
+
 	cfg := agentConfig{
 		KubernetesVersion: version.GitVersion,
 		Token:             *wcToken,
@@ -181,6 +204,7 @@ func main() {
 		AgentPollURL:      *agentPollURL,
 		AgentRecoveryWait: *agentRecoveryWait,
 		KubeClient:        kubeClient,
+		FluxConfig:        existingFluxCfg,
 	}
 
 	wcPollURL, err := text.ResolveString(*wcPollURLTemplate, cfg)
