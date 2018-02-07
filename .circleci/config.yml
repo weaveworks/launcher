@@ -1,5 +1,10 @@
 version: 2
 
+notify:
+  webhooks:
+    # Zap to forward healthcheck failures to Slack
+    - url: $ZAPIER_SLACK_WEBHOOK_URL
+
 defaults: &defaults
   working_directory: /go/src/github.com/weaveworks/launcher
   docker:
