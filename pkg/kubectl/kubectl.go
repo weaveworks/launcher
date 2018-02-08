@@ -38,6 +38,12 @@ type ClusterInfo struct {
 	ServerAddress string
 }
 
+// IsPresent returns true if there's a kubectl command in the PATH.
+func IsPresent() bool {
+	_, err := exec.LookPath("kubectl")
+	return err == nil
+}
+
 // GetClusterInfo gets the current Kubernetes cluster information
 func GetClusterInfo(otherArgs []string) (ClusterInfo, error) {
 	currentContext, err := ExecuteWithGlobalArgs(otherArgs, "config", "current-context")
