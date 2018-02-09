@@ -117,10 +117,14 @@ items:
           containers:
             - name: agent
               args:
-                - '--token={{.Token}}'
+                - '--token={{.K8sKubeSystem.Token}}'
                 - '--connect=wss://cloud.weave.works./api/flux'
                 - >-
                   --memcached-hostname=weave-flux-memcached.kube-system.svc.cluster.local
+                - '--git-url=git@github.com:weaveworks/example'
+                - '--git-path=k8s/example'
+                - '--git-branch=master'
+                - '--git-label=example'
               image: 'quay.io/weaveworks/flux:1.2.2'
               imagePullPolicy: IfNotPresent
               volumeMounts:
@@ -193,7 +197,7 @@ items:
                 - '--probe.docker.bridge=docker0'
                 - '--probe.docker=true'
                 - '--probe.kubernetes=true'
-                - '--service-token={{.Token}}'
+                - '--service-token={{.K8sKubeSystem.Token}}'
               image: 'weaveworks/scope:1.7.3'
               imagePullPolicy: IfNotPresent
               securityContext:
@@ -382,11 +386,11 @@ items:
         remote_write:
           - url: 'https://cloud.weave.works./api/prom/push'
             basic_auth:
-              password: {{.Token}}
+              password: {{.K8sKubeSystem.Token}}
         remote_read:
           - url: 'https://cloud.weave.works./api/prom/read'
             basic_auth:
-              password: {{.Token}}
+              password: {{.K8sKubeSystem.Token}}
         scrape_configs:
           - job_name: kubernetes-apiservers
             kubernetes_sd_configs:
