@@ -55,6 +55,11 @@ func main() {
 		die("%s\n", err)
 	}
 
+	if !kubectl.IsPresent() {
+		die("Could not find kubectl in PATH, please install it: https://kubernetes.io/docs/tasks/tools/install-kubectl/\n")
+
+	}
+
 	agentK8sURL, err := text.ResolveString(agentK8sURLTemplate, opts)
 	if err != nil {
 		log.Fatal("invalid URL template:", err)
