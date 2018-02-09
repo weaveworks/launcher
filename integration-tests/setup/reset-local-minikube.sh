@@ -2,6 +2,13 @@
 
 # Cleans up a minikube cluster that has been populated by setup-local-minikube.sh
 
+echo "• Removing legacy kube-system namespace agents"
+kubectl delete --namespace=kube-system deployments,pods,services,daemonsets,serviceaccounts,configmaps,secrets \
+    --selector='app in (weave-flux, weave-cortex, weave-scope)' 2> /dev/null
+kubectl delete --namespace=kube-system deployments,pods,services,daemonsets,serviceaccounts,configmaps,secrets \
+    --selector='name in (weave-flux, weave-cortex, weave-scope)' 2> /dev/null
+kubectl delete --namespace=kube-system secret flux-git-deploy 2> /dev/null
+
 echo "• Removing weave namespace"
 kubectl delete ns weave 2> /dev/null
 
