@@ -117,7 +117,7 @@ items:
           containers:
             - name: agent
               args:
-                - '--token={{.Token}}'
+                - '--token={{.Agent.Token}}'
                 - '--connect=wss://cloud.weave.works./api/flux'
                 - >-
                   --memcached-hostname=weave-flux-memcached.kube-system.svc.cluster.local
@@ -197,7 +197,7 @@ items:
                 - '--probe.docker.bridge=docker0'
                 - '--probe.docker=true'
                 - '--probe.kubernetes=true'
-                - '--service-token={{.Token}}'
+                - '--service-token={{.Agent.Token}}'
               image: 'weaveworks/scope:1.7.3'
               imagePullPolicy: IfNotPresent
               securityContext:
@@ -386,11 +386,11 @@ items:
         remote_write:
           - url: 'https://cloud.weave.works./api/prom/push'
             basic_auth:
-              password: {{.Token}}
+              password: {{.Agent.Token}}
         remote_read:
           - url: 'https://cloud.weave.works./api/prom/read'
             basic_auth:
-              password: {{.Token}}
+              password: {{.Agent.Token}}
         scrape_configs:
           - job_name: kubernetes-apiservers
             kubernetes_sd_configs:

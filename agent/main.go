@@ -45,14 +45,6 @@ type agentConfig struct {
 	FluxConfig        *FluxConfig
 }
 
-// FluxConfig stores existing flux arguments which will be used when updating WC agents
-type FluxConfig struct {
-	GitLabel  string `long:"git-label"`
-	GitURL    string `long:"git-url"`
-	GitPath   string `long:"git-path"`
-	GitBranch string `long:"git-branch"`
-}
-
 func init() {
 	// https://sentry.io/weaveworks/launcher-agent/
 	raven.SetDSN("https://a31e98421db8457a8c85fb42afcfc6fa:ec43815dbf4e440ca69f53b683bb81da@sentry.io/278297")
@@ -197,8 +189,8 @@ func main() {
 		logError("lookup instance by token", err, agentConfig{})
 	}
 
-	// Migrate old versions and use any existing flux config
-	existingFluxCfg := migrate()
+	// Migrate kube system and reuse any existing flux config
+	existingFluxCfg := migrateKubeSystem()
 	if existingFluxCfg != nil {
 		log.Infof("Using existing flux config: %+v", existingFluxCfg)
 	}
