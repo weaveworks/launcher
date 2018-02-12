@@ -25,17 +25,19 @@ import (
 const (
 	defaultAgentPollURL      = "https://get.weave.works/k8s/agent.yaml"
 	defaultAgentRecoveryWait = 5 * time.Minute
-	defaultWCPollURL         = "https://cloud.weave.works/k8s.yaml" +
+	defaultWCHostname        = "cloud.weave.works"
+	defaultWCPollURL         = "https://{{.WCHostname}}/k8s.yaml" +
 		"?k8s-version={{.KubernetesVersion}}&t={{.Token}}&&omit-support-info=true" +
 		"{{if .FluxConfig}}" +
 		"&git-label={{.FluxConfig.GitLabel}}&git-url={{.FluxConfig.GitURL}}" +
 		"&git-path={{.FluxConfig.GitPath}}&git-branch={{.FluxConfig.GitBranch}}" +
 		"{{end}}"
-	defaultWCOrgLookupURL = "https://cloud.weave.works/api/users/org/lookup"
+	defaultWCOrgLookupURL = "https://{{.WCHostname}}/api/users/org/lookup"
 )
 
 type agentConfig struct {
 	KubernetesVersion string
+	WCHostname        string
 	Token             string
 	InstanceID        string
 	AgentPollURL      string
@@ -158,7 +160,8 @@ func main() {
 	wcToken := flag.String("wc.token", "", "Weave Cloud instance token")
 	wcPollInterval := flag.Duration("wc.poll-interval", 1*time.Hour, "Polling interval to check WC manifests")
 	wcPollURLTemplate := flag.String("wc.poll-url", defaultWCPollURL, "URL to poll for WC manifests")
-	wcOrgLookupURL := flag.String("wc.org-lookup-url", defaultWCOrgLookupURL, "URL to lookup org external ID by token")
+	wcOrgLookupURLTemplate := flag.String("wc.org-lookup-url", defaultWCOrgLookupURL, "URL to lookup org external ID by token")
+	wcHostname := flag.String("wc.hostname", defaultWCHostname, "WC Hostname for WC agents and users API")
 
 	eventsReportInterval := flag.Duration("events.report-interval", 3*time.Second, "Minimal time interval between two reports")
 
@@ -184,25 +187,13 @@ func main() {
 		log.Fatal("get server version:", err)
 	}
 
-	instanceID, err := weavecloud.LookupInstanceByToken(*wcOrgLookupURL, *wcToken)
-	if err != nil {
-		logError("lookup instance by token", err, agentConfig{})
-	}
-
-	// Migrate kube system and reuse any existing flux config
-	existingFluxCfg := migrateKubeSystem()
-	if existingFluxCfg != nil {
-		log.Infof("Using existing flux config: %+v", existingFluxCfg)
-	}
-
 	cfg := agentConfig{
 		KubernetesVersion: version.GitVersion,
 		Token:             *wcToken,
-		InstanceID:        instanceID,
-		AgentPollURL:      *agentPollURL,
 		AgentRecoveryWait: *agentRecoveryWait,
 		KubeClient:        kubeClient,
-		FluxConfig:        existingFluxCfg,
+		WCHostname:        *wcHostname,
+		AgentPollURL:      *agentPollURL,
 	}
 
 	wcPollURL, err := text.ResolveString(*wcPollURLTemplate, cfg)
@@ -210,6 +201,24 @@ func main() {
 		log.Fatal("invalid URL template:", err)
 	}
 	cfg.WCPollURL = wcPollURL
+
+	// Lookup instance ID
+	wcOrgLookupURL, err := text.ResolveString(*wcOrgLookupURLTemplate, cfg)
+	if err != nil {
+		log.Fatal("invalid URL template:", err)
+	}
+	instanceID, err := weavecloud.LookupInstanceByToken(wcOrgLookupURL, *wcToken)
+	if err != nil {
+		logError("lookup instance by token", err, agentConfig{})
+	}
+	cfg.InstanceID = instanceID
+
+	// Migrate kube system and reuse any existing flux config
+	existingFluxCfg := migrateKubeSystem()
+	if existingFluxCfg != nil {
+		log.Infof("Using existing flux config: %+v", existingFluxCfg)
+	}
+	cfg.FluxConfig = existingFluxCfg
 
 	var g run.Group
 

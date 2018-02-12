@@ -44,7 +44,7 @@ run_self_update_test () {
     echo "• Take the current service agent k8s and add a new label to it and reduce the recovery wait to 60s"
     kubectl cp default/${service_pod}:static/agent.yaml $updated_agent_yaml
     yq w -i $updated_agent_yaml items.4.spec.template.metadata.labels.newLabel foo
-    yq w -i $updated_agent_yaml items.4.spec.template.spec.containers.0.args.2 '"-agent.recovery-wait=60s"'
+    yq w -i $updated_agent_yaml items.4.spec.template.spec.containers.0.args.3 '"-agent.recovery-wait=60s"'
 
     echo "• Create a configmap for the updated yaml which will be mounted as a volume"
     if kubectl get configmap agent-k8s; then
