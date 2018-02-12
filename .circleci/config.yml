@@ -4,6 +4,7 @@ notify:
   webhooks:
     # Zap to forward healthcheck failures to Slack
     - url: https://hooks.zapier.com/hooks/catch/2669140/zma7dg/
+    - url: https://hooks.zapier.com/hooks/catch/2669140/ziw81i/
 
 defaults: &defaults
   working_directory: /go/src/github.com/weaveworks/launcher
