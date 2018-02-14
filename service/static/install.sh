@@ -1,6 +1,25 @@
 #!/bin/sh
 set -e
 
+# Parse command-line arguments
+for arg in "$@"; do
+    case $arg in
+        --token=*)
+            token=$(echo $arg | cut -d '=' -f 2)
+            ;;
+    esac
+done
+
+if [ -z "$token" ]; then
+    echo "error: please specify the instance token with --token=<TOKEN>"
+    exit 1
+fi
+
+# Notify installation has started
+curl -s >/dev/null 2>/dev/null -H "Accept: application/json" -H "Authorization: Bearer $token" -X POST -d \
+    '{"type": "onboarding_started", "messages": {"browser": "Installation of Weave Cloud agents has started"}}' \
+    {{.Scheme}}://{{.WCHostname}}/api/notification/external/events
+
 # Create a temporary file for the bootstrap binary
 TMPFILE="$(mktemp -qt weave_bootstrap.XXXXXXXXXX)" || exit 1
 
