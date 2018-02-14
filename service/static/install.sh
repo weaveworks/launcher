@@ -18,7 +18,7 @@ fi
 # Notify installation has started
 curl -s >/dev/null 2>/dev/null -H "Accept: application/json" -H "Authorization: Bearer $token" -X POST -d \
     '{"type": "onboarding_started", "messages": {"browser": "Installation of Weave Cloud agents has started"}}' \
-    {{.Scheme}}://{{.WCHostname}}/api/notification/external/events
+    {{.Scheme}}://{{.WCHostname}}/api/notification/external/events || true
 
 # Create a temporary file for the bootstrap binary
 TMPFILE="$(mktemp -qt weave_bootstrap.XXXXXXXXXX)" || exit 1
