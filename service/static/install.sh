@@ -11,9 +11,9 @@ trap 'exit $?' 1 2 3 15
 # Get distribution
 unamestr=$(uname)
 if [ "$unamestr" = 'Darwin' ]; then
-   dist='darwin'
+    dist='darwin'
 elif [ "$unamestr" = 'Linux' ]; then
-   dist='linux'
+    dist='linux'
 fi
 
 # Download the bootstrap binary
