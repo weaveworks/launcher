@@ -35,7 +35,6 @@ func main() {
 
 	if !kubectl.IsPresent() {
 		die("Could not find kubectl in PATH, please install it: https://kubernetes.io/docs/tasks/tools/install-kubectl/\n")
-
 	}
 
 	agentK8sURL, err := text.ResolveString(agentK8sURLTemplate, opts)
@@ -54,20 +53,8 @@ func main() {
 		die("There was an error fetching the current cluster info: %s\n", err)
 	}
 
-	fmt.Printf("\nThis will install Weave Cloud on the following cluster:\n")
-	fmt.Printf("    Name: %s\n    Server: %s\n\n", cluster.Name, cluster.ServerAddress)
-	fmt.Printf("Please run 'kubectl config use-context' or pass '--kubeconfig' if you would like to change this.\n\n")
+	fmt.Printf("Installing Weave Cloud agents on %s at %s", cluster.Name, cluster.ServerAddress)
 
-	confirmed, err := askForConfirmation("Would you like to continue?", opts.AssumeYes)
-	if err != nil {
-		die("There was an error: %s\n", err)
-	}
-	if !confirmed {
-		fmt.Println("Cancelled.")
-		return
-	}
-
-	fmt.Println("Storing the instance token in the weave-cloud secret...")
 	secretCreated, err := createWCSecret(opts, otherArgs)
 	if err != nil {
 		die("There was an error creating the secret: %s\n", err)
@@ -77,7 +64,7 @@ func main() {
 		return
 	}
 
-	fmt.Println("Applying the agent...")
+	// Apply the agent
 	_, err = kubectl.ExecuteWithGlobalArgs(otherArgs, "apply", "-f", agentK8sURL)
 	if err != nil {
 		die("There was an error applying the agent: %s\n", err)
