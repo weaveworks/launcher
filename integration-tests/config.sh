@@ -7,7 +7,7 @@ DEFAULT_NGINX_BOOTSTRAP_IMAGE="quay.io/weaveworks/launcher-nginx-bootstrap:${IMA
 DEFAULT_BOOTSTRAP_BASE_URL="https://weaveworks-launcher.s3.amazonaws.com"
 
 # When run locally, we source bootstrap from a local nginx service
-[ -z "$CI" ] && BOOTSTRAP_BASE_URL="http://$(minikube ip):30081"
+[ -z "$CI" ] && BOOTSTRAP_BASE_URL="http://$(minikube ip):30091"
 
 cat <<EOF
 {
