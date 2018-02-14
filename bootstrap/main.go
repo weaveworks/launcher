@@ -53,7 +53,7 @@ func main() {
 		die("There was an error fetching the current cluster info: %s\n", err)
 	}
 
-	fmt.Printf("Installing Weave Cloud agents on %s at %s", cluster.Name, cluster.ServerAddress)
+	fmt.Printf("Installing Weave Cloud agents on %s at %s\n", cluster.Name, cluster.ServerAddress)
 
 	secretCreated, err := createWCSecret(opts, otherArgs)
 	if err != nil {
