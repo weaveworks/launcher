@@ -166,6 +166,7 @@ func main() {
 	eventsReportInterval := flag.Duration("events.report-interval", 3*time.Second, "Minimal time interval between two reports")
 
 	featureInstall := flag.Bool("feature.install-agents", true, "Whether the agent should install anything in the cluster or not")
+	featureEvents := flag.Bool("feature.kubernetes-events", false, "Whether the agent should forward kubernetes events to Weave Cloud or not")
 
 	flag.Parse()
 
@@ -266,7 +267,7 @@ func main() {
 	eventSource := k8s.NewEventSource(kubeClient, apiv1.NamespaceAll)
 
 	// Capture Kubernetes events
-	{
+	if *featureEvents {
 		cancel := make(chan interface{})
 		g.Add(
 			func() error {
@@ -280,7 +281,7 @@ func main() {
 	}
 
 	// Report Kubernetes events
-	{
+	if *featureEvents {
 		cancel := make(chan interface{})
 		g.Add(
 			func() error {
