@@ -70,7 +70,7 @@ func main() {
 		die("There was an error applying the agent: %s\n", err)
 	}
 
-	fmt.Println("Successfully installed. Please check the status at https://cloud.weave.works.")
+	fmt.Println("Successfully installed.")
 }
 
 func die(msg string, args ...interface{}) {
