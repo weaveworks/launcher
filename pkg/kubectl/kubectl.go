@@ -101,7 +101,11 @@ func CreateSecretFromLiteral(namespace, secretName, key, value string, otherArgs
 func ResourceExists(resourceType, resourceName, namespace string, otherArgs []string) (bool, error) {
 	_, err := ExecuteWithGlobalArgs(otherArgs, "get", resourceType, resourceName, fmt.Sprintf("--namespace=%s", namespace))
 	if err != nil {
-		if strings.Contains(err.Error(), "NotFound") {
+		// k8s 1.4 answers with "Error from server: secrets "weave-cloud" not found"
+		// More recent versions with "Error from server (NotFound): secrets "weave-cloud" not found
+		errorText := err.Error()
+		if strings.Contains(errorText, "NotFound") ||
+			strings.Contains(errorText, "not found") {
 			return false, nil
 		}
 		return false, err
