@@ -8,6 +8,8 @@ import (
 	"strings"
 	"syscall"
 
+	raven "github.com/getsentry/raven-go"
+
 	"github.com/jessevdk/go-flags"
 	"github.com/weaveworks/launcher/pkg/kubectl"
 	"github.com/weaveworks/launcher/pkg/text"
@@ -22,6 +24,11 @@ type options struct {
 	Scheme    string `long:"scheme" description:"Weave Cloud scheme" default:"https"`
 	Hostname  string `long:"hostname" description:"Weave Cloud hostname" default:"get.weave.works"`
 	Token     string `long:"token" description:"Weave Cloud token" required:"true"`
+}
+
+func init() {
+	// https://sentry.io/weaveworks/launcher-bootstrap/
+	raven.SetDSN("https://44cf71b08710447888c993011b1302fc:8f57948cabd34bbe854b196635bff59f@sentry.io/288665")
 }
 
 func main() {
@@ -74,7 +81,9 @@ func main() {
 }
 
 func die(msg string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, msg, args...)
+	formatted := fmt.Sprintf(msg, args...)
+	fmt.Fprintf(os.Stderr, formatted)
+	raven.CaptureMessageAndWait(formatted, map[string]string{})
 	os.Exit(1)
 }
 
