@@ -16,7 +16,7 @@ type FluxConfig struct {
 }
 
 func getFluxConfig(namespace string) (*FluxConfig, error) {
-	out, err := kubectl.Execute("get", "pod", "-n", namespace, "-l", "name=weave-flux-agent", "-o", "jsonpath='{.items[?(@.metadata.labels.name==\"weave-flux-agent\")].spec.containers[?(@.name==\"agent\")].args[*]}'")
+	out, err := kubectl.Execute("get", "pod", "-n", namespace, "-l", "name=weave-flux-agent", "-o", "jsonpath='{.items[?(@.metadata.labels.name==\"weave-flux-agent\")].spec.containers[0].args[*]}'")
 	if err != nil {
 		return nil, err
 	}

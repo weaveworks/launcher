@@ -61,7 +61,7 @@ func setLogLevel(logLevel string) error {
 	return nil
 }
 
-func logError(msg string, err error, cfg agentConfig) {
+func logError(msg string, err error, cfg *agentConfig) {
 	log.Errorf("%s: %s", msg, err)
 	ravenTags := map[string]string{
 		"kubernetes": cfg.KubernetesVersion,
@@ -70,7 +70,7 @@ func logError(msg string, err error, cfg agentConfig) {
 	raven.CaptureErrorAndWait(err, ravenTags)
 }
 
-func updateAgents(cfg agentConfig, cancel <-chan interface{}) {
+func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 	// Self-update
 	log.Info("Updating self from ", cfg.AgentPollURL)
 
@@ -188,7 +188,7 @@ func main() {
 		log.Fatal("get server version:", err)
 	}
 
-	cfg := agentConfig{
+	cfg := &agentConfig{
 		KubernetesVersion: version.GitVersion,
 		Token:             *wcToken,
 		AgentRecoveryWait: *agentRecoveryWait,
@@ -210,7 +210,7 @@ func main() {
 	}
 	instanceID, err := weavecloud.LookupInstanceByToken(wcOrgLookupURL, *wcToken)
 	if err != nil {
-		logError("lookup instance by token", err, agentConfig{})
+		logError("lookup instance by token", err, &agentConfig{})
 	}
 	cfg.InstanceID = instanceID
 
