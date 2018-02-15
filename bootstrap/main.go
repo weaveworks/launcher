@@ -8,6 +8,8 @@ import (
 	"strings"
 	"syscall"
 
+	raven "github.com/getsentry/raven-go"
+
 	"github.com/jessevdk/go-flags"
 	"github.com/weaveworks/launcher/pkg/kubectl"
 	"github.com/weaveworks/launcher/pkg/text"
@@ -24,7 +26,16 @@ type options struct {
 	Token     string `long:"token" description:"Weave Cloud token" required:"true"`
 }
 
+func init() {
+	// https://sentry.io/weaveworks/launcher-bootstrap/
+	raven.SetDSN("https://44cf71b08710447888c993011b1302fc:8f57948cabd34bbe854b196635bff59f@sentry.io/288665")
+}
+
 func main() {
+	raven.CapturePanicAndWait(mainImpl, nil)
+}
+
+func mainImpl() {
 	opts := options{}
 	// Parse arguments with go-flags so we can forward unknown arguments to kubectl
 	parser := flags.NewParser(&opts, flags.IgnoreUnknown)
@@ -32,6 +43,10 @@ func main() {
 	if err != nil {
 		die("%s\n", err)
 	}
+	raven.SetTagsContext(map[string]string{
+		"weave_cloud_scheme":   opts.Scheme,
+		"weave_cloud_hostname": opts.Hostname,
+	})
 
 	if !kubectl.IsPresent() {
 		die("Could not find kubectl in PATH, please install it: https://kubernetes.io/docs/tasks/tools/install-kubectl/\n")
@@ -74,7 +89,9 @@ func main() {
 }
 
 func die(msg string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, msg, args...)
+	formatted := fmt.Sprintf(msg, args...)
+	fmt.Fprintf(os.Stderr, formatted)
+	raven.CaptureMessageAndWait(formatted, nil)
 	os.Exit(1)
 }
 
