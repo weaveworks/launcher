@@ -39,6 +39,10 @@ func main() {
 	if err != nil {
 		die("%s\n", err)
 	}
+	raven.SetTagsContext(map[string]string{
+		"weave_cloud_scheme":   opts.Scheme,
+		"weave_cloud_hostname": opts.Hostname,
+	})
 
 	if !kubectl.IsPresent() {
 		die("Could not find kubectl in PATH, please install it: https://kubernetes.io/docs/tasks/tools/install-kubectl/\n")
