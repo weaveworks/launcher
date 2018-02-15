@@ -57,5 +57,5 @@ echo "• Check flux configuration still exists"
 args=$(kubectl get pod -n weave -l name=weave-flux-agent -o jsonpath='{.items[?(@.metadata.labels.name=="weave-flux-agent")].spec.containers[?(@.name=="flux-agent")].args[*]}')
 if [[ $args != *"--git-url=git@github.com:weaveworks/example --git-path=k8s/example --git-branch=example --git-label=example"* ]]; then
     echo "Missing existing flux args"
-    exit 1;
+    exit 1
 fi
