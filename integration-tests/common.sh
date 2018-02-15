@@ -24,5 +24,5 @@ wait_for_wc_agents () {
 templatinator () {
     config="$1"
     file="$2"
-    echo $($root/$config) | go run $root/../cmd/templatinator/templatinator.go $file.in > $file
+    echo $(${tests_root}/$config) | go run ${tests_root}/../cmd/templatinator/templatinator.go $file.in > $file
 }
