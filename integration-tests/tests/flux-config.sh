@@ -1,8 +1,8 @@
-#!/bin/sh -e
+#!/bin/bash -e
 
-root=$(dirname "$0")/..
+tests_root=$(dirname "$0")/..
 
-. $root/common.sh
+. ${tests_root}/common.sh
 
 echo "####################"
 echo "### Test flux config"
@@ -12,15 +12,15 @@ echo "• Set WEAVE_CLOUD_TOKEN if it is not already set"
 [ -z "$WEAVE_CLOUD_TOKEN" ] && WEAVE_CLOUD_TOKEN="abcd1234"
 
 echo "• Start launcher/service on minikube"
-service_yaml=$root/k8s/service.yaml
+service_yaml=${tests_root}/k8s/service.yaml
 templatinator "config.sh" $service_yaml
 kubectl apply -f $service_yaml
 
 wait_for_service
 
 service_pod=$(kubectl get pods -l name=service -o jsonpath='{range .items[*]}{@.metadata.name}')
-updated_service_yaml=$root/k8s/service.updated.yaml
-updated_agent_yaml=$root/k8s/agent.updated.yaml
+updated_service_yaml=${tests_root}/k8s/service.updated.yaml
+updated_agent_yaml=${tests_root}/k8s/agent.updated.yaml
 templatinator "config.sh" $updated_service_yaml
 
 echo "• Take the current service agent k8s and reduce the poll interval to 10 seconds"
@@ -55,7 +55,7 @@ sleep 40
 
 echo "• Check flux configuration still exists"
 args=$(kubectl get pod -n weave -l name=weave-flux-agent -o jsonpath='{.items[?(@.metadata.labels.name=="weave-flux-agent")].spec.containers[?(@.name=="flux-agent")].args[*]}')
-if [[ $args != *"--git-url=git@github.com:weaveworks/example --git-path=k8s/example --git-branch=master --git-label=example"* ]]; then
+if [[ $args != *"--git-url=git@github.com:weaveworks/example --git-path=k8s/example --git-branch=example --git-label=example"* ]]; then
     echo "Missing existing flux args"
-    exit 1
+    exit 1;
 fi

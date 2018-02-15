@@ -1,8 +1,8 @@
-#!/bin/sh -e
+#!/bin/bash -e
 
-root=$(dirname "$0")/..
+tests_root=$(dirname "$0")/..
 
-. $root/common.sh
+. ${tests_root}/common.sh
 
 run () {
     run_install_test
@@ -19,7 +19,7 @@ run_install_test () {
     [ -z "$WEAVE_CLOUD_TOKEN" ] && WEAVE_CLOUD_TOKEN="abcd1234"
 
     echo "• Start launcher/service on minikube"
-    service_yaml=$root/k8s/service.yaml
+    service_yaml=${tests_root}/k8s/service.yaml
     templatinator "config.sh" $service_yaml
     kubectl apply -f $service_yaml
 
@@ -37,8 +37,8 @@ run_self_update_test () {
     echo "###########################"
 
     service_pod=$(kubectl get pods -l name=service -o jsonpath='{range .items[*]}{@.metadata.name}')
-    updated_service_yaml=$root/k8s/service.updated.yaml
-    updated_agent_yaml=$root/k8s/agent.updated.yaml
+    updated_service_yaml=${tests_root}/k8s/service.updated.yaml
+    updated_agent_yaml=${tests_root}/k8s/agent.updated.yaml
     templatinator "config.sh" $updated_service_yaml
 
     echo "• Take the current service agent k8s and add a new label to it and reduce the recovery wait to 60s"
@@ -81,8 +81,8 @@ run_self_update_failure_test () {
     echo "##################################"
 
     service_pod=$(kubectl get pods -l name=service -o jsonpath='{range .items[*]}{@.metadata.name}')
-    updated_service_yaml=$root/k8s/service.updated.yaml
-    updated_agent_yaml=$root/k8s/agent.updated.yaml
+    updated_service_yaml=${tests_root}/k8s/service.updated.yaml
+    updated_agent_yaml=${tests_root}/k8s/agent.updated.yaml
     templatinator "config.sh" $updated_service_yaml
 
     echo "• Take the current service agent k8s and set the image to one that does not exist"
