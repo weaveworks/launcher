@@ -69,7 +69,7 @@ run_self_update_test () {
     wait_for_wc_agents
 
     echo "• Check the agent updated correctly"
-    if [ $(kubectl get pods -n weave -l name=weave-agent -o jsonpath="{.items[0].metadata.labels.newLabel}") != "foo" ]; then
+    if [[ $(kubectl get pods -n weave -l name=weave-agent -o jsonpath="{.items[0].metadata.labels.newLabel}") != "foo" ]]; then
         echo "Failed to self update. Label newLabel=foo does not exist."
         exit 1
     fi
