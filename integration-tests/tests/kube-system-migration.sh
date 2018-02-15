@@ -1,15 +1,15 @@
-#!/bin/sh -e
+#!/bin/bash -e
 
-root=$(dirname "$0")/..
+tests_root=$(dirname "$0")/..
 
-. $root/common.sh
+. ${tests_root}/common.sh
 
 echo "##################"
 echo "### Test migration"
 echo "##################"
 
 echo "• Install agents in kube-system"
-k8s_kube_system_yaml=$root/k8s/k8s-kube-system.yaml
+k8s_kube_system_yaml=${tests_root}/k8s/k8s-kube-system.yaml
 templatinator "config.sh" $k8s_kube_system_yaml
 kubectl apply -f $k8s_kube_system_yaml -n kube-system
 
@@ -17,7 +17,7 @@ echo "• Set WEAVE_CLOUD_TOKEN if it is not already set"
 [ -z "$WEAVE_CLOUD_TOKEN" ] && WEAVE_CLOUD_TOKEN="abcd1234"
 
 echo "• Start launcher/service on minikube"
-service_yaml=$root/k8s/service.yaml
+service_yaml=${tests_root}/k8s/service.yaml
 templatinator "config.sh" $service_yaml
 kubectl apply -f $service_yaml
 
@@ -36,5 +36,5 @@ echo "• Check old flux arguments have been applied to the new agent"
 args=$(kubectl get pod -n weave -l name=weave-flux-agent -o jsonpath='{.items[?(@.metadata.labels.name=="weave-flux-agent")].spec.containers[?(@.name=="flux-agent")].args[*]}')
 if [[ $args != *"--git-url=git@github.com:weaveworks/example --git-path=k8s/example --git-branch=master --git-label=example"* ]]; then
     echo "Missing existing flux args"
-    exit 1
+    exit 1;
 fi

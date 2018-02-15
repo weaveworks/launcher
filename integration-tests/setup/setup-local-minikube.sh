@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-root=$(dirname "$0")
+root=$(dirname "$0")/..
 IMAGE_TAG=$($root/../docker/image-tag)
 GIT_HASH=$(git rev-parse HEAD)
 
@@ -22,7 +22,7 @@ echo "• Building agent image on minikube"
 
 ###
 echo "• Building nginx image serving bootstrap"
-dockerfile=$root/../build/Dockerfile.nginx-bootstrap 
+dockerfile=$root/../build/Dockerfile.nginx-bootstrap
 cp $root/docker/Dockerfile.nginx-bootstrap ${dockerfile}
 docker build -t quay.io/weaveworks/launcher-nginx-bootstrap:${IMAGE_TAG} --build-arg version=${GIT_HASH} -f ${dockerfile} $root/../build/
 

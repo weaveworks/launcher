@@ -1,8 +1,8 @@
-#!/bin/sh -e
+#!/bin/bash -e
 
-root=$(dirname "$0")/..
+tests_root=$(dirname "$0")/..
 
-. $root/common.sh
+. ${tests_root}/common.sh
 
 echo "####################################"
 echo "### Healthcheck of $1 install script"

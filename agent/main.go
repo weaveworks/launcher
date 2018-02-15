@@ -42,7 +42,7 @@ type agentConfig struct {
 	InstanceID        string
 	AgentPollURL      string
 	AgentRecoveryWait time.Duration
-	WCPollURL         string
+	WCPollURLTemplate string
 	KubeClient        *kubeclient.Clientset
 	FluxConfig        *FluxConfig
 }
@@ -61,7 +61,7 @@ func setLogLevel(logLevel string) error {
 	return nil
 }
 
-func logError(msg string, err error, cfg agentConfig) {
+func logError(msg string, err error, cfg *agentConfig) {
 	log.Errorf("%s: %s", msg, err)
 	ravenTags := map[string]string{
 		"kubernetes": cfg.KubernetesVersion,
@@ -70,7 +70,7 @@ func logError(msg string, err error, cfg agentConfig) {
 	raven.CaptureErrorAndWait(err, ravenTags)
 }
 
-func updateAgents(cfg agentConfig, cancel <-chan interface{}) {
+func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 	// Self-update
 	log.Info("Updating self from ", cfg.AgentPollURL)
 
@@ -127,8 +127,12 @@ func updateAgents(cfg agentConfig, cancel <-chan interface{}) {
 	}
 
 	// Update Weave Cloud agents
-	log.Info("Updating WC from ", cfg.WCPollURL)
-	_, err = kubectl.Execute("apply", "-f", cfg.WCPollURL)
+	wcPollURL, err := text.ResolveString(cfg.WCPollURLTemplate, cfg)
+	if err != nil {
+		log.Fatal("invalid URL template:", err)
+	}
+	log.Info("Updating WC from ", wcPollURL)
+	_, err = kubectl.Execute("apply", "-f", wcPollURL)
 	if err != nil {
 		logError("Failed to execute kubectl apply", err, cfg)
 		return
@@ -183,20 +187,15 @@ func mainImpl() {
 		log.Fatal("get server version:", err)
 	}
 
-	cfg := agentConfig{
+	cfg := &agentConfig{
 		KubernetesVersion: version.GitVersion,
 		Token:             *wcToken,
 		AgentRecoveryWait: *agentRecoveryWait,
 		KubeClient:        kubeClient,
 		WCHostname:        *wcHostname,
 		AgentPollURL:      *agentPollURL,
+		WCPollURLTemplate: *wcPollURLTemplate,
 	}
-
-	wcPollURL, err := text.ResolveString(*wcPollURLTemplate, cfg)
-	if err != nil {
-		log.Fatal("invalid URL template:", err)
-	}
-	cfg.WCPollURL = wcPollURL
 
 	// Lookup instance ID
 	wcOrgLookupURL, err := text.ResolveString(*wcOrgLookupURLTemplate, cfg)
@@ -205,7 +204,7 @@ func mainImpl() {
 	}
 	instanceID, err := weavecloud.LookupInstanceByToken(wcOrgLookupURL, *wcToken)
 	if err != nil {
-		logError("lookup instance by token", err, agentConfig{})
+		logError("lookup instance by token", err, &agentConfig{})
 	}
 	cfg.InstanceID = instanceID
 
