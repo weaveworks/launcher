@@ -32,6 +32,10 @@ func init() {
 }
 
 func main() {
+	raven.CapturePanicAndWait(mainImpl, nil)
+}
+
+func mainImpl() {
 	opts := options{}
 	// Parse arguments with go-flags so we can forward unknown arguments to kubectl
 	parser := flags.NewParser(&opts, flags.IgnoreUnknown)
@@ -87,7 +91,7 @@ func main() {
 func die(msg string, args ...interface{}) {
 	formatted := fmt.Sprintf(msg, args...)
 	fmt.Fprintf(os.Stderr, formatted)
-	raven.CaptureMessageAndWait(formatted, map[string]string{})
+	raven.CaptureMessageAndWait(formatted, nil)
 	os.Exit(1)
 }
 
