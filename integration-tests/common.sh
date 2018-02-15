@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash -e
 
 wait_for_service () {
     echo -n "• Wait for launcher/service pod to become ready"
