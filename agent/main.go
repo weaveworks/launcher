@@ -42,7 +42,7 @@ type agentConfig struct {
 	InstanceID        string
 	AgentPollURL      string
 	AgentRecoveryWait time.Duration
-	WCPollURL         string
+	WCPollURLTemplate string
 	KubeClient        *kubeclient.Clientset
 	FluxConfig        *FluxConfig
 }
@@ -127,8 +127,12 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 	}
 
 	// Update Weave Cloud agents
-	log.Info("Updating WC from ", cfg.WCPollURL)
-	_, err = kubectl.Execute("apply", "-f", cfg.WCPollURL)
+	wcPollURL, err := text.ResolveString(cfg.WCPollURLTemplate, cfg)
+	if err != nil {
+		log.Fatal("invalid URL template:", err)
+	}
+	log.Info("Updating WC from ", wcPollURL)
+	_, err = kubectl.Execute("apply", "-f", wcPollURL)
 	if err != nil {
 		logError("Failed to execute kubectl apply", err, cfg)
 		return
@@ -195,13 +199,8 @@ func main() {
 		KubeClient:        kubeClient,
 		WCHostname:        *wcHostname,
 		AgentPollURL:      *agentPollURL,
+		WCPollURLTemplate: *wcPollURLTemplate,
 	}
-
-	wcPollURL, err := text.ResolveString(*wcPollURLTemplate, cfg)
-	if err != nil {
-		log.Fatal("invalid URL template:", err)
-	}
-	cfg.WCPollURL = wcPollURL
 
 	// Lookup instance ID
 	wcOrgLookupURL, err := text.ResolveString(*wcOrgLookupURLTemplate, cfg)
