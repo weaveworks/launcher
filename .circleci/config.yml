@@ -150,6 +150,35 @@ jobs:
             fi
             ./integration-tests/tests/flux-config.sh
 
+  integration_gke:
+    machine: true
+    environment:
+      CHANGE_MINIKUBE_NONE_USER: true
+    steps:
+      - checkout
+      - <<: *integration_deps
+      - run:
+          name: Configure gcloud with launcher-integration-tests project
+          command: |
+            echo $GCLOUD_SERVICE_KEY | base64 --decode --ignore-garbage > ${HOME}/gcloud-service-key.json
+            sudo /opt/google-cloud-sdk/bin/gcloud --quiet components update
+            sudo /opt/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
+            sudo /opt/google-cloud-sdk/bin/gcloud config set project $GCLOUD_PROJECT
+      - run: sudo minikube start --vm-driver=none
+      - run: sudo chown -R $USER.$USER ~/.minikube
+      - run: sudo chown -R $USER.$USER ~/.kube
+      - run: minikube update-context
+      - <<: *wait_for_minikube
+      - run:
+          name: Execute integration tests
+          command: |
+            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
+              export SERVICE_IMAGE="quay.io/weaveworks/launcher-service:$(docker/image-tag)"
+            else
+              export SERVICE_IMAGE=quay.io/weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
+            fi
+            ./integration-tests/tests/gke.sh
+
   healthcheck_dev:
     machine: true
     environment:
@@ -201,6 +230,11 @@ workflows:
             - bootstrap
             - service
       - integration_flux_config:
+          requires:
+            - agent
+            - bootstrap
+            - service
+      - integration_gke:
           requires:
             - agent
             - bootstrap

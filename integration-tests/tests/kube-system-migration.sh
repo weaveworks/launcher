@@ -36,5 +36,5 @@ echo "• Check old flux arguments have been applied to the new agent"
 args=$(kubectl get pod -n weave -l name=weave-flux-agent -o jsonpath='{.items[?(@.metadata.labels.name=="weave-flux-agent")].spec.containers[?(@.name=="flux-agent")].args[*]}')
 if [[ $args != *"--git-url=git@github.com:weaveworks/example --git-path=k8s/example --git-branch=master --git-label=example"* ]]; then
     echo "Missing existing flux args"
-    exit 1;
+    exit 1
 fi

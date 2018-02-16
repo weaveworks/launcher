@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -11,6 +12,7 @@ import (
 	raven "github.com/getsentry/raven-go"
 
 	"github.com/jessevdk/go-flags"
+	"github.com/weaveworks/launcher/pkg/gcloud"
 	"github.com/weaveworks/launcher/pkg/kubectl"
 	"github.com/weaveworks/launcher/pkg/text"
 )
@@ -24,6 +26,7 @@ type options struct {
 	Scheme    string `long:"scheme" description:"Weave Cloud scheme" default:"https"`
 	Hostname  string `long:"hostname" description:"Weave Cloud hostname" default:"get.weave.works"`
 	Token     string `long:"token" description:"Weave Cloud token" required:"true"`
+	GKE       bool   `long:"gke" description:"Create clusterrolebinding for GKE instances"`
 }
 
 func init() {
@@ -70,6 +73,14 @@ func mainImpl() {
 
 	fmt.Printf("Installing Weave Cloud agents on %s at %s\n", cluster.Name, cluster.ServerAddress)
 
+	if opts.GKE {
+		err := createGKEClusterRoleBinding(otherArgs)
+		if err != nil {
+			fmt.Println("WARNING: For GKE installations, a cluster-admin clusterrolebinding is required.")
+			fmt.Printf("Could not create clusterrolebinding: %s", err)
+		}
+	}
+
 	secretCreated, err := createWCSecret(opts, otherArgs)
 	if err != nil {
 		die("There was an error creating the secret: %s\n", err)
@@ -93,6 +104,32 @@ func die(msg string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, formatted)
 	raven.CaptureMessageAndWait(formatted, nil)
 	os.Exit(1)
+}
+
+func createGKEClusterRoleBinding(otherArgs []string) error {
+	if !gcloud.IsPresent() {
+		return errors.New("Could not find gcloud in PATH, please install it: https://cloud.google.com/sdk/docs/")
+	}
+
+	account, err := gcloud.GetConfigValue("core/account")
+	if err != nil || account == "" {
+		return errors.New("Could not find gcloud account. Please run: gcloud auth login `ACCOUNT`")
+	}
+	hostUser := os.Getenv("USER")
+
+	_, err = kubectl.ExecuteWithGlobalArgs(
+		otherArgs,
+		"create",
+		"clusterrolebinding",
+		fmt.Sprintf("cluster-admin-%s", hostUser),
+		"--clusterrole=cluster-admin",
+		"--user",
+		account,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func createWCSecret(opts options, otherArgs []string) (bool, error) {
