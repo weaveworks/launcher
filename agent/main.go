@@ -70,8 +70,7 @@ func logError(msg string, err error, cfg *agentConfig) {
 	raven.CaptureErrorAndWait(err, ravenTags)
 }
 
-func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
-	// Self-update
+func maybeUpdateSelf(cfg *agentConfig, cancel <-chan interface{}) {
 	log.Info("Updating self from ", cfg.AgentPollURL)
 
 	initialRevision, err := k8s.GetLatestDeploymentReplicaSetRevision(cfg.KubeClient, "weave", "weave-agent")
@@ -116,7 +115,9 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 		logError("The new agent was rolled back.", errors.New("Rollback success"), cfg)
 		return
 	}
+}
 
+func maybeInstallOrUpdateWC(cfg *agentConfig, cancel <-chan interface{}) {
 	// Get existing flux config
 	fluxCfg, err := getFluxConfig("weave")
 	if err != nil {
@@ -164,7 +165,9 @@ func mainImpl() {
 
 	eventsReportInterval := flag.Duration("events.report-interval", 3*time.Second, "Minimal time interval between two reports")
 
-	featureInstall := flag.Bool("feature.install-agents", true, "Whether the agent should install anything in the cluster or not")
+	featureInstallWC := flag.Bool("feature.install-wc", true, "Whether the agent should install anything in the cluster or not")
+	featureUpdateSelf := flag.Bool("feature.update-self", true, "Whether the agent should update itself or not")
+
 	featureEvents := flag.Bool("feature.kubernetes-events", false, "Whether the agent should forward kubernetes events to Weave Cloud or not")
 
 	flag.Parse()
@@ -218,14 +221,19 @@ func mainImpl() {
 	var g run.Group
 
 	// Poll for new manifests every wcPollInterval.
-	if *featureInstall {
+	if *featureUpdateSelf || *featureInstallWC {
 		cancel := make(chan interface{})
 
 		g.Add(
 			func() error {
 				for {
 
-					updateAgents(cfg, cancel)
+					if *featureUpdateSelf {
+						maybeUpdateSelf(cfg, cancel)
+					}
+					if *featureInstallWC {
+						maybeInstallOrUpdateWC(cfg, cancel)
+					}
 
 					select {
 					case <-time.After(*wcPollInterval):
