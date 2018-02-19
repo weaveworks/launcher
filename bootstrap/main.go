@@ -85,8 +85,8 @@ func mainImpl() {
 	if opts.GKE {
 		err := createGKEClusterRoleBinding(otherArgs)
 		if err != nil {
-			fmt.Println("WARNING: For GKE installations, a cluster-admin clusterrolebinding is required.")
-			fmt.Printf("Could not create clusterrolebinding: %s", err)
+			fmt.Fprintln(os.Stderr, "WARNING: For GKE installations, a cluster-admin clusterrolebinding is required.")
+			fmt.Fprintf(os.Stderr, "Could not create clusterrolebinding: %s", err)
 		}
 	}
 
