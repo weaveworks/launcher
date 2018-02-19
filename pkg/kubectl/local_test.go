@@ -21,6 +21,7 @@ func TestFormatCmdOutput(t *testing.T) {
 	}
 }
 
-func ExampleExecute() {
-	Execute("apply", "-f", "service.yaml")
+func ExampleLocalClient() {
+	local := LocalClient{}
+	local.Execute("apply", "-f", "service.yaml")
 }

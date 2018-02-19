@@ -15,8 +15,8 @@ type FluxConfig struct {
 	GitBranch string `long:"git-branch"`
 }
 
-func getFluxConfig(namespace string) (*FluxConfig, error) {
-	out, err := kubectl.Execute("get", "pod", "-n", namespace, "-l", "name=weave-flux-agent", "-o", "jsonpath='{.items[?(@.metadata.labels.name==\"weave-flux-agent\")].spec.containers[0].args[*]}'")
+func getFluxConfig(k kubectl.Client, namespace string) (*FluxConfig, error) {
+	out, err := k.Execute("get", "pod", "-n", namespace, "-l", "name=weave-flux-agent", "-o", "jsonpath='{.items[?(@.metadata.labels.name==\"weave-flux-agent\")].spec.containers[0].args[*]}'")
 	if err != nil {
 		return nil, err
 	}
