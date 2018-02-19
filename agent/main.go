@@ -44,6 +44,7 @@ type agentConfig struct {
 	AgentRecoveryWait time.Duration
 	WCPollURLTemplate string
 	KubeClient        *kubeclient.Clientset
+	KubectlClient     kubectl.Client
 	FluxConfig        *FluxConfig
 }
 
@@ -80,7 +81,7 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 		return
 	}
 	log.Info("Revision before self-update: ", initialRevision)
-	_, err = kubectl.Execute("apply", "-f", cfg.AgentPollURL)
+	err = kubectl.Apply(cfg.KubectlClient, cfg.AgentPollURL, []string{})
 	if err != nil {
 		logError("Failed to execute kubectl apply", err, cfg)
 		return
@@ -106,7 +107,7 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 		}
 
 		logError("Deployment of the new agent failed. Rolling back.", errors.New("Deployment failed"), cfg)
-		_, err := kubectl.Execute("rollout", "undo", "--namespace=weave", "deployment/weave-agent")
+		_, err := cfg.KubectlClient.Execute("rollout", "undo", "--namespace=weave", "deployment/weave-agent")
 		if err != nil {
 			logError("Failed rolling back agent. Will continue to check for updates.", err, cfg)
 			return
@@ -118,7 +119,7 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 	}
 
 	// Get existing flux config
-	fluxCfg, err := getFluxConfig("weave")
+	fluxCfg, err := getFluxConfig(cfg.KubectlClient, "weave")
 	if err != nil {
 		logError("Failed getting existing flux config", err, cfg)
 	}
@@ -132,7 +133,7 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 		log.Fatal("invalid URL template:", err)
 	}
 	log.Info("Updating WC from ", wcPollURL)
-	_, err = kubectl.Execute("apply", "-f", wcPollURL)
+	err = kubectl.Apply(cfg.KubectlClient, wcPollURL, []string{})
 	if err != nil {
 		logError("Failed to execute kubectl apply", err, cfg)
 		return
@@ -192,6 +193,7 @@ func mainImpl() {
 		Token:             *wcToken,
 		AgentRecoveryWait: *agentRecoveryWait,
 		KubeClient:        kubeClient,
+		KubectlClient:     kubectl.LocalClient{},
 		WCHostname:        *wcHostname,
 		AgentPollURL:      *agentPollURL,
 		WCPollURLTemplate: *wcPollURLTemplate,
@@ -209,7 +211,7 @@ func mainImpl() {
 	cfg.InstanceID = instanceID
 
 	// Migrate kube system and reuse any existing flux config
-	existingFluxCfg := migrateKubeSystem()
+	existingFluxCfg := migrateKubeSystem(cfg.KubectlClient)
 	if existingFluxCfg != nil {
 		log.Infof("Using existing flux config: %+v", existingFluxCfg)
 	}
