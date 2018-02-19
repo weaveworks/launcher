@@ -65,6 +65,15 @@ func mainImpl() {
 		exitWithCapture("Could not restore stdin\n", err)
 	}
 
+	// Capture the kubernetes version info to help debug issues
+	fmt.Println("Checking kubectl & kubernetes versions")
+	versionMeta, err := kubectl.GetVersionInfo()
+	if err == nil {
+		raven.SetTagsContext(versionMeta)
+	} else {
+		fmt.Fprintln(os.Stderr, "WARNING: Could not get kubernetes version info.")
+	}
+
 	// Ask the user to confirm the cluster
 	cluster, err := kubectl.GetClusterInfo(otherArgs)
 	if err != nil {
