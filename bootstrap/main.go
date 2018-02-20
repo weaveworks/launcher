@@ -51,7 +51,9 @@ func mainImpl() {
 		"weave_cloud_hostname": opts.Hostname,
 	})
 
-	kubectlClient := kubectl.LocalClient{}
+	kubectlClient := kubectl.LocalClient{
+		GlobalArgs: otherArgs,
+	}
 
 	if !kubectlClient.IsPresent() {
 		die("Could not find kubectl in PATH, please install it: https://kubernetes.io/docs/tasks/tools/install-kubectl/\n")
@@ -68,7 +70,7 @@ func mainImpl() {
 	}
 
 	// Ask the user to confirm the cluster
-	cluster, err := kubectl.GetClusterInfo(kubectlClient, otherArgs)
+	cluster, err := kubectl.GetClusterInfo(kubectlClient)
 	if err != nil {
 		die("There was an error fetching the current cluster info: %s\n", err)
 	}
@@ -76,27 +78,27 @@ func mainImpl() {
 	fmt.Printf("Installing Weave Cloud agents on %s at %s\n", cluster.Name, cluster.ServerAddress)
 
 	if opts.GKE {
-		err := createGKEClusterRoleBinding(kubectlClient, otherArgs)
+		err := createGKEClusterRoleBinding(kubectlClient)
 		if err != nil {
 			fmt.Println("WARNING: For GKE installations, a cluster-admin clusterrolebinding is required.")
 			fmt.Printf("Could not create clusterrolebinding: %s", err)
 		}
 	}
 
-	secretCreated, err := kubectl.CreateSecretFromLiteral(kubectlClient, "weave", "weave-cloud", "token", opts.Token, opts.AssumeYes, otherArgs)
+	secretCreated, err := kubectl.CreateSecretFromLiteral(kubectlClient, "weave", "weave-cloud", "token", opts.Token, opts.AssumeYes)
 	if err != nil {
 		die("There was an error creating the secret: %s\n", err)
 	}
 	if !secretCreated {
 		askForConfirmation("A weave-cloud secret already exists. Would you like to continue and replace the secret?")
-		_, err := kubectl.CreateSecretFromLiteral(kubectlClient, "weave", "weave-cloud", "token", opts.Token, true, otherArgs)
+		_, err := kubectl.CreateSecretFromLiteral(kubectlClient, "weave", "weave-cloud", "token", opts.Token, true)
 		if err != nil {
 			die("There was an error creating the secret: %s\n", err)
 		}
 	}
 
 	// Apply the agent
-	err = kubectl.Apply(kubectlClient, agentK8sURL, otherArgs)
+	err = kubectl.Apply(kubectlClient, agentK8sURL)
 	if err != nil {
 		die("There was an error applying the agent: %s\n", err)
 	}
@@ -111,7 +113,7 @@ func die(msg string, args ...interface{}) {
 	os.Exit(1)
 }
 
-func createGKEClusterRoleBinding(kubectlClient kubectl.Client, otherArgs []string) error {
+func createGKEClusterRoleBinding(kubectlClient kubectl.Client) error {
 	if !gcloud.IsPresent() {
 		return errors.New("Could not find gcloud in PATH, please install it: https://cloud.google.com/sdk/docs/")
 	}
@@ -127,7 +129,6 @@ func createGKEClusterRoleBinding(kubectlClient kubectl.Client, otherArgs []strin
 		fmt.Sprintf("cluster-admin-%s", hostUser),
 		"cluster-admin",
 		account,
-		otherArgs,
 	)
 	if err != nil {
 		return err

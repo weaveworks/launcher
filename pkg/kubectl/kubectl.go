@@ -8,8 +8,11 @@ import (
 // Client implements a kubectl client to execute commands
 type Client interface {
 	Execute(args ...string) (string, error)
-	ExecuteWithGlobalArgs(globalArgs []string, args ...string) (string, error)
-	IsPresent() bool
+}
+
+// Execute executes kubectl <args> and returns the combined stdout/err output.
+func Execute(c Client, args ...string) (string, error) {
+	return c.Execute(args...)
 }
 
 // ClusterInfo describes a Kubernetes cluster
@@ -19,20 +22,20 @@ type ClusterInfo struct {
 }
 
 // GetClusterInfo gets the current Kubernetes cluster information
-func GetClusterInfo(c Client, otherArgs []string) (ClusterInfo, error) {
-	currentContext, err := c.ExecuteWithGlobalArgs(otherArgs, "config", "current-context")
+func GetClusterInfo(c Client) (ClusterInfo, error) {
+	currentContext, err := Execute(c, "config", "current-context")
 	if err != nil {
 		return ClusterInfo{}, err
 	}
 
-	name, err := c.ExecuteWithGlobalArgs(otherArgs, "config", "view",
+	name, err := Execute(c, "config", "view",
 		fmt.Sprintf("-o=jsonpath='{.contexts[?(@.name == \"%s\")].context.cluster}'", currentContext),
 	)
 	if err != nil {
 		return ClusterInfo{}, err
 	}
 
-	serverAddress, err := c.ExecuteWithGlobalArgs(otherArgs,
+	serverAddress, err := Execute(c,
 		"config",
 		"view",
 		fmt.Sprintf("-o=jsonpath='{.clusters[?(@.name == \"%s\")].cluster.server}'", name),
@@ -48,14 +51,14 @@ func GetClusterInfo(c Client, otherArgs []string) (ClusterInfo, error) {
 }
 
 // Apply applies via kubectl
-func Apply(c Client, f string, otherArgs []string) error {
-	_, err := c.ExecuteWithGlobalArgs(otherArgs, "apply", "-f", f)
+func Apply(c Client, f string) error {
+	_, err := Execute(c, "apply", "-f", f)
 	return err
 }
 
 // ResourceExists return true if the resource exists
-func ResourceExists(c Client, resourceType, namespace, resourceName string, otherArgs []string) (bool, error) {
-	_, err := c.ExecuteWithGlobalArgs(otherArgs, "get", resourceType, resourceName, fmt.Sprintf("--namespace=%s", namespace))
+func ResourceExists(c Client, resourceType, namespace, resourceName string) (bool, error) {
+	_, err := Execute(c, "get", resourceType, resourceName, fmt.Sprintf("--namespace=%s", namespace))
 	if err != nil {
 		// k8s 1.4 answers with "Error from server: secrets "weave-cloud" not found"
 		// More recent versions with "Error from server (NotFound): secrets "weave-cloud" not found
@@ -70,14 +73,14 @@ func ResourceExists(c Client, resourceType, namespace, resourceName string, othe
 }
 
 // DeleteResource deletes a resource
-func DeleteResource(c Client, resourceType, namespace, resourceName string, otherArgs []string) error {
-	_, err := c.ExecuteWithGlobalArgs(otherArgs, "delete", resourceType, resourceName, fmt.Sprintf("--namespace=%s", namespace))
+func DeleteResource(c Client, resourceType, namespace, resourceName string) error {
+	_, err := Execute(c, "delete", resourceType, resourceName, fmt.Sprintf("--namespace=%s", namespace))
 	return err
 }
 
 // CreateNamespace creates a new namespace and returns whether it was created or not
-func CreateNamespace(c Client, namespace string, otherArgs []string) (bool, error) {
-	_, err := c.ExecuteWithGlobalArgs(otherArgs, "create", "namespace", namespace)
+func CreateNamespace(c Client, namespace string) (bool, error) {
+	_, err := Execute(c, "create", "namespace", namespace)
 	if err != nil {
 		if strings.Contains(err.Error(), "AlreadyExists") {
 			return false, nil
@@ -88,9 +91,9 @@ func CreateNamespace(c Client, namespace string, otherArgs []string) (bool, erro
 }
 
 // CreateClusterRoleBinding creates a new cluster role binding
-func CreateClusterRoleBinding(c Client, name, role, user string, otherArgs []string) error {
-	_, err := c.ExecuteWithGlobalArgs(
-		otherArgs,
+func CreateClusterRoleBinding(c Client, name, role, user string) error {
+	_, err := Execute(
+		c,
 		"create",
 		"clusterrolebinding",
 		name,
@@ -103,8 +106,8 @@ func CreateClusterRoleBinding(c Client, name, role, user string, otherArgs []str
 }
 
 // CreateSecretFromLiteral creates a new secret with a single (key,value) pair.
-func CreateSecretFromLiteral(c Client, namespace, name, key, value string, override bool, otherArgs []string) (bool, error) {
-	secretExists, err := ResourceExists(c, "secret", namespace, name, otherArgs)
+func CreateSecretFromLiteral(c Client, namespace, name, key, value string, override bool) (bool, error) {
+	secretExists, err := ResourceExists(c, "secret", namespace, name)
 	if err != nil {
 		return false, err
 	}
@@ -113,20 +116,20 @@ func CreateSecretFromLiteral(c Client, namespace, name, key, value string, overr
 		if !override {
 			return false, nil
 		}
-		err := DeleteResource(c, "secret", namespace, name, otherArgs)
+		err := DeleteResource(c, "secret", namespace, name)
 		if err != nil {
 			return false, err
 		}
 	}
 
 	// Create the weave namespace and the weave-cloud secret
-	_, err = CreateNamespace(c, namespace, otherArgs)
+	_, err = CreateNamespace(c, namespace)
 	if err != nil {
 		return false, err
 	}
 
 	// Create the secret
-	_, err = c.ExecuteWithGlobalArgs(otherArgs,
+	_, err = Execute(c,
 		fmt.Sprintf("--namespace=%s", namespace),
 		"create",
 		"secret",
