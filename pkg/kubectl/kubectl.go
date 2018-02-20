@@ -2,34 +2,17 @@ package kubectl
 
 import (
 	"fmt"
-	"os/exec"
 	"strings"
 )
 
-func executeCommand(args []string) (string, error) {
-	cmdOut, err := exec.Command("kubectl", args...).CombinedOutput()
-	if err != nil {
-		// Kubectl error messages output to stdOut
-		return "", fmt.Errorf(formatCmdOutput(cmdOut))
-	}
-	return formatCmdOutput(cmdOut), nil
+// Client implements a kubectl client to execute commands
+type Client interface {
+	Execute(args ...string) (string, error)
 }
 
 // Execute executes kubectl <args> and returns the combined stdout/err output.
-func Execute(args ...string) (string, error) {
-	return executeCommand(args)
-}
-
-// ExecuteWithGlobalArgs is a convenience version of Execute that lets the user
-// specify global arguments as an array. Global arguments are arguments that are
-// not specific to a kubectl sub-command, eg. --kubeconfig. The list of global
-// options can be retrieved with kubectl options.
-func ExecuteWithGlobalArgs(globalArgs []string, args ...string) (string, error) {
-	return executeCommand(append(globalArgs, args...))
-}
-
-func formatCmdOutput(output []byte) string {
-	return strings.TrimPrefix(strings.TrimSuffix(strings.TrimSpace(string(output)), "'"), "'")
+func Execute(c Client, args ...string) (string, error) {
+	return c.Execute(args...)
 }
 
 // ClusterInfo describes a Kubernetes cluster
@@ -38,27 +21,21 @@ type ClusterInfo struct {
 	ServerAddress string
 }
 
-// IsPresent returns true if there's a kubectl command in the PATH.
-func IsPresent() bool {
-	_, err := exec.LookPath("kubectl")
-	return err == nil
-}
-
 // GetClusterInfo gets the current Kubernetes cluster information
-func GetClusterInfo(otherArgs []string) (ClusterInfo, error) {
-	currentContext, err := ExecuteWithGlobalArgs(otherArgs, "config", "current-context")
+func GetClusterInfo(c Client) (ClusterInfo, error) {
+	currentContext, err := Execute(c, "config", "current-context")
 	if err != nil {
 		return ClusterInfo{}, err
 	}
 
-	name, err := ExecuteWithGlobalArgs(otherArgs, "config", "view",
+	name, err := Execute(c, "config", "view",
 		fmt.Sprintf("-o=jsonpath='{.contexts[?(@.name == \"%s\")].context.cluster}'", currentContext),
 	)
 	if err != nil {
 		return ClusterInfo{}, err
 	}
 
-	serverAddress, err := ExecuteWithGlobalArgs(otherArgs,
+	serverAddress, err := Execute(c,
 		"config",
 		"view",
 		fmt.Sprintf("-o=jsonpath='{.clusters[?(@.name == \"%s\")].cluster.server}'", name),
@@ -73,33 +50,15 @@ func GetClusterInfo(otherArgs []string) (ClusterInfo, error) {
 	}, nil
 }
 
-// CreateNamespace creates a new namespace and returns whether it was created or not
-func CreateNamespace(namespace string, otherArgs []string) (bool, error) {
-	_, err := ExecuteWithGlobalArgs(otherArgs, "create", "namespace", namespace)
-	if err != nil {
-		if strings.Contains(err.Error(), "AlreadyExists") {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
-}
-
-// CreateSecretFromLiteral creates a new secret with a single (key,value) pair.
-func CreateSecretFromLiteral(namespace, secretName, key, value string, otherArgs []string) (string, error) {
-	return ExecuteWithGlobalArgs(otherArgs,
-		fmt.Sprintf("--namespace=%s", namespace),
-		"create",
-		"secret",
-		"generic",
-		secretName,
-		fmt.Sprintf("--from-literal=%s=%s", key, value),
-	)
+// Apply applies via kubectl
+func Apply(c Client, f string) error {
+	_, err := Execute(c, "apply", "-f", f)
+	return err
 }
 
 // ResourceExists return true if the resource exists
-func ResourceExists(resourceType, resourceName, namespace string, otherArgs []string) (bool, error) {
-	_, err := ExecuteWithGlobalArgs(otherArgs, "get", resourceType, resourceName, fmt.Sprintf("--namespace=%s", namespace))
+func ResourceExists(c Client, resourceType, namespace, resourceName string) (bool, error) {
+	_, err := Execute(c, "get", resourceType, resourceName, fmt.Sprintf("--namespace=%s", namespace))
 	if err != nil {
 		// k8s 1.4 answers with "Error from server: secrets "weave-cloud" not found"
 		// More recent versions with "Error from server (NotFound): secrets "weave-cloud" not found
@@ -110,5 +69,77 @@ func ResourceExists(resourceType, resourceName, namespace string, otherArgs []st
 		}
 		return false, err
 	}
+	return true, nil
+}
+
+// DeleteResource deletes a resource
+func DeleteResource(c Client, resourceType, namespace, resourceName string) error {
+	_, err := Execute(c, "delete", resourceType, resourceName, fmt.Sprintf("--namespace=%s", namespace))
+	return err
+}
+
+// CreateNamespace creates a new namespace and returns whether it was created or not
+func CreateNamespace(c Client, namespace string) (bool, error) {
+	_, err := Execute(c, "create", "namespace", namespace)
+	if err != nil {
+		if strings.Contains(err.Error(), "AlreadyExists") {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+// CreateClusterRoleBinding creates a new cluster role binding
+func CreateClusterRoleBinding(c Client, name, role, user string) error {
+	_, err := Execute(
+		c,
+		"create",
+		"clusterrolebinding",
+		name,
+		"--clusterrole",
+		role,
+		"--user",
+		user,
+	)
+	return err
+}
+
+// CreateSecretFromLiteral creates a new secret with a single (key,value) pair.
+func CreateSecretFromLiteral(c Client, namespace, name, key, value string, override bool) (bool, error) {
+	secretExists, err := ResourceExists(c, "secret", namespace, name)
+	if err != nil {
+		return false, err
+	}
+
+	if secretExists {
+		if !override {
+			return false, nil
+		}
+		err := DeleteResource(c, "secret", namespace, name)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	// Create the weave namespace and the weave-cloud secret
+	_, err = CreateNamespace(c, namespace)
+	if err != nil {
+		return false, err
+	}
+
+	// Create the secret
+	_, err = Execute(c,
+		fmt.Sprintf("--namespace=%s", namespace),
+		"create",
+		"secret",
+		"generic",
+		name,
+		fmt.Sprintf("--from-literal=%s=%s", key, value),
+	)
+	if err != nil {
+		return false, err
+	}
+
 	return true, nil
 }

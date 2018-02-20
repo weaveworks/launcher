@@ -51,7 +51,11 @@ func mainImpl() {
 		"weave_cloud_hostname": opts.Hostname,
 	})
 
-	if !kubectl.IsPresent() {
+	kubectlClient := kubectl.LocalClient{
+		GlobalArgs: otherArgs,
+	}
+
+	if !kubectlClient.IsPresent() {
 		die("Could not find kubectl in PATH, please install it: https://kubernetes.io/docs/tasks/tools/install-kubectl/\n")
 	}
 
@@ -66,7 +70,7 @@ func mainImpl() {
 	}
 
 	// Ask the user to confirm the cluster
-	cluster, err := kubectl.GetClusterInfo(otherArgs)
+	cluster, err := kubectl.GetClusterInfo(kubectlClient)
 	if err != nil {
 		die("There was an error fetching the current cluster info: %s\n", err)
 	}
@@ -74,24 +78,27 @@ func mainImpl() {
 	fmt.Printf("Installing Weave Cloud agents on %s at %s\n", cluster.Name, cluster.ServerAddress)
 
 	if opts.GKE {
-		err := createGKEClusterRoleBinding(otherArgs)
+		err := createGKEClusterRoleBinding(kubectlClient)
 		if err != nil {
 			fmt.Println("WARNING: For GKE installations, a cluster-admin clusterrolebinding is required.")
 			fmt.Printf("Could not create clusterrolebinding: %s", err)
 		}
 	}
 
-	secretCreated, err := createWCSecret(opts, otherArgs)
+	secretCreated, err := kubectl.CreateSecretFromLiteral(kubectlClient, "weave", "weave-cloud", "token", opts.Token, opts.AssumeYes)
 	if err != nil {
 		die("There was an error creating the secret: %s\n", err)
 	}
 	if !secretCreated {
-		fmt.Println("Cancelled.")
-		return
+		askForConfirmation("A weave-cloud secret already exists. Would you like to continue and replace the secret?")
+		_, err := kubectl.CreateSecretFromLiteral(kubectlClient, "weave", "weave-cloud", "token", opts.Token, true)
+		if err != nil {
+			die("There was an error creating the secret: %s\n", err)
+		}
 	}
 
 	// Apply the agent
-	_, err = kubectl.ExecuteWithGlobalArgs(otherArgs, "apply", "-f", agentK8sURL)
+	err = kubectl.Apply(kubectlClient, agentK8sURL)
 	if err != nil {
 		die("There was an error applying the agent: %s\n", err)
 	}
@@ -106,7 +113,7 @@ func die(msg string, args ...interface{}) {
 	os.Exit(1)
 }
 
-func createGKEClusterRoleBinding(otherArgs []string) error {
+func createGKEClusterRoleBinding(kubectlClient kubectl.Client) error {
 	if !gcloud.IsPresent() {
 		return errors.New("Could not find gcloud in PATH, please install it: https://cloud.google.com/sdk/docs/")
 	}
@@ -117,13 +124,10 @@ func createGKEClusterRoleBinding(otherArgs []string) error {
 	}
 	hostUser := os.Getenv("USER")
 
-	_, err = kubectl.ExecuteWithGlobalArgs(
-		otherArgs,
-		"create",
-		"clusterrolebinding",
+	err = kubectl.CreateClusterRoleBinding(
+		kubectlClient,
 		fmt.Sprintf("cluster-admin-%s", hostUser),
-		"--clusterrole=cluster-admin",
-		"--user",
+		"cluster-admin",
 		account,
 	)
 	if err != nil {
@@ -132,46 +136,7 @@ func createGKEClusterRoleBinding(otherArgs []string) error {
 	return nil
 }
 
-func createWCSecret(opts options, otherArgs []string) (bool, error) {
-	secretExists, err := kubectl.ResourceExists("secret", "weave-cloud", "weave", otherArgs)
-	if err != nil {
-		return false, err
-	}
-
-	if secretExists {
-		confirmed, err := askForConfirmation("A weave-cloud secret already exists. Would you like to continue and replace the secret?", opts.AssumeYes)
-		if err != nil {
-			return false, err
-		}
-		if !confirmed {
-			return false, nil
-		}
-
-		// Delete the secret
-		_, err = kubectl.ExecuteWithGlobalArgs(otherArgs, "delete", "secret", "weave-cloud", "--namespace=weave")
-		if err != nil {
-			return false, err
-		}
-	}
-
-	// Create the weave namespace and the weave-cloud secret
-	_, err = kubectl.CreateNamespace("weave", otherArgs)
-	if err != nil {
-		return false, err
-	}
-
-	_, err = kubectl.CreateSecretFromLiteral("weave", "weave-cloud", "token", opts.Token, otherArgs)
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-func askForConfirmation(s string, assumeYes bool) (bool, error) {
-	if assumeYes {
-		return true, nil
-	}
-
+func askForConfirmation(s string) (bool, error) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Printf("%s [y/n]: ", s)
