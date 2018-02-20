@@ -81,7 +81,7 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 		return
 	}
 	log.Info("Revision before self-update: ", initialRevision)
-	err = kubectl.Apply(cfg.KubectlClient, cfg.AgentPollURL, []string{})
+	err = kubectl.Apply(cfg.KubectlClient, cfg.AgentPollURL)
 	if err != nil {
 		logError("Failed to execute kubectl apply", err, cfg)
 		return
@@ -133,7 +133,7 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 		log.Fatal("invalid URL template:", err)
 	}
 	log.Info("Updating WC from ", wcPollURL)
-	err = kubectl.Apply(cfg.KubectlClient, wcPollURL, []string{})
+	err = kubectl.Apply(cfg.KubectlClient, wcPollURL)
 	if err != nil {
 		logError("Failed to execute kubectl apply", err, cfg)
 		return
