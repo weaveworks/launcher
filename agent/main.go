@@ -23,11 +23,11 @@ import (
 )
 
 const (
-	defaultAgentPollURL      = "https://get.weave.works/k8s/agent.yaml"
+	defaultAgentPollURL      = "https://get.weave.works/k8s/agent.yaml?instanceID={{.InstanceID}}"
 	defaultAgentRecoveryWait = 5 * time.Minute
 	defaultWCHostname        = "cloud.weave.works"
 	defaultWCPollURL         = "https://{{.WCHostname}}/k8s.yaml" +
-		"?k8s-version={{.KubernetesVersion}}&t={{.Token}}&&omit-support-info=true" +
+		"?k8s-version={{.KubernetesVersion}}&t={{.Token}}&omit-support-info=true" +
 		"{{if .FluxConfig}}" +
 		"&git-label={{.FluxConfig.GitLabel}}&git-url={{.FluxConfig.GitURL}}" +
 		"&git-path={{.FluxConfig.GitPath}}&git-branch={{.FluxConfig.GitBranch}}" +
@@ -36,15 +36,16 @@ const (
 )
 
 type agentConfig struct {
-	KubernetesVersion string
-	WCHostname        string
-	Token             string
-	InstanceID        string
-	AgentPollURL      string
-	AgentRecoveryWait time.Duration
-	WCPollURLTemplate string
-	KubeClient        *kubeclient.Clientset
-	FluxConfig        *FluxConfig
+	KubernetesVersion    string
+	WCHostname           string
+	Token                string
+	InstanceID           string
+	AgentPollURLTemplate string
+	AgentRecoveryWait    time.Duration
+	WCPollURLTemplate    string
+	KubeClient           *kubeclient.Clientset
+	KubectlClient        kubectl.Client
+	FluxConfig           *FluxConfig
 }
 
 func init() {
@@ -72,7 +73,11 @@ func logError(msg string, err error, cfg *agentConfig) {
 
 func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 	// Self-update
-	log.Info("Updating self from ", cfg.AgentPollURL)
+	agentPollURL, err := text.ResolveString(cfg.AgentPollURLTemplate, cfg)
+	if err != nil {
+		log.Fatal("invalid URL template:", err)
+	}
+	log.Info("Updating self from ", agentPollURL)
 
 	initialRevision, err := k8s.GetLatestDeploymentReplicaSetRevision(cfg.KubeClient, "weave", "weave-agent")
 	if err != nil {
@@ -80,7 +85,7 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 		return
 	}
 	log.Info("Revision before self-update: ", initialRevision)
-	_, err = kubectl.Execute("apply", "-f", cfg.AgentPollURL)
+	err = kubectl.Apply(cfg.KubectlClient, agentPollURL)
 	if err != nil {
 		logError("Failed to execute kubectl apply", err, cfg)
 		return
@@ -106,7 +111,7 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 		}
 
 		logError("Deployment of the new agent failed. Rolling back.", errors.New("Deployment failed"), cfg)
-		_, err := kubectl.Execute("rollout", "undo", "--namespace=weave", "deployment/weave-agent")
+		_, err := cfg.KubectlClient.Execute("rollout", "undo", "--namespace=weave", "deployment/weave-agent")
 		if err != nil {
 			logError("Failed rolling back agent. Will continue to check for updates.", err, cfg)
 			return
@@ -118,7 +123,7 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 	}
 
 	// Get existing flux config
-	fluxCfg, err := getFluxConfig("weave")
+	fluxCfg, err := getFluxConfig(cfg.KubectlClient, "weave")
 	if err != nil {
 		logError("Failed getting existing flux config", err, cfg)
 	}
@@ -132,7 +137,7 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 		log.Fatal("invalid URL template:", err)
 	}
 	log.Info("Updating WC from ", wcPollURL)
-	_, err = kubectl.Execute("apply", "-f", wcPollURL)
+	err = kubectl.Apply(cfg.KubectlClient, wcPollURL)
 	if err != nil {
 		logError("Failed to execute kubectl apply", err, cfg)
 		return
@@ -154,7 +159,7 @@ func main() {
 func mainImpl() {
 	logLevel := flag.String("log.level", "info", "verbosity of log output - one of 'debug', 'info' (default), 'warning', 'error', 'fatal'")
 
-	agentPollURL := flag.String("agent.poll-url", defaultAgentPollURL, "URL to poll for the agent manifest")
+	agentPollURLTemplate := flag.String("agent.poll-url", defaultAgentPollURL, "URL to poll for the agent manifest")
 	agentRecoveryWait := flag.Duration("agent.recovery-wait", defaultAgentRecoveryWait, "Duration to wait before recovering from a failed self update")
 	wcToken := flag.String("wc.token", "", "Weave Cloud instance token")
 	wcPollInterval := flag.Duration("wc.poll-interval", 1*time.Hour, "Polling interval to check WC manifests")
@@ -188,13 +193,14 @@ func mainImpl() {
 	}
 
 	cfg := &agentConfig{
-		KubernetesVersion: version.GitVersion,
-		Token:             *wcToken,
-		AgentRecoveryWait: *agentRecoveryWait,
-		KubeClient:        kubeClient,
-		WCHostname:        *wcHostname,
-		AgentPollURL:      *agentPollURL,
-		WCPollURLTemplate: *wcPollURLTemplate,
+		KubernetesVersion:    version.GitVersion,
+		Token:                *wcToken,
+		AgentRecoveryWait:    *agentRecoveryWait,
+		KubeClient:           kubeClient,
+		KubectlClient:        kubectl.LocalClient{},
+		WCHostname:           *wcHostname,
+		AgentPollURLTemplate: *agentPollURLTemplate,
+		WCPollURLTemplate:    *wcPollURLTemplate,
 	}
 
 	// Lookup instance ID
@@ -209,7 +215,7 @@ func mainImpl() {
 	cfg.InstanceID = instanceID
 
 	// Migrate kube system and reuse any existing flux config
-	existingFluxCfg := migrateKubeSystem()
+	existingFluxCfg := migrateKubeSystem(cfg.KubectlClient)
 	if existingFluxCfg != nil {
 		log.Infof("Using existing flux config: %+v", existingFluxCfg)
 	}
