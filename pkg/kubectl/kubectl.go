@@ -1,6 +1,7 @@
 package kubectl
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -8,6 +9,7 @@ import (
 // Client implements a kubectl client to execute commands
 type Client interface {
 	Execute(args ...string) (string, error)
+	ExecuteStdout(args ...string) (string, error)
 }
 
 // Execute executes kubectl <args> and returns the combined stdout/err output.
@@ -19,6 +21,33 @@ func Execute(c Client, args ...string) (string, error) {
 type ClusterInfo struct {
 	Name          string
 	ServerAddress string
+}
+
+// GetVersionInfo returns the version metadata from kubectl
+func GetVersionInfo(c Client) (map[string]string, error) {
+	// Capture stdout only (to ignore server reachability errors)
+	output, err := c.ExecuteStdout("version", "-ojson")
+	versionData := map[string]interface{}{}
+	parseErr := json.Unmarshal([]byte(output), &versionData)
+	// If the server is unreachable, we might have an error but parsable output
+	if parseErr != nil {
+		if err != nil {
+			return nil, err
+		}
+		return nil, parseErr
+	}
+	out := make(map[string]string)
+	for key, maybeValuesMap := range versionData {
+		valueMap, ok := maybeValuesMap.(map[string]interface{})
+		if ok {
+			for subKey, value := range valueMap {
+				if str, ok := value.(string); ok {
+					out[fmt.Sprintf("kubectl_%s_%s", key, subKey)] = str
+				}
+			}
+		}
+	}
+	return out, nil
 }
 
 // GetClusterInfo gets the current Kubernetes cluster information

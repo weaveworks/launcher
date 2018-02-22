@@ -27,6 +27,12 @@ func (k LocalClient) Execute(args ...string) (string, error) {
 	return formatCmdOutput(cmdOut), nil
 }
 
+// ExecuteStdout executes kubectl <args> and returns the stdout output.
+func (k LocalClient) ExecuteStdout(args ...string) (string, error) {
+	cmdOut, err := exec.Command("kubectl", append(k.GlobalArgs, args...)...).Output()
+	return string(cmdOut), err
+}
+
 func formatCmdOutput(output []byte) string {
 	return strings.TrimPrefix(strings.TrimSuffix(strings.TrimSpace(string(output)), "'"), "'")
 }
