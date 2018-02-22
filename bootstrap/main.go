@@ -44,7 +44,7 @@ func mainImpl() {
 	parser := flags.NewParser(&opts, flags.IgnoreUnknown)
 	otherArgs, err := parser.Parse()
 	if err != nil {
-		die("%s\n", err)
+		exitNoCapture("%s\n", err)
 	}
 	raven.SetTagsContext(map[string]string{
 		"weave_cloud_scheme":   opts.Scheme,
@@ -56,7 +56,7 @@ func mainImpl() {
 	}
 
 	if !kubectlClient.IsPresent() {
-		die("Could not find kubectl in PATH, please install it: https://kubernetes.io/docs/tasks/tools/install-kubectl/\n")
+		exitNoCapture("Could not find kubectl in PATH, please install it: https://kubernetes.io/docs/tasks/tools/install-kubectl/\n")
 	}
 
 	agentK8sURL, err := text.ResolveString(agentK8sURLTemplate, opts)
@@ -66,13 +66,22 @@ func mainImpl() {
 
 	// Restore stdin, making fd 0 point at the terminal
 	if err := syscall.Dup2(1, 0); err != nil {
-		die("Could not restore stdin\n", err)
+		exitWithCapture("Could not restore stdin\n", err)
+	}
+
+	// Capture the kubernetes version info to help debug issues
+	fmt.Println("Checking kubectl & kubernetes versions")
+	versionMeta, err := kubectl.GetVersionInfo(kubectlClient)
+	if err == nil {
+		raven.SetTagsContext(versionMeta)
+	} else {
+		fmt.Fprintln(os.Stderr, "WARNING: Could not get kubernetes version info.")
 	}
 
 	// Ask the user to confirm the cluster
 	cluster, err := kubectl.GetClusterInfo(kubectlClient)
 	if err != nil {
-		die("There was an error fetching the current cluster info: %s\n", err)
+		exitWithCapture("There was an error fetching the current cluster info: %s\n", err)
 	}
 
 	fmt.Printf("Installing Weave Cloud agents on %s at %s\n", cluster.Name, cluster.ServerAddress)
@@ -80,33 +89,38 @@ func mainImpl() {
 	if opts.GKE {
 		err := createGKEClusterRoleBinding(kubectlClient)
 		if err != nil {
-			fmt.Println("WARNING: For GKE installations, a cluster-admin clusterrolebinding is required.")
-			fmt.Printf("Could not create clusterrolebinding: %s", err)
+			fmt.Fprintln(os.Stderr, "WARNING: For GKE installations, a cluster-admin clusterrolebinding is required.")
+			fmt.Fprintf(os.Stderr, "Could not create clusterrolebinding: %s", err)
 		}
 	}
 
 	secretCreated, err := kubectl.CreateSecretFromLiteral(kubectlClient, "weave", "weave-cloud", "token", opts.Token, opts.AssumeYes)
 	if err != nil {
-		die("There was an error creating the secret: %s\n", err)
+		exitWithCapture("There was an error creating the secret: %s\n", err)
 	}
 	if !secretCreated {
 		askForConfirmation("A weave-cloud secret already exists. Would you like to continue and replace the secret?")
 		_, err := kubectl.CreateSecretFromLiteral(kubectlClient, "weave", "weave-cloud", "token", opts.Token, true)
 		if err != nil {
-			die("There was an error creating the secret: %s\n", err)
+			exitWithCapture("There was an error creating the secret: %s\n", err)
 		}
 	}
 
 	// Apply the agent
 	err = kubectl.Apply(kubectlClient, agentK8sURL)
 	if err != nil {
-		die("There was an error applying the agent: %s\n", err)
+		exitWithCapture("There was an error applying the agent: %s\n", err)
 	}
 
 	fmt.Println("Successfully installed.")
 }
 
-func die(msg string, args ...interface{}) {
+func exitNoCapture(msg string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, msg, args...)
+	os.Exit(1)
+}
+
+func exitWithCapture(msg string, args ...interface{}) {
 	formatted := fmt.Sprintf(msg, args...)
 	fmt.Fprintf(os.Stderr, formatted)
 	raven.CaptureMessageAndWait(formatted, nil)
