@@ -78,13 +78,16 @@ func mainImpl() {
 		fmt.Fprintln(os.Stderr, "WARNING: Could not get kubernetes version info.")
 	}
 
-	// Ask the user to confirm the cluster
+	// Display information on the cluster we're about to install the agent onto.
+	//
+	// This relies on having a current-context defined and is only to try to be
+	// user friendly. So, in case of errors (eg. no current-context) we simply
+	// assume kubectl can reach the API server eg. through a previously set up api
+	// server proxy with kubectl proxy.
 	cluster, err := kubectl.GetClusterInfo(kubectlClient)
-	if err != nil {
-		exitWithCapture("There was an error fetching the current cluster info: %s\n", err)
+	if err == nil {
+		fmt.Printf("Installing Weave Cloud agents on %s at %s\n", cluster.Name, cluster.ServerAddress)
 	}
-
-	fmt.Printf("Installing Weave Cloud agents on %s at %s\n", cluster.Name, cluster.ServerAddress)
 
 	if opts.GKE {
 		err := createGKEClusterRoleBinding(kubectlClient)
