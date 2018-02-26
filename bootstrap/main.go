@@ -93,7 +93,7 @@ func mainImpl() {
 		err := createGKEClusterRoleBinding(kubectlClient)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "WARNING: For GKE installations, a cluster-admin clusterrolebinding is required.")
-			fmt.Fprintf(os.Stderr, "Could not create clusterrolebinding: %s", err)
+			fmt.Fprintf(os.Stderr, "Could not create clusterrolebinding: %s\n", err)
 		}
 	}
 
