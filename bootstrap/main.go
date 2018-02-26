@@ -92,6 +92,9 @@ func mainImpl() {
 	if opts.GKE {
 		err := createGKEClusterRoleBinding(kubectlClient)
 		if err != nil {
+			raven.SetTagsContext(map[string]string{
+				"gke_clusterrolebindingError": err.Error(),
+			})
 			fmt.Fprintln(os.Stderr, "WARNING: For GKE installations, a cluster-admin clusterrolebinding is required.")
 			fmt.Fprintf(os.Stderr, "Could not create clusterrolebinding: %s\n", err)
 		}
