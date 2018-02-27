@@ -145,7 +145,11 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 }
 
 func setupKubeClient() (*kubeclient.Clientset, error) {
-	kubeConfig, err := k8s.GetClientConfig(&k8s.ClientConfig{})
+	kubeConfig, err := k8s.GetClientConfig(&k8s.ClientConfig{
+		// We have seen quite a few clusters in the wild with invalid certificates.
+		// Disable checking certificates as a result.
+		Insecure: true,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("client config: %s", err)
 	}
