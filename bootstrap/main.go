@@ -115,7 +115,13 @@ func mainImpl() {
 	// Apply the agent
 	err = kubectl.Apply(kubectlClient, agentK8sURL)
 	if err != nil {
-		exitWithCapture("There was an error applying the agent: %s\n", err)
+		capture("There was an error applying the agent: %s\n", err)
+
+		// We've failed to apply the agent. kubectl apply isn't an atomic operation
+		// can leave some objects behind when encountering an error. Clean things up.
+		fmt.Println("Rolling back cluster changes")
+		kubectl.Execute(kubectlClient, "delete", "--ignore-not-found=true", "-f", agentK8sURL)
+		os.Exit(1)
 	}
 
 	fmt.Println("Successfully installed.")
@@ -126,10 +132,14 @@ func exitNoCapture(msg string, args ...interface{}) {
 	os.Exit(1)
 }
 
-func exitWithCapture(msg string, args ...interface{}) {
+func capture(msg string, args ...interface{}) {
 	formatted := fmt.Sprintf(msg, args...)
 	fmt.Fprintf(os.Stderr, formatted)
 	raven.CaptureMessageAndWait(formatted, nil)
+}
+
+func exitWithCapture(msg string, args ...interface{}) {
+	capture(msg, args...)
 	os.Exit(1)
 }
 
