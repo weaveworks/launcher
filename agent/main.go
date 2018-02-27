@@ -63,12 +63,21 @@ func setLogLevel(logLevel string) error {
 }
 
 func logError(msg string, err error, cfg *agentConfig) {
-	log.Errorf("%s: %s", msg, err)
+	formatted := fmt.Sprintf("%s: %s", msg, err)
+	log.Error(formatted)
+
 	ravenTags := map[string]string{
 		"kubernetes": cfg.KubernetesVersion,
 		"instance":   cfg.InstanceID,
 	}
-	raven.CaptureErrorAndWait(err, ravenTags)
+
+	// Capture the error with stacktrace and wait.
+	stack := raven.NewStacktrace(1, 3, nil)
+	packet := raven.NewPacket(formatted, stack)
+	eventID, ch := raven.Capture(packet, ravenTags)
+	if eventID != "" {
+		<-ch
+	}
 }
 
 func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
