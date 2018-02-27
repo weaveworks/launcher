@@ -18,6 +18,7 @@ import (
 
 	"github.com/weaveworks/launcher/pkg/k8s"
 	"github.com/weaveworks/launcher/pkg/kubectl"
+	"github.com/weaveworks/launcher/pkg/sentry"
 	"github.com/weaveworks/launcher/pkg/text"
 	"github.com/weaveworks/launcher/pkg/weavecloud"
 )
@@ -66,18 +67,12 @@ func logError(msg string, err error, cfg *agentConfig) {
 	formatted := fmt.Sprintf("%s: %s", msg, err)
 	log.Error(formatted)
 
-	ravenTags := map[string]string{
+	tags := map[string]string{
 		"kubernetes": cfg.KubernetesVersion,
 		"instance":   cfg.InstanceID,
 	}
 
-	// Capture the error with stacktrace and wait.
-	stack := raven.NewStacktrace(1, 3, nil)
-	packet := raven.NewPacket(formatted, stack)
-	eventID, ch := raven.Capture(packet, ravenTags)
-	if eventID != "" {
-		<-ch
-	}
+	sentry.Capture(formatted, 2, tags)
 }
 
 func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
