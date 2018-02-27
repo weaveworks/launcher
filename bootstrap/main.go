@@ -75,6 +75,8 @@ func mainImpl() {
 		exitWithCapture("Could not restore stdin\n", err)
 	}
 
+	fmt.Println("Preparing for Weave Cloud setup")
+
 	// Capture the kubernetes version info to help debug issues
 	fmt.Println("Checking kubectl & kubernetes versions")
 	versionMeta, err := kubectl.GetVersionInfo(kubectlClient)
