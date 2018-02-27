@@ -195,26 +195,28 @@ func mainImpl() {
 		log.Fatal("missing Weave Cloud instance token, provide one with -wc.token")
 	}
 
-	kubeClient, err := setupKubeClient()
-	if err != nil {
-		log.Fatal("kubernetes client:", err)
-	}
-
-	version, err := kubeClient.Discovery().ServerVersion()
-	if err != nil {
-		log.Fatal("get server version:", err)
-	}
-
 	cfg := &agentConfig{
-		KubernetesVersion:    version.GitVersion,
 		Token:                *wcToken,
 		AgentRecoveryWait:    *agentRecoveryWait,
-		KubeClient:           kubeClient,
 		KubectlClient:        kubectl.LocalClient{},
 		WCHostname:           *wcHostname,
 		AgentPollURLTemplate: *agentPollURLTemplate,
 		WCPollURLTemplate:    *wcPollURLTemplate,
 	}
+
+	kubeClient, err := setupKubeClient()
+	if err != nil {
+		logError("kubernetes client", err, cfg)
+		os.Exit(1)
+	}
+	cfg.KubeClient = kubeClient
+
+	version, err := kubeClient.Discovery().ServerVersion()
+	if err != nil {
+		logError("get server version", err, cfg)
+		os.Exit(1)
+	}
+	cfg.KubernetesVersion = version.GitVersion
 
 	// Lookup instance ID
 	wcOrgLookupURL, err := text.ResolveString(*wcOrgLookupURLTemplate, cfg)
