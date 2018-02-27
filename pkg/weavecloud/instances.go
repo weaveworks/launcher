@@ -27,10 +27,15 @@ func LookupInstanceByToken(apiURL, token string) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		return "", "", fmt.Errorf("Invalid token")
+	} else if resp.StatusCode != http.StatusOK {
+		return "", "", fmt.Errorf(resp.Status)
+	}
 
 	instance := lookupInstanceByTokenView{}
-
-	defer resp.Body.Close()
 	err = json.NewDecoder(resp.Body).Decode(&instance)
 	if err != nil {
 		return "", "", err
