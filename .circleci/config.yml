@@ -88,10 +88,14 @@ jobs:
             curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
             # Install yq
             curl -Lo yq https://github.com/mikefarah/yq/releases/download/1.14.0/yq_linux_amd64 && chmod +x yq && sudo mv yq /usr/local/bin/
-      - run: sudo minikube start --vm-driver=none
-      - run: sudo chown -R $USER.$USER ~/.minikube
-      - run: sudo chown -R $USER.$USER ~/.kube
-      - run: minikube update-context
+      - &start_minikube
+        run:
+          name: Start minikube
+          command: |
+            sudo minikube start --vm-driver=none
+            sudo chown -R $USER.$USER ~/.minikube
+            sudo chown -R $USER.$USER ~/.kube
+            minikube update-context
       - &wait_for_minikube
         run:
           name: Wait for nodes to become ready
@@ -113,10 +117,7 @@ jobs:
     steps:
       - checkout
       - <<: *integration_deps
-      - run: sudo minikube start --vm-driver=none
-      - run: sudo chown -R $USER.$USER ~/.minikube
-      - run: sudo chown -R $USER.$USER ~/.kube
-      - run: minikube update-context
+      - <<: *start_minikube
       - <<: *wait_for_minikube
       - run:
           name: Execute integration tests
@@ -135,10 +136,7 @@ jobs:
     steps:
       - checkout
       - <<: *integration_deps
-      - run: sudo minikube start --vm-driver=none
-      - run: sudo chown -R $USER.$USER ~/.minikube
-      - run: sudo chown -R $USER.$USER ~/.kube
-      - run: minikube update-context
+      - <<: *start_minikube
       - <<: *wait_for_minikube
       - run:
           name: Execute integration tests
@@ -164,10 +162,7 @@ jobs:
             sudo /opt/google-cloud-sdk/bin/gcloud --quiet components update
             sudo /opt/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
             sudo /opt/google-cloud-sdk/bin/gcloud config set project $GCLOUD_PROJECT
-      - run: sudo minikube start --vm-driver=none
-      - run: sudo chown -R $USER.$USER ~/.minikube
-      - run: sudo chown -R $USER.$USER ~/.kube
-      - run: minikube update-context
+      - <<: *start_minikube
       - <<: *wait_for_minikube
       - run:
           name: Execute integration tests
@@ -186,10 +181,7 @@ jobs:
     steps:
       - checkout
       - <<: *integration_deps
-      - run: sudo minikube start --vm-driver=none
-      - run: sudo chown -R $USER.$USER ~/.minikube
-      - run: sudo chown -R $USER.$USER ~/.kube
-      - run: minikube update-context
+      - <<: *start_minikube
       - <<: *wait_for_minikube
       - run:
           name: Execute healthcheck for get.dev.weave.works
@@ -202,10 +194,7 @@ jobs:
     steps:
       - checkout
       - <<: *integration_deps
-      - run: sudo minikube start --vm-driver=none
-      - run: sudo chown -R $USER.$USER ~/.minikube
-      - run: sudo chown -R $USER.$USER ~/.kube
-      - run: minikube update-context
+      - <<: *start_minikube
       - <<: *wait_for_minikube
       - run:
           name: Execute healthcheck for get.weave.works
