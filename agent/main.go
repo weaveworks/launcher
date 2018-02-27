@@ -32,7 +32,6 @@ const (
 		"&git-label={{.FluxConfig.GitLabel}}&git-url={{.FluxConfig.GitURL}}" +
 		"&git-path={{.FluxConfig.GitPath}}&git-branch={{.FluxConfig.GitBranch}}" +
 		"{{end}}"
-	defaultWCOrgLookupURL = "https://{{.WCHostname}}/api/users/org/lookup"
 )
 
 type agentConfig struct {
@@ -168,7 +167,7 @@ func mainImpl() {
 	wcToken := flag.String("wc.token", "", "Weave Cloud instance token")
 	wcPollInterval := flag.Duration("wc.poll-interval", 1*time.Hour, "Polling interval to check WC manifests")
 	wcPollURLTemplate := flag.String("wc.poll-url", defaultWCPollURL, "URL to poll for WC manifests")
-	wcOrgLookupURLTemplate := flag.String("wc.org-lookup-url", defaultWCOrgLookupURL, "URL to lookup org external ID by token")
+	wcOrgLookupURLTemplate := flag.String("wc.org-lookup-url", weavecloud.DefaultWCOrgLookupURLTemplate, "URL to lookup org external ID by token")
 	wcHostname := flag.String("wc.hostname", defaultWCHostname, "WC Hostname for WC agents and users API")
 
 	eventsReportInterval := flag.Duration("events.report-interval", 3*time.Second, "Minimal time interval between two reports")

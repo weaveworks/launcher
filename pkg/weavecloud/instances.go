@@ -10,6 +10,9 @@ type lookupInstanceByTokenView struct {
 	ExternalID string `json:"externalID"`
 }
 
+// DefaultWCOrgLookupURLTemplate is the default URL template for LookupInstanceByToken
+const DefaultWCOrgLookupURLTemplate = "https://{{.WCHostname}}/api/users/org/lookup"
+
 // LookupInstanceByToken returns the instance ID given an instance token
 func LookupInstanceByToken(apiURL, token string) (string, error) {
 	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
