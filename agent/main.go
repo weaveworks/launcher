@@ -211,7 +211,7 @@ func mainImpl() {
 	if err != nil {
 		log.Fatal("invalid URL template:", err)
 	}
-	instanceID, err := weavecloud.LookupInstanceByToken(wcOrgLookupURL, *wcToken)
+	instanceID, _, err := weavecloud.LookupInstanceByToken(wcOrgLookupURL, *wcToken)
 	if err != nil {
 		logError("lookup instance by token", err, &agentConfig{})
 	}
