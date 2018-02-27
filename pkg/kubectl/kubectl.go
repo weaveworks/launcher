@@ -1,6 +1,7 @@
 package kubectl
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -171,4 +172,30 @@ func CreateSecretFromLiteral(c Client, namespace, name, key, value string, overr
 	}
 
 	return true, nil
+}
+
+type secretManifest struct {
+	Data map[string]string
+}
+
+// GetSecretValue returns the value of a secret
+func GetSecretValue(c Client, namespace, name, key string) (string, error) {
+	output, err := Execute(c, "get", "secret", name, fmt.Sprintf("--namespace=%s", namespace), "-ojson")
+	if err != nil {
+		return "", err
+	}
+	var secretDefn secretManifest
+	err = json.Unmarshal([]byte(output), &secretDefn)
+	if err != nil {
+		return "", err
+	}
+	encoded, ok := secretDefn.Data[key]
+	if !ok {
+		return "", fmt.Errorf("Secret missing key %s", key)
+	}
+	valueBytes, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return "", err
+	}
+	return string(valueBytes), nil
 }
