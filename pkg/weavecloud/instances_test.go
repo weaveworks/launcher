@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	instanceName  = "Awesome Instance"
 	instanceID    = "awesome-instance"
 	instanceToken = "WEAVE_CLOUD_TOKEN_123"
 )
@@ -23,12 +24,14 @@ func TestLookupInstanceByToken(t *testing.T) {
 		json.NewEncoder(w).Encode(
 			lookupInstanceByTokenView{
 				ExternalID: instanceID,
+				Name:       instanceName,
 			},
 		)
 	}))
 	defer ts.Close()
 
-	id, err := LookupInstanceByToken(ts.URL, instanceToken)
+	id, name, err := LookupInstanceByToken(ts.URL, instanceToken)
 	assert.NoError(t, err)
 	assert.Equal(t, instanceID, id)
+	assert.Equal(t, instanceName, name)
 }
