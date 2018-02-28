@@ -67,7 +67,7 @@ func logError(msg string, err error, cfg *agentConfig) {
 	formatted := fmt.Sprintf("%s: %s", msg, err)
 	log.Error(formatted)
 
-	sentry.Capture(formatted, 2, nil)
+	sentry.CaptureAndWait(1, formatted, nil)
 }
 
 func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {

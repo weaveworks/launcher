@@ -116,7 +116,7 @@ func mainImpl() {
 	// Apply the agent
 	err = kubectl.Apply(kubectlClient, agentK8sURL)
 	if err != nil {
-		capture(2, "There was an error applying the agent: %s\n", err)
+		capture(1, "There was an error applying the agent: %s\n", err)
 
 		// We've failed to apply the agent. kubectl apply isn't an atomic operation
 		// can leave some objects behind when encountering an error. Clean things up.
@@ -133,14 +133,14 @@ func exitNoCapture(msg string, args ...interface{}) {
 	os.Exit(1)
 }
 
-func capture(skipFrames int, msg string, args ...interface{}) {
+func capture(skipFrames uint, msg string, args ...interface{}) {
 	formatted := fmt.Sprintf(msg, args...)
 	fmt.Fprintf(os.Stderr, formatted)
-	sentry.Capture(formatted, skipFrames, nil)
+	sentry.CaptureAndWait(skipFrames, formatted, nil)
 }
 
 func exitWithCapture(msg string, args ...interface{}) {
-	capture(3, msg, args...)
+	capture(2, msg, args...)
 	os.Exit(1)
 }
 
