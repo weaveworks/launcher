@@ -67,12 +67,7 @@ func logError(msg string, err error, cfg *agentConfig) {
 	formatted := fmt.Sprintf("%s: %s", msg, err)
 	log.Error(formatted)
 
-	tags := map[string]string{
-		"kubernetes": cfg.KubernetesVersion,
-		"instance":   cfg.InstanceID,
-	}
-
-	sentry.Capture(formatted, 2, tags)
+	sentry.Capture(formatted, 2, nil)
 }
 
 func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
@@ -212,6 +207,9 @@ func mainImpl() {
 		os.Exit(1)
 	}
 	cfg.KubernetesVersion = version.GitVersion
+	raven.SetTagsContext(map[string]string{
+		"kubernetes": cfg.KubernetesVersion,
+	})
 
 	// Lookup instance ID
 	wcOrgLookupURL, err := text.ResolveString(*wcOrgLookupURLTemplate, cfg)
@@ -221,8 +219,12 @@ func mainImpl() {
 	instanceID, err := weavecloud.LookupInstanceByToken(wcOrgLookupURL, *wcToken)
 	if err != nil {
 		logError("lookup instance by token", err, &agentConfig{})
+	} else {
+		cfg.InstanceID = instanceID
+		raven.SetTagsContext(map[string]string{
+			"instance": cfg.InstanceID,
+		})
 	}
-	cfg.InstanceID = instanceID
 
 	// Migrate kube system and reuse any existing flux config
 	existingFluxCfg := migrateKubeSystem(cfg.KubectlClient)
