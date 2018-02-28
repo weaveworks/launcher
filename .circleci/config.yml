@@ -9,7 +9,8 @@ notify:
 defaults: &defaults
   working_directory: /go/src/github.com/weaveworks/launcher
   docker:
-    - image: circleci/golang:latest
+    # 1.10.0 and dnsName: https://github.com/golang/go/issues/23995
+    - image: circleci/golang:1.9
 
 jobs:
   lint:
