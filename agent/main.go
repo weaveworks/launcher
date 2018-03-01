@@ -18,6 +18,7 @@ import (
 
 	"github.com/weaveworks/launcher/pkg/k8s"
 	"github.com/weaveworks/launcher/pkg/kubectl"
+	"github.com/weaveworks/launcher/pkg/sentry"
 	"github.com/weaveworks/launcher/pkg/text"
 	"github.com/weaveworks/launcher/pkg/weavecloud"
 )
@@ -63,12 +64,10 @@ func setLogLevel(logLevel string) error {
 }
 
 func logError(msg string, err error, cfg *agentConfig) {
-	log.Errorf("%s: %s", msg, err)
-	ravenTags := map[string]string{
-		"kubernetes": cfg.KubernetesVersion,
-		"instance":   cfg.InstanceID,
-	}
-	raven.CaptureErrorAndWait(err, ravenTags)
+	formatted := fmt.Sprintf("%s: %s", msg, err)
+	log.Error(formatted)
+
+	sentry.CaptureAndWait(1, formatted, nil)
 }
 
 func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
@@ -186,26 +185,31 @@ func mainImpl() {
 		log.Fatal("missing Weave Cloud instance token, provide one with -wc.token")
 	}
 
-	kubeClient, err := setupKubeClient()
-	if err != nil {
-		log.Fatal("kubernetes client:", err)
-	}
-
-	version, err := kubeClient.Discovery().ServerVersion()
-	if err != nil {
-		log.Fatal("get server version:", err)
-	}
-
 	cfg := &agentConfig{
-		KubernetesVersion:    version.GitVersion,
 		Token:                *wcToken,
 		AgentRecoveryWait:    *agentRecoveryWait,
-		KubeClient:           kubeClient,
 		KubectlClient:        kubectl.LocalClient{},
 		WCHostname:           *wcHostname,
 		AgentPollURLTemplate: *agentPollURLTemplate,
 		WCPollURLTemplate:    *wcPollURLTemplate,
 	}
+
+	kubeClient, err := setupKubeClient()
+	if err != nil {
+		logError("kubernetes client", err, cfg)
+		os.Exit(1)
+	}
+	cfg.KubeClient = kubeClient
+
+	version, err := kubeClient.Discovery().ServerVersion()
+	if err != nil {
+		logError("get server version", err, cfg)
+		os.Exit(1)
+	}
+	cfg.KubernetesVersion = version.GitVersion
+	raven.SetTagsContext(map[string]string{
+		"kubernetes": cfg.KubernetesVersion,
+	})
 
 	// Lookup instance ID
 	wcOrgLookupURL, err := text.ResolveString(*wcOrgLookupURLTemplate, cfg)
@@ -215,8 +219,12 @@ func mainImpl() {
 	instanceID, err := weavecloud.LookupInstanceByToken(wcOrgLookupURL, *wcToken)
 	if err != nil {
 		logError("lookup instance by token", err, &agentConfig{})
+	} else {
+		cfg.InstanceID = instanceID
+		raven.SetTagsContext(map[string]string{
+			"instance": cfg.InstanceID,
+		})
 	}
-	cfg.InstanceID = instanceID
 
 	// Migrate kube system and reuse any existing flux config
 	existingFluxCfg := migrateKubeSystem(cfg.KubectlClient)

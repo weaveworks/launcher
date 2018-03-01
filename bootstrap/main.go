@@ -14,6 +14,7 @@ import (
 	"github.com/jessevdk/go-flags"
 	"github.com/weaveworks/launcher/pkg/gcloud"
 	"github.com/weaveworks/launcher/pkg/kubectl"
+	"github.com/weaveworks/launcher/pkg/sentry"
 	"github.com/weaveworks/launcher/pkg/text"
 )
 
@@ -115,7 +116,7 @@ func mainImpl() {
 	// Apply the agent
 	err = kubectl.Apply(kubectlClient, agentK8sURL)
 	if err != nil {
-		capture("There was an error applying the agent: %s\n", err)
+		capture(1, "There was an error applying the agent: %s\n", err)
 
 		// We've failed to apply the agent. kubectl apply isn't an atomic operation
 		// can leave some objects behind when encountering an error. Clean things up.
@@ -132,14 +133,14 @@ func exitNoCapture(msg string, args ...interface{}) {
 	os.Exit(1)
 }
 
-func capture(msg string, args ...interface{}) {
+func capture(skipFrames uint, msg string, args ...interface{}) {
 	formatted := fmt.Sprintf(msg, args...)
 	fmt.Fprintf(os.Stderr, formatted)
-	raven.CaptureMessageAndWait(formatted, nil)
+	sentry.CaptureAndWait(skipFrames, formatted, nil)
 }
 
 func exitWithCapture(msg string, args ...interface{}) {
-	capture(msg, args...)
+	capture(2, msg, args...)
 	os.Exit(1)
 }
 
