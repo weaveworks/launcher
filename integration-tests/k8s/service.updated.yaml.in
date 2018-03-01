@@ -27,7 +27,7 @@ spec:
         image: {{.Service.Image}}
         args:
         - -scheme={{.Service.Scheme}}
-        - -hostname={{.Service.Hostname}}
+        - -hostname={{.Service.LauncherHostname}}
         - -wcHostname={{.Service.WCHostname}}
         - -bootstrap.base-url={{.Bootstrap.BaseURL}}
         - -agent-manifest=/agent-k8s/agent.updated.yaml
