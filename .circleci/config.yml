@@ -186,7 +186,7 @@ jobs:
       - <<: *wait_for_minikube
       - run:
           name: Execute healthcheck for get.dev.weave.works
-          command: ./integration-tests/tests/healthcheck.sh get.dev.weave.works
+          command: WEAVE_CLOUD_TOKEN=$DEV_INSTANCE_TOKEN ./integration-tests/tests/healthcheck.sh get.dev.weave.works
 
   healthcheck_prod:
     machine: true
@@ -199,7 +199,7 @@ jobs:
       - <<: *wait_for_minikube
       - run:
           name: Execute healthcheck for get.weave.works
-          command: ./integration-tests/tests/healthcheck.sh get.weave.works
+          command: WEAVE_CLOUD_TOKEN=$PROD_INSTANCE_TOKEN ./integration-tests/tests/healthcheck.sh get.weave.works
 
 workflows:
   version: 2
