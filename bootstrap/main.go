@@ -89,7 +89,7 @@ func mainImpl() {
 
 	InstanceID, InstanceName, err := weavecloud.LookupInstanceByToken(wcOrgLookupURL, opts.Token)
 	if err != nil {
-		exitWithCapture("Error looking up Weave Cloud instance\n", err)
+		exitWithCapture("Error looking up Weave Cloud instance: %s\n", err)
 	}
 	raven.SetTagsContext(map[string]string{"instance": InstanceID})
 	fmt.Printf("Connecting cluster to %q (id: %s) on Weave Cloud\n", InstanceName, InstanceID)
