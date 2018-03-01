@@ -19,16 +19,16 @@ import (
 )
 
 const (
-	agentK8sURLTemplate = "{{.Scheme}}://{{.Hostname}}/k8s/agent.yaml"
+	agentK8sURLTemplate = "{{.Scheme}}://{{.LauncherHostname}}/k8s/agent.yaml"
 )
 
 type options struct {
-	AssumeYes  bool   `short:"y" long:"assume-yes" description:"Install without user confirmation"`
-	Scheme     string `long:"scheme" description:"Weave Cloud scheme" default:"https"`
-	Hostname   string `long:"hostname" description:"Weave Cloud launcher hostname" default:"get.weave.works"`
-	WCHostname string `long:"wc-hostname" description:"Weave Cloud hostname" default:"cloud.weave.works"`
-	Token      string `long:"token" description:"Weave Cloud token" required:"true"`
-	GKE        bool   `long:"gke" description:"Create clusterrolebinding for GKE instances"`
+	AssumeYes        bool   `short:"y" long:"assume-yes" description:"Install without user confirmation"`
+	Scheme           string `long:"scheme" description:"Weave Cloud scheme" default:"https"`
+	LauncherHostname string `long:"wc.launcher" description:"Weave Cloud launcher hostname" default:"get.weave.works"`
+	WCHostname       string `long:"wc.hostname" description:"Weave Cloud hostname" default:"cloud.weave.works"`
+	Token            string `long:"token" description:"Weave Cloud token" required:"true"`
+	GKE              bool   `long:"gke" description:"Create clusterrolebinding for GKE instances"`
 }
 
 func init() {
@@ -50,7 +50,8 @@ func mainImpl() {
 	}
 	raven.SetTagsContext(map[string]string{
 		"weave_cloud_scheme":   opts.Scheme,
-		"weave_cloud_hostname": opts.Hostname,
+		"weave_cloud_launcher": opts.LauncherHostname,
+		"weave_cloud_hostname": opts.WCHostname,
 	})
 
 	kubectlClient := kubectl.LocalClient{
