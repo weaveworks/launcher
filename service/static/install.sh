@@ -37,10 +37,10 @@ fi
 
 # Download the bootstrap binary
 echo "Downloading the Weave Cloud installer...  "
-curl -Ls "{{.Scheme}}://{{.Hostname}}/bootstrap?dist=$dist" >> "$TMPFILE"
+curl -Ls "{{.Scheme}}://{{.LauncherHostname}}/bootstrap?dist=$dist" >> "$TMPFILE"
 
 # Make the bootstrap binary executable
 chmod +x "$TMPFILE"
 
 # Execute the bootstrap binary
-"$TMPFILE" "--scheme={{.Scheme}}" "--hostname={{.Hostname}}" "$@"
+"$TMPFILE" "--scheme={{.Scheme}}" "--wc.launcher={{.LauncherHostname}}" "--wc.hostname={{.WCHostname}}" "$@"
