@@ -16,18 +16,20 @@ import (
 	"github.com/weaveworks/launcher/pkg/kubectl"
 	"github.com/weaveworks/launcher/pkg/sentry"
 	"github.com/weaveworks/launcher/pkg/text"
+	"github.com/weaveworks/launcher/pkg/weavecloud"
 )
 
 const (
-	agentK8sURLTemplate = "{{.Scheme}}://{{.Hostname}}/k8s/agent.yaml"
+	agentK8sURLTemplate = "{{.Scheme}}://{{.LauncherHostname}}/k8s/agent.yaml"
 )
 
 type options struct {
-	AssumeYes bool   `short:"y" long:"assume-yes" description:"Install without user confirmation"`
-	Scheme    string `long:"scheme" description:"Weave Cloud scheme" default:"https"`
-	Hostname  string `long:"hostname" description:"Weave Cloud hostname" default:"get.weave.works"`
-	Token     string `long:"token" description:"Weave Cloud token" required:"true"`
-	GKE       bool   `long:"gke" description:"Create clusterrolebinding for GKE instances"`
+	AssumeYes        bool   `short:"y" long:"assume-yes" description:"Install without user confirmation"`
+	Scheme           string `long:"scheme" description:"Weave Cloud scheme" default:"https"`
+	LauncherHostname string `long:"wc.launcher" description:"Weave Cloud launcher hostname" default:"get.weave.works"`
+	WCHostname       string `long:"wc.hostname" description:"Weave Cloud hostname" default:"cloud.weave.works"`
+	Token            string `long:"token" description:"Weave Cloud token" required:"true"`
+	GKE              bool   `long:"gke" description:"Create clusterrolebinding for GKE instances"`
 }
 
 func init() {
@@ -49,7 +51,8 @@ func mainImpl() {
 	}
 	raven.SetTagsContext(map[string]string{
 		"weave_cloud_scheme":   opts.Scheme,
-		"weave_cloud_hostname": opts.Hostname,
+		"weave_cloud_launcher": opts.LauncherHostname,
+		"weave_cloud_hostname": opts.WCHostname,
 	})
 
 	kubectlClient := kubectl.LocalClient{
@@ -64,11 +67,17 @@ func mainImpl() {
 	if err != nil {
 		log.Fatal("invalid URL template:", err)
 	}
+	wcOrgLookupURL, err := text.ResolveString(weavecloud.DefaultWCOrgLookupURLTemplate, opts)
+	if err != nil {
+		log.Fatal("invalid URL template:", err)
+	}
 
 	// Restore stdin, making fd 0 point at the terminal
 	if err := syscall.Dup2(1, 0); err != nil {
 		exitWithCapture("Could not restore stdin\n", err)
 	}
+
+	fmt.Println("Preparing for Weave Cloud setup")
 
 	// Capture the kubernetes version info to help debug issues
 	fmt.Println("Checking kubectl & kubernetes versions")
@@ -78,6 +87,13 @@ func mainImpl() {
 	} else {
 		fmt.Fprintln(os.Stderr, "WARNING: Could not get kubernetes version info.")
 	}
+
+	InstanceID, InstanceName, err := weavecloud.LookupInstanceByToken(wcOrgLookupURL, opts.Token)
+	if err != nil {
+		exitWithCapture("Error looking up Weave Cloud instance: %s\n", err)
+	}
+	raven.SetTagsContext(map[string]string{"instance": InstanceID})
+	fmt.Printf("Connecting cluster to %q (id: %s) on Weave Cloud\n", InstanceName, InstanceID)
 
 	// Display information on the cluster we're about to install the agent onto.
 	//
@@ -106,10 +122,29 @@ func mainImpl() {
 		exitWithCapture("There was an error creating the secret: %s\n", err)
 	}
 	if !secretCreated {
-		askForConfirmation("A weave-cloud secret already exists. Would you like to continue and replace the secret?")
-		_, err := kubectl.CreateSecretFromLiteral(kubectlClient, "weave", "weave-cloud", "token", opts.Token, true)
+		currentToken, err := kubectl.GetSecretValue(kubectlClient, "weave", "weave-cloud", "token")
 		if err != nil {
-			exitWithCapture("There was an error creating the secret: %s\n", err)
+			exitWithCapture("There was an error checking the current secret: %s\n", err)
+		}
+		if currentToken != opts.Token {
+			currentInstanceID, currentInstanceName, errCurrent := weavecloud.LookupInstanceByToken(wcOrgLookupURL, currentToken)
+			msg := "This cluster is currently connected to "
+			if errCurrent == nil {
+				msg += fmt.Sprintf("%q (id: %s) on Weave Cloud", currentInstanceName, currentInstanceID)
+			} else {
+				msg += "a different Weave Cloud instance."
+			}
+			confirmed, err := askForConfirmation(fmt.Sprintf(
+				"\n%s\nWould you like to continue and connect this cluster to %q (id: %s) instead?", msg, InstanceName, InstanceID))
+			if err != nil {
+				exitWithCapture("Could not ask for confirmation: %s\n", err)
+			} else if !confirmed {
+				exitNoCapture("Installation cancelled")
+			}
+			_, err = kubectl.CreateSecretFromLiteral(kubectlClient, "weave", "weave-cloud", "token", opts.Token, true)
+			if err != nil {
+				exitWithCapture("There was an error creating the secret: %s\n", err)
+			}
 		}
 	}
 

@@ -124,8 +124,8 @@ func TestAgentYAMLHandler(t *testing.T) {
 
 func TestLoadData(t *testing.T) {
 	ctx := &templateData{
-		Scheme:   "https",
-		Hostname: "hostname.test",
+		Scheme:           "https",
+		LauncherHostname: "hostname.test",
 	}
 	// install.sh
 	installScriptData, err := loadData("./static/install.sh", ctx)
@@ -137,8 +137,8 @@ func TestLoadData(t *testing.T) {
 	if !strings.Contains(installScript, "https://hostname.test/bootstrap?dist=$dist") {
 		t.Errorf("Expected 'https://hostname.test/bootstrap?dist=$dist' in install.sh")
 	}
-	if !strings.Contains(installScript, "--hostname=hostname.test") {
-		t.Errorf("Expected '--hostname=hostname.test' in install.sh")
+	if !strings.Contains(installScript, "--wc.launcher=hostname.test") {
+		t.Errorf("Expected '--wc.launcher=hostname.test' in install.sh")
 	}
 
 	// agent.yaml

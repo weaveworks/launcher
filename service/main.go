@@ -20,14 +20,14 @@ const (
 )
 
 type templateData struct {
-	Scheme     string
-	Hostname   string
-	WCHostname string
+	Scheme           string
+	LauncherHostname string
+	WCHostname       string
 }
 
 var (
 	bootstrapVersion = flag.String("bootstrap-version", "", "Bootstrap version used for S3 binaries (commit hash)")
-	hostname         = flag.String("hostname", "get.weave.works", "Hostname for external launcher service")
+	launcherHostname = flag.String("hostname", "get.weave.works", "Hostname for external launcher service")
 	wcHostname       = flag.String("wcHostname", "cloud.weave.works", "Hostname for WC agents and users API")
 	scheme           = flag.String("scheme", "https", "URL scheme for external launcher service")
 	bootstrapBaseURL = flag.String("bootstrap.base-url", s3Bucket, "Base URL the bootstrap binary should be fetched from")
@@ -48,9 +48,9 @@ func main() {
 
 	// Load install.sh and agent.yaml into memory
 	data := &templateData{
-		Scheme:     *scheme,
-		Hostname:   *hostname,
-		WCHostname: *wcHostname,
+		Scheme:           *scheme,
+		LauncherHostname: *launcherHostname,
+		WCHostname:       *wcHostname,
 	}
 	installScriptData, err := loadData(installScriptFile, data)
 	if err != nil {

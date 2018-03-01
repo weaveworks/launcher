@@ -13,7 +13,7 @@ cat <<EOF
 {
   "Service": {
     "Scheme": "http",
-    "Hostname": "$(minikube ip):30080",
+    "LauncherHostname": "$(minikube ip):30080",
     "WCHostname": "frontend.dev.weave.works",
     "Image": "${SERVICE_IMAGE-$DEFAULT_SERVICE_IMAGE}"
   },
