@@ -191,7 +191,7 @@ func GetSecretValue(c Client, namespace, name, key string) (string, error) {
 	}
 	encoded, ok := secretDefn.Data[key]
 	if !ok {
-		return "", fmt.Errorf("Secret missing key %s", key)
+		return "", fmt.Errorf("Secret missing key %q", key)
 	}
 	valueBytes, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
