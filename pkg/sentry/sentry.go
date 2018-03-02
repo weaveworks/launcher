@@ -2,7 +2,13 @@ package sentry
 
 import (
 	raven "github.com/getsentry/raven-go"
+	"github.com/weaveworks/launcher/pkg/version"
 )
+
+// Init initialises sentry
+func Init() {
+	raven.SetRelease(version.Version)
+}
 
 // CaptureAndWait reports an error message to sentry along with a stacktrace.
 //
