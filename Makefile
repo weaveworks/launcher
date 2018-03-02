@@ -15,6 +15,7 @@ AGENT_DEPS   := $(call godeps,./agent)
 BOOTSTRAP_DEPS := $(call godeps,./bootstrap)
 SERVICE_DEPS := $(call godeps,./service)
 
+GIT_VERSION :=$(shell git describe --always --long --dirty)
 GIT_HASH :=$(shell git rev-parse HEAD)
 IMAGE_TAG:=$(shell ./docker/image-tag)
 
@@ -25,6 +26,7 @@ ifneq ($(CI),true)
 INSTALL_FLAG := -i
 endif
 BUILDFLAGS   := $(INSTALL_FLAG)
+LDFLAGS:=-ldflags "-X github.com/weaveworks/launcher/pkg/version.Version=$(GIT_VERSION) -X github.com/weaveworks/launcher/pkg/version.Revision=$(GIT_HASH)"
 
 all: dep agent bootstrap service
 agent: build/.agent.done
