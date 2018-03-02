@@ -201,6 +201,33 @@ jobs:
           name: Execute healthcheck for get.weave.works
           command: WEAVE_CLOUD_TOKEN=$PROD_INSTANCE_TOKEN ./integration-tests/tests/healthcheck.sh get.weave.works
 
+  sentry:
+    <<: *defaults
+    steps:
+      - checkout
+      - run:
+          name: Create sentry release
+          command: |
+            set -e
+            CURRENT_COMMIT="$(git rev-parse HEAD)"
+            PREV_COMMIT="$(git rev-parse HEAD^)"
+            VERSION="$(git describe --always --long --dirty)"
+            curl https://sentry.io/api/0/organizations/weaveworks/releases/ \
+              -X POST \
+              -H "Authorization: Bearer ${SENTRY_BOOTSTRAP_TOKEN}" \
+              -H 'Content-Type: application/json' \
+              -d '
+              {
+                "version": "'${VERSION}'",
+                "refs": [{
+                    "repository":"weaveworks/launcher",
+                    "commit":"'${CURRENT_COMMIT}'",
+                    "previousCommit":"'${PREV_COMMIT}'"
+                }],
+                "projects":["launcher-bootstrap","launcher-agent"]
+            }
+            '
+
 workflows:
   version: 2
   build_deploy:
@@ -229,6 +256,15 @@ workflows:
             - agent
             - bootstrap
             - service
+      - sentry:
+          requires:
+            - integration_install_update_flow
+            - integration_kube_system_migration
+            - integration_flux_config
+            - integration_gke
+          filters:
+            branches:
+              only: master
 
   healthchecks:
     triggers:
