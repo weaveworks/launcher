@@ -132,7 +132,10 @@ func CreateClusterRoleBinding(c Client, name, role, user string) error {
 		"--user",
 		user,
 	)
-	return err
+	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
+		return err
+	}
+	return nil
 }
 
 // CreateSecretFromLiteral creates a new secret with a single (key,value) pair.
