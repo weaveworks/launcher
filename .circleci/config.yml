@@ -213,8 +213,9 @@ jobs:
             PREV_COMMIT="$(git rev-parse HEAD^)"
             VERSION="$(git describe --always --long --dirty)"
             curl https://sentry.io/api/0/organizations/weaveworks/releases/ \
+              --fail \
               -X POST \
-              -H "Authorization: Bearer ${SENTRY_BOOTSTRAP_TOKEN}" \
+              -H "Authorization: Bearer ${SENTRY_API_KEY}" \
               -H 'Content-Type: application/json' \
               -d '
               {
