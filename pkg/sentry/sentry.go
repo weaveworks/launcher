@@ -5,8 +5,8 @@ import (
 	"github.com/weaveworks/launcher/pkg/version"
 )
 
-// Init initialises sentry
-func Init() {
+// init initialises sentry
+func init() {
 	raven.SetRelease(version.Version)
 }
 
