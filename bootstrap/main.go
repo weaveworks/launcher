@@ -80,13 +80,7 @@ func mainImpl() {
 	fmt.Println("Preparing for Weave Cloud setup")
 
 	// Capture the kubernetes version info to help debug issues
-	fmt.Println("Checking kubectl & kubernetes versions")
-	versionMeta, err := kubectl.GetVersionInfo(kubectlClient)
-	if err == nil {
-		raven.SetTagsContext(versionMeta)
-	} else {
-		fmt.Fprintln(os.Stderr, "WARNING: Could not get kubernetes version info.")
-	}
+	checkK8sVersion(kubectlClient) // NB exits on error
 
 	InstanceID, InstanceName, err := weavecloud.LookupInstanceByToken(wcOrgLookupURL, opts.Token)
 	if err != nil {
@@ -217,5 +211,24 @@ func askForConfirmation(s string) (bool, error) {
 		} else if response == "n" || response == "no" {
 			return false, nil
 		}
+	}
+}
+
+func checkK8sVersion(kubectlClient kubectl.Client) {
+	fmt.Println("Checking kubectl & kubernetes versions")
+	clientVersion, serverVersion, err := kubectl.GetVersionInfo(kubectlClient)
+	if err == nil {
+		raven.SetTagsContext(map[string]string{
+			"kubectl_clientVersion_gitVersion": clientVersion,
+		})
+		if serverVersion == "" {
+			exitNoCapture("Error loading the kubernetes server version, please check that you can connect to it with \"kubectl version\".\n")
+		} else {
+			raven.SetTagsContext(map[string]string{
+				"kubectl_serverVersion_gitVersion": serverVersion,
+			})
+		}
+	} else {
+		exitNoCapture("Error loading kubernetes version info, please check your environment for problems with \"kubectl version\".\n")
 	}
 }
