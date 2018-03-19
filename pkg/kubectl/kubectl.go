@@ -24,31 +24,36 @@ type ClusterInfo struct {
 	ServerAddress string
 }
 
+type kubeCtlVersionInfo struct {
+	GitVersion string `json:"gitVersion"`
+}
+
+type kubeCtlVersionData struct {
+	ClientVersion *kubeCtlVersionInfo `json:"clientVersion,omitempty"`
+	ServerVersion *kubeCtlVersionInfo `json:"serverVersion,omitempty"`
+}
+
 // GetVersionInfo returns the version metadata from kubectl
-func GetVersionInfo(c Client) (map[string]string, error) {
+func GetVersionInfo(c Client) (string, string, error) {
 	// Capture stdout only (to ignore server reachability errors)
 	output, err := c.ExecuteStdout("version", "-ojson")
-	versionData := map[string]interface{}{}
+	var versionData kubeCtlVersionData
 	parseErr := json.Unmarshal([]byte(output), &versionData)
 	// If the server is unreachable, we might have an error but parsable output
 	if parseErr != nil {
 		if err != nil {
-			return nil, err
+			return "", "", err
 		}
-		return nil, parseErr
+		return "", "", parseErr
 	}
-	out := make(map[string]string)
-	for key, maybeValuesMap := range versionData {
-		valueMap, ok := maybeValuesMap.(map[string]interface{})
-		if ok {
-			for subKey, value := range valueMap {
-				if str, ok := value.(string); ok {
-					out[fmt.Sprintf("kubectl_%s_%s", key, subKey)] = str
-				}
-			}
-		}
+	var clientVersion, serverVersion string
+	if versionData.ClientVersion != nil {
+		clientVersion = versionData.ClientVersion.GitVersion
 	}
-	return out, nil
+	if versionData.ServerVersion != nil {
+		serverVersion = versionData.ServerVersion.GitVersion
+	}
+	return clientVersion, serverVersion, nil
 }
 
 // GetClusterInfo gets the current Kubernetes cluster information
