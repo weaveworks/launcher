@@ -86,7 +86,7 @@ jobs:
             # Install kubectl
             curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.8.4/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
             # Install minikube
-            curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+            curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.25.0/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
             # Install yq
             curl -Lo yq https://github.com/mikefarah/yq/releases/download/1.14.0/yq_linux_amd64 && chmod +x yq && sudo mv yq /usr/local/bin/
       - &start_minikube
