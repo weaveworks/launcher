@@ -36,7 +36,7 @@ type kubeCtlVersionData struct {
 // GetVersionInfo returns the version metadata from kubectl
 func GetVersionInfo(c Client) (string, string, error) {
 	// Capture stdout only (to ignore server reachability errors)
-	output, err := c.ExecuteStdout("version", "-ojson")
+	output, err := c.ExecuteStdout("version", "--output=json")
 	var versionData kubeCtlVersionData
 	parseErr := json.Unmarshal([]byte(output), &versionData)
 	// If the server is unreachable, we might have an error but parsable output
@@ -188,7 +188,7 @@ type secretManifest struct {
 
 // GetSecretValue returns the value of a secret
 func GetSecretValue(c Client, namespace, name, key string) (string, error) {
-	output, err := Execute(c, "get", "secret", name, fmt.Sprintf("--namespace=%s", namespace), "-ojson")
+	output, err := Execute(c, "get", "secret", name, fmt.Sprintf("--namespace=%s", namespace), "--output=json")
 	if err != nil {
 		return "", err
 	}
