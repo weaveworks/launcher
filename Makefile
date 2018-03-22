@@ -1,4 +1,4 @@
-.PHONY: all clean dep lint agent bootstrap service
+.PHONY: all clean dep lint agent bootstrap service integration-tests
 .SUFFIXES:
 
 DOCKER ?= docker
@@ -130,3 +130,4 @@ integration-tests: all
 clean:
 	rm -rf build cache vendor
 	rm -f docker/Dockerfile.service service/static/agent.yaml
+	rm -f integration-tests/k8s/service.yaml integration-tests/k8s/k8s-kube-system.yaml integration-tests/k8s/nginx-bootstrap.yaml integration-tests/k8s/service.updated.yaml integration-tests/k8s/agent.updated.yaml
