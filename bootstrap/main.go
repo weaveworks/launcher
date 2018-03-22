@@ -222,13 +222,13 @@ func checkK8sVersion(kubectlClient kubectl.Client) {
 			"kubectl_clientVersion_gitVersion": clientVersion,
 		})
 		if serverVersion == "" {
-			exitNoCapture("Error loading the kubernetes server version, please check that you can connect to it with \"kubectl version\".\n")
+			exitNoCapture("Error loading the kubernetes server version, please check that you can connect to it by running \"kubectl version\".\n")
 		} else {
 			raven.SetTagsContext(map[string]string{
 				"kubectl_serverVersion_gitVersion": serverVersion,
 			})
 		}
 	} else {
-		exitNoCapture("Error loading kubernetes version info, please check your environment for problems with \"kubectl version\".\n")
+		exitNoCapture("Error loading kubernetes version info, please check your environment for problems by running \"kubectl version\".\n")
 	}
 }
