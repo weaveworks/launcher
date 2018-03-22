@@ -27,5 +27,6 @@ echo "• Wait for terminating pods"
 JSONPATH='{range .items[*]}{@.metadata.name}{end}'
 while [ $(kubectl get pods -l name=service -o jsonpath="$JSONPATH" 2>&1 | wc -c | tr -d '[:space:]') != 0 ]; do echo -n .; sleep 1; done
 while [ $(kubectl get pods -n weave -o jsonpath="$JSONPATH" 2>&1 | wc -c | tr -d '[:space:]') != 0 ]; do echo -n .; sleep 1; done
+echo "• All pods terminated"
 
 exit 0

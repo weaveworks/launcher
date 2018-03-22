@@ -33,5 +33,6 @@ echo $($root/config.sh) | go run $root/../cmd/templatinator/templatinator.go $bo
 kubectl apply -f $bootstrap_yaml
 
 ###
-echo -n "• Waiting for nginx-bootstrap service to be available"
+echo "• Waiting for nginx-bootstrap service to be available"
 until curl -Ls $(minikube service nginx-bootstrap --url) >/dev/null 2>/dev/null; do echo -n .; sleep 1; done
+echo
