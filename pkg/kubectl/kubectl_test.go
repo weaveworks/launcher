@@ -27,8 +27,9 @@ func (t *TestClient) Execute(args ...string) (string, error) {
 	return "", fmt.Errorf("Missing response for %q", cmd)
 }
 
-func (t *TestClient) ExecuteStdout(args ...string) (string, error) {
-	return Execute(t, args...)
+func (t *TestClient) ExecuteOutputMatrix(args ...string) (stdout, stderr, combined string, err error) {
+	stdout, err = Execute(t, args...)
+	return stdout, "", stdout, err
 }
 
 func TestGetSecretValue(t *testing.T) {
