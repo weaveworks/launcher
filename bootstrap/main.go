@@ -47,7 +47,7 @@ func mainImpl() {
 	parser := flags.NewParser(&opts, flags.IgnoreUnknown)
 	otherArgs, err := parser.Parse()
 	if err != nil {
-		exitNoCapture("%s\n", err)
+		exitWithCapture("%s\n", err)
 	}
 	raven.SetTagsContext(map[string]string{
 		"weave_cloud_scheme":   opts.Scheme,
@@ -60,7 +60,7 @@ func mainImpl() {
 	}
 
 	if !kubectlClient.IsPresent() {
-		exitNoCapture("Could not find kubectl in PATH, please install it: https://kubernetes.io/docs/tasks/tools/install-kubectl/\n")
+		exitWithCapture("Could not find kubectl in PATH, please install it: https://kubernetes.io/docs/tasks/tools/install-kubectl/\n")
 	}
 
 	agentK8sURL, err := text.ResolveString(agentK8sURLTemplate, opts)
@@ -133,7 +133,7 @@ func mainImpl() {
 			if err != nil {
 				exitWithCapture("Could not ask for confirmation: %s\n", err)
 			} else if !confirmed {
-				exitNoCapture("Installation cancelled")
+				exitWithCapture("Installation cancelled")
 			}
 			_, err = kubectl.CreateSecretFromLiteral(kubectlClient, "weave", "weave-cloud", "token", opts.Token, true)
 			if err != nil {
@@ -155,11 +155,6 @@ func mainImpl() {
 	}
 
 	fmt.Println("Successfully installed.")
-}
-
-func exitNoCapture(msg string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, msg, args...)
-	os.Exit(1)
 }
 
 func capture(skipFrames uint, msg string, args ...interface{}) {
@@ -222,13 +217,13 @@ func checkK8sVersion(kubectlClient kubectl.Client) {
 			"kubectl_clientVersion_gitVersion": clientVersion,
 		})
 		if serverVersion == "" {
-			exitNoCapture("%v\nError loading the kubernetes server version.\nPlease check that you can connect to it by running \"kubectl version\".\n", err)
+			exitWithCapture("%v\nError loading the kubernetes server version.\nPlease check that you can connect to it by running \"kubectl version\".\n", err)
 		} else {
 			raven.SetTagsContext(map[string]string{
 				"kubectl_serverVersion_gitVersion": serverVersion,
 			})
 		}
 	} else {
-		exitNoCapture("%v\nError loading kubernetes version info.\nPlease check your environment for problems by running \"kubectl version\".\n", err)
+		exitWithCapture("%v\nError loading kubernetes version info.\nPlease check your environment for problems by running \"kubectl version\".\n", err)
 	}
 }
