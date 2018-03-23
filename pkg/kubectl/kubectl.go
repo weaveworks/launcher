@@ -11,7 +11,7 @@ import (
 // Client implements a kubectl client to execute commands
 type Client interface {
 	Execute(args ...string) (string, error)
-	ExecuteOutputMatrix(args ...string) (string, string, string, error)
+	ExecuteOutputMatrix(args ...string) (stdout, stderr, combined string, err error)
 }
 
 // Execute executes kubectl <args> and returns the combined stdout/err output.
