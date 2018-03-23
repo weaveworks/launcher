@@ -32,15 +32,15 @@ func (k LocalClient) Execute(args ...string) (string, error) {
 }
 
 // ExecuteOutputMatrix executes kubectl <args> and returns stdout, stderr, and the combined interleaved output.
-func (k LocalClient) ExecuteOutputMatrix(args ...string) (string, string, string, error) {
+func (k LocalClient) ExecuteOutputMatrix(args ...string) (stdout, stderr, combined string, err error) {
 	cmd := exec.Command("kubectl", append(k.GlobalArgs, args...)...)
 	return outputMatrix(cmd)
 }
 
-func outputMatrix(cmd *exec.Cmd) (string, string, string, error) {
+func outputMatrix(cmd *exec.Cmd) (stdout, stderr, combined string, err error) {
 	var stdoutBuf, stderrBuf, combinedBuf bytes.Buffer
-	stdout, _ := cmd.StdoutPipe()
-	stderr, _ := cmd.StderrPipe()
+	stdoutPipe, _ := cmd.StdoutPipe()
+	stderrPipe, _ := cmd.StderrPipe()
 
 	stdoutWriter := io.MultiWriter(&combinedBuf, &stdoutBuf)
 	stderrWriter := io.MultiWriter(&combinedBuf, &stderrBuf)
@@ -51,16 +51,17 @@ func outputMatrix(cmd *exec.Cmd) (string, string, string, error) {
 		_, _ = io.Copy(dst, src)
 	}
 
-	err := cmd.Start()
+	err = cmd.Start()
 	if err == nil {
 		wg.Add(2)
-		go copy(stdoutWriter, stdout)
-		go copy(stderrWriter, stderr)
+		go copy(stdoutWriter, stdoutPipe)
+		go copy(stderrWriter, stderrPipe)
 		// we need to wait for all reads to finish before calling cmd.Wait
 		wg.Wait()
 		err = cmd.Wait()
 	}
-	return string(stdoutBuf.Bytes()), string(stderrBuf.Bytes()), string(combinedBuf.Bytes()), err
+	stdout, stderr, combined = string(stdoutBuf.Bytes()), string(stderrBuf.Bytes()), string(combinedBuf.Bytes())
+	return
 }
 
 func trimOutput(output string) string {
