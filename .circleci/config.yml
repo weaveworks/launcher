@@ -258,11 +258,6 @@ workflows:
             - bootstrap
             - service
       - sentry:
-          requires:
-            - integration_install_update_flow
-            - integration_kube_system_migration
-            - integration_flux_config
-            - integration_gke
           filters:
             branches:
               only: master
