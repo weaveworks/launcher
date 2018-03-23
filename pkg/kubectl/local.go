@@ -22,18 +22,13 @@ func (k LocalClient) IsPresent() bool {
 
 // Execute executes kubectl <args> and returns the combined stdout/err output.
 func (k LocalClient) Execute(args ...string) (string, error) {
-	cmdOut, err := exec.Command("kubectl", append(k.GlobalArgs, args...)...).CombinedOutput()
+	cmd := exec.Command("kubectl", append(k.GlobalArgs, args...)...)
+	_, stderr, combined, err := outputMatrix(cmd)
 	if err != nil {
 		// Kubectl error messages output to stdOut
-		return "", fmt.Errorf(formatCmdOutput(cmdOut))
+		return "", fmt.Errorf("%s\nFull output:\n%s", trimOutput(stderr), trimOutput(combined))
 	}
-	return formatCmdOutput(cmdOut), nil
-}
-
-// ExecuteStdout executes kubectl <args> and returns the stdout output.
-func (k LocalClient) ExecuteStdout(args ...string) (string, error) {
-	cmdOut, err := exec.Command("kubectl", append(k.GlobalArgs, args...)...).Output()
-	return string(cmdOut), err
+	return trimOutput(combined), nil
 }
 
 // ExecuteOutputMatrix executes kubectl <args> and returns stdout, stderr, and the combined interleaved output.
@@ -68,6 +63,6 @@ func outputMatrix(cmd *exec.Cmd) (string, string, string, error) {
 	return string(stdoutBuf.Bytes()), string(stderrBuf.Bytes()), string(combinedBuf.Bytes()), err
 }
 
-func formatCmdOutput(output []byte) string {
-	return strings.TrimPrefix(strings.TrimSuffix(strings.TrimSpace(string(output)), "'"), "'")
+func trimOutput(output string) string {
+	return strings.TrimPrefix(strings.TrimSuffix(strings.TrimSpace(output), "'"), "'")
 }
