@@ -217,18 +217,18 @@ func askForConfirmation(s string) (bool, error) {
 func checkK8sVersion(kubectlClient kubectl.Client) {
 	fmt.Println("Checking kubectl & kubernetes versions")
 	clientVersion, serverVersion, err := kubectl.GetVersionInfo(kubectlClient)
-	if err == nil {
+	if clientVersion != "" {
 		raven.SetTagsContext(map[string]string{
 			"kubectl_clientVersion_gitVersion": clientVersion,
 		})
 		if serverVersion == "" {
-			exitNoCapture("Error loading the kubernetes server version, please check that you can connect to it by running \"kubectl version\".\n")
+			exitNoCapture("%v\nError loading the kubernetes server version.\nPlease check that you can connect to it by running \"kubectl version\".\n", err)
 		} else {
 			raven.SetTagsContext(map[string]string{
 				"kubectl_serverVersion_gitVersion": serverVersion,
 			})
 		}
 	} else {
-		exitNoCapture("Error loading kubernetes version info, please check your environment for problems by running \"kubectl version\".\n")
+		exitNoCapture("%v\nError loading kubernetes version info.\nPlease check your environment for problems by running \"kubectl version\".\n", err)
 	}
 }

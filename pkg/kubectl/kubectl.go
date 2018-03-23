@@ -3,6 +3,7 @@ package kubectl
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -10,7 +11,7 @@ import (
 // Client implements a kubectl client to execute commands
 type Client interface {
 	Execute(args ...string) (string, error)
-	ExecuteStdout(args ...string) (string, error)
+	ExecuteOutputMatrix(args ...string) (string, string, string, error)
 }
 
 // Execute executes kubectl <args> and returns the combined stdout/err output.
@@ -34,26 +35,33 @@ type kubeCtlVersionData struct {
 }
 
 // GetVersionInfo returns the version metadata from kubectl
+// May return a value for the kubectl client version, despite also returning an error
 func GetVersionInfo(c Client) (string, string, error) {
 	// Capture stdout only (to ignore server reachability errors)
-	output, err := c.ExecuteStdout("version", "--output=json")
+	stdout, stderr, _, err := c.ExecuteOutputMatrix("version", "--output=json")
 	var versionData kubeCtlVersionData
-	parseErr := json.Unmarshal([]byte(output), &versionData)
+	parseErr := json.Unmarshal([]byte(stdout), &versionData)
 	// If the server is unreachable, we might have an error but parsable output
 	if parseErr != nil {
 		if err != nil {
-			return "", "", err
+			if stderr == "" {
+				return "", "", err
+			}
+			return "", "", fmt.Errorf("kubectl error (%v): %s", err, stderr)
 		}
-		return "", "", parseErr
+		return "", "", fmt.Errorf("error parsing kubectl output: %v", parseErr)
 	}
 	var clientVersion, serverVersion string
+	var outErr error
 	if versionData.ClientVersion != nil {
 		clientVersion = versionData.ClientVersion.GitVersion
 	}
-	if versionData.ServerVersion != nil {
+	if versionData.ServerVersion == nil {
+		outErr = errors.New(stderr)
+	} else {
 		serverVersion = versionData.ServerVersion.GitVersion
 	}
-	return clientVersion, serverVersion, nil
+	return clientVersion, serverVersion, outErr
 }
 
 // GetClusterInfo gets the current Kubernetes cluster information
