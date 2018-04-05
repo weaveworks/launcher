@@ -49,7 +49,7 @@ func GetVersionInfo(c Client) (string, string, error) {
 			}
 			return "", "", fmt.Errorf("kubectl error (%v): %s", err, stderr)
 		}
-		return "", "", fmt.Errorf("error parsing kubectl output: %v", parseErr)
+		return "", "", fmt.Errorf("error parsing kubectl version output: %v", parseErr)
 	}
 	var clientVersion, serverVersion string
 	var outErr error
