@@ -8,6 +8,14 @@ import (
 	"strings"
 )
 
+type deployment struct {
+	Status status `json:"status"`
+}
+
+type status struct {
+	UnavailableReplicas int `json:"unavailableReplicas"`
+}
+
 // Client implements a kubectl client to execute commands
 type Client interface {
 	Execute(args ...string) (string, error)
@@ -119,6 +127,27 @@ func ResourceExists(c Client, resourceType, namespace, resourceName string) (boo
 func DeleteResource(c Client, resourceType, namespace, resourceName string) error {
 	_, err := Execute(c, "delete", resourceType, resourceName, fmt.Sprintf("--namespace=%s", namespace))
 	return err
+}
+
+// DeploymentAvailability gets the current deployment status and returs true if all the replicas are up and running.
+func DeploymentAvailability(c Client, name, namespace string) (bool, error) {
+	// Get the deployment information in json format, so it can be easily parsed.
+	deploymentJson, err := Execute(c, "get", "deployment", name, "-ojson", "-n", namespace)
+	if err != nil {
+		return false, err
+	}
+
+	d := deployment{}
+	err = json.Unmarshal([]byte(deploymentJson), &d)
+	if err != nil {
+		return false, err
+	}
+
+	if d.Status.UnavailableReplicas > 0 {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 // CreateNamespace creates a new namespace and returns whether it was created or not
