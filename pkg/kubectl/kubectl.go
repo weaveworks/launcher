@@ -42,7 +42,7 @@ type kubeCtlVersionData struct {
 // more context in the error message anyway.
 var errParsing = errors.New("parse error")
 
-func parseVersionLine(line string, versionInfo **kubeCtlVersionInfo) error {
+func parseVersionLine(line string) (string, error) {
 	// Only interested in what's between '{', '}'
 	idx := strings.Index(line, "{")
 	list := line[idx+1 : len(line)-2]
@@ -53,17 +53,17 @@ func parseVersionLine(line string, versionInfo **kubeCtlVersionInfo) error {
 		part := strings.TrimSpace(part)
 		colon := strings.Index(part, ":")
 		if colon == -1 {
-			return errParsing
+			return "", errParsing
 		}
 		key := part[0:colon]
 
 		if key == "GitVersion" {
 			value := part[colon+2 : len(part)-1]
-			*versionInfo = &kubeCtlVersionInfo{GitVersion: value}
+			return value, nil
 		}
 	}
 
-	return nil
+	return "", nil
 }
 
 func parseVersionOutput(stdout string, versionData *kubeCtlVersionData) (err error) {
@@ -82,11 +82,13 @@ func parseVersionOutput(stdout string, versionData *kubeCtlVersionData) (err err
 		"Server Version:": &versionData.ServerVersion,
 	}
 	for _, line := range lines {
-		for k, v := range m {
+		for k, dst := range m {
 			if strings.HasPrefix(line, k) {
-				if err := parseVersionLine(line, v); err != nil {
+				version, err := parseVersionLine(line)
+				if err != nil {
 					return fmt.Errorf("error parsing: %s", line)
 				}
+				*dst = &kubeCtlVersionInfo{GitVersion: version}
 			}
 		}
 	}
