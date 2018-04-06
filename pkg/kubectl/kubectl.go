@@ -34,13 +34,75 @@ type kubeCtlVersionData struct {
 	ServerVersion *kubeCtlVersionInfo `json:"serverVersion,omitempty"`
 }
 
+// Example stdout:
+// Client Version: version.Info{Major:"1", Minor:"9", GitVersion:"v1.9.2", ..., Platform:"linux/amd64"}
+// Server Version: version.Info{Major:"1", Minor:"9", GitVersion:"v1.9.3", ..., Platform:"linux/amd64"}
+
+// We don't care about the exact reason why the parsing failed, we'll display
+// more context in the error message anyway.
+var errParsing = errors.New("parse error")
+
+func parseVersionLine(line string) (string, error) {
+	// Only interested in what's between '{', '}'
+	idx := strings.Index(line, "{")
+	list := line[idx+1 : len(line)-2]
+
+	parts := strings.Split(list, ",")
+	for _, part := range parts {
+		// parts are of the form key:"value"
+		part := strings.TrimSpace(part)
+		colon := strings.Index(part, ":")
+		if colon == -1 {
+			return "", errParsing
+		}
+		key := part[0:colon]
+
+		if key == "GitVersion" {
+			value := part[colon+2 : len(part)-1]
+			return value, nil
+		}
+	}
+
+	return "", nil
+}
+
+func parseVersionOutput(stdout string, versionData *kubeCtlVersionData) (err error) {
+	// Protect against invalid input triggering panics (eg. out of bounds).
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("error parsing: %s", stdout)
+		}
+	}()
+
+	lines := strings.Split(strings.TrimSuffix(stdout, "\n"), "\n")
+
+	// Map line prefixes to the correct client/server version struct
+	m := map[string]**kubeCtlVersionInfo{
+		"Client Version:": &versionData.ClientVersion,
+		"Server Version:": &versionData.ServerVersion,
+	}
+	for _, line := range lines {
+		for k, dst := range m {
+			if strings.HasPrefix(line, k) {
+				version, err := parseVersionLine(line)
+				if err != nil {
+					return fmt.Errorf("error parsing: %s", line)
+				}
+				*dst = &kubeCtlVersionInfo{GitVersion: version}
+			}
+		}
+	}
+
+	return nil
+}
+
 // GetVersionInfo returns the version metadata from kubectl
 // May return a value for the kubectl client version, despite also returning an error
 func GetVersionInfo(c Client) (string, string, error) {
 	// Capture stdout only (to ignore server reachability errors)
-	stdout, stderr, _, err := c.ExecuteOutputMatrix("version", "--output=json")
+	stdout, stderr, _, err := c.ExecuteOutputMatrix("version")
 	var versionData kubeCtlVersionData
-	parseErr := json.Unmarshal([]byte(stdout), &versionData)
+	parseErr := parseVersionOutput(stdout, &versionData)
 	// If the server is unreachable, we might have an error but parsable output
 	if parseErr != nil {
 		if err != nil {
@@ -49,7 +111,7 @@ func GetVersionInfo(c Client) (string, string, error) {
 			}
 			return "", "", fmt.Errorf("kubectl error (%v): %s", err, stderr)
 		}
-		return "", "", fmt.Errorf("error parsing kubectl output: %v", parseErr)
+		return "", "", fmt.Errorf("error parsing kubectl version output: %s", parseErr)
 	}
 	var clientVersion, serverVersion string
 	var outErr error

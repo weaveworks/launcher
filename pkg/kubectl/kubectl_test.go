@@ -41,3 +41,42 @@ func TestGetSecretValue(t *testing.T) {
 	assert.Equal(t, res, "secret!")
 	assert.NoError(t, err)
 }
+
+const (
+	outputVersion = `Client Version: version.Info{Major:"1", Minor:"6", GitVersion:"v1.6.13", GitCommit:"14ea65f53cdae4a5657cf38cfc8d7349b75b5512", GitTreeState:"clean", BuildDate:"2017-11-22T20:29:21Z", GoVersion:"go1.7.6", Compiler:"gc", Platform:"linux/amd64"}
+Server Version: version.Info{Major:"1", Minor:"9", GitVersion:"v1.9.3", GitCommit:"d2835416544f298c919e2ead3be3d0864b52323b", GitTreeState:"clean", BuildDate:"2018-02-07T11:55:20Z", GoVersion:"go1.9.2", Compiler:"gc", Platform:"linux/amd64"}
+`
+	outputClientOnly = `Client Version: version.Info{Major:"1", Minor:"9", GitVersion:"v1.10.0", GitCommit:"d2835416544f298c919e2ead3be3d0864b52323b", GitTreeState:"clean", BuildDate:"2018-02-07T12:22:21Z", GoVersion:"go1.9.2", Compiler:"gc", Platform:"linux/amd64"}
+`
+	outputTruncated = `Client Version: version.Info{Major:"1", Minor:"9", GitVersion:"v`
+)
+
+func version(s string) *kubeCtlVersionInfo {
+	return &kubeCtlVersionInfo{GitVersion: s}
+}
+
+func TestParseVersionOutput(t *testing.T) {
+	tests := []struct {
+		stdout   string
+		valid    bool
+		expected kubeCtlVersionData
+	}{
+		{outputVersion, true, kubeCtlVersionData{ClientVersion: version("v1.6.13"), ServerVersion: version("v1.9.3")}},
+		{outputClientOnly, true, kubeCtlVersionData{ClientVersion: version("v1.10.0")}},
+		// Badly formatted things, will trigger a panic and exercise the defer/recover path.
+		{outputTruncated, false, kubeCtlVersionData{}},
+	}
+
+	for _, test := range tests {
+		var got kubeCtlVersionData
+
+		err := parseVersionOutput(test.stdout, &got)
+		if !test.valid {
+			assert.NotNil(t, err)
+			continue
+		}
+
+		assert.NoError(t, err)
+		assert.Equal(t, test.expected, got)
+	}
+}
