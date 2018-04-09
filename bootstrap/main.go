@@ -120,8 +120,7 @@ func mainImpl() {
 	// We exit if the DNS pods are not up and running, as the installer needs to be
 	// able to connect to the server to correctly setup the needed resources.
 	if !ok {
-		fmt.Println("DNS is not working in this Kubernetes cluster. We require correct DNS setup in the Kubernetes cluster.")
-		os.Exit(1)
+		exitWithCapture("DNS is not working in this Kubernetes cluster. We require correct DNS setup in the Kubernetes cluster.")
 	}
 
 	secretCreated, err := kubectl.CreateSecretFromLiteral(kubectlClient, "weave", "weave-cloud", "token", opts.Token, opts.AssumeYes)
