@@ -25,15 +25,6 @@ type ClusterInfo struct {
 	ServerAddress string
 }
 
-type kubeCtlVersionInfo struct {
-	GitVersion string `json:"gitVersion"`
-}
-
-type kubeCtlVersionData struct {
-	ClientVersion *kubeCtlVersionInfo `json:"clientVersion,omitempty"`
-	ServerVersion *kubeCtlVersionInfo `json:"serverVersion,omitempty"`
-}
-
 // Example stdout:
 // Client Version: version.Info{Major:"1", Minor:"9", GitVersion:"v1.9.2", ..., Platform:"linux/amd64"}
 // Server Version: version.Info{Major:"1", Minor:"9", GitVersion:"v1.9.3", ..., Platform:"linux/amd64"}
@@ -66,7 +57,7 @@ func parseVersionLine(line string) (string, error) {
 	return "", nil
 }
 
-func parseVersionOutput(stdout string, versionData *kubeCtlVersionData) (err error) {
+func parseVersionOutput(stdout string) (clientVersion, serverVersion string, err error) {
 	// Protect against invalid input triggering panics (eg. out of bounds).
 	defer func() {
 		if r := recover(); r != nil {
@@ -76,24 +67,26 @@ func parseVersionOutput(stdout string, versionData *kubeCtlVersionData) (err err
 
 	lines := strings.Split(strings.TrimSuffix(stdout, "\n"), "\n")
 
-	// Map line prefixes to the correct client/server version struct
-	m := map[string]**kubeCtlVersionInfo{
-		"Client Version:": &versionData.ClientVersion,
-		"Server Version:": &versionData.ServerVersion,
+	// Associate line prefixes to their respective version.
+	a := []struct {
+		prefix, version string
+	}{
+		{"Client Version:", ""},
+		{"Server Version:", ""},
 	}
 	for _, line := range lines {
-		for k, dst := range m {
-			if strings.HasPrefix(line, k) {
+		for i := range a {
+			if strings.HasPrefix(line, a[i].prefix) {
 				version, err := parseVersionLine(line)
 				if err != nil {
-					return fmt.Errorf("error parsing: %s", line)
+					return "", "", fmt.Errorf("error parsing: %s", line)
 				}
-				*dst = &kubeCtlVersionInfo{GitVersion: version}
+				a[i].version = version
 			}
 		}
 	}
 
-	return nil
+	return a[0].version, a[1].version, nil
 }
 
 // GetVersionInfo returns the version metadata from kubectl
@@ -101,8 +94,7 @@ func parseVersionOutput(stdout string, versionData *kubeCtlVersionData) (err err
 func GetVersionInfo(c Client) (string, string, error) {
 	// Capture stdout only (to ignore server reachability errors)
 	stdout, stderr, _, err := c.ExecuteOutputMatrix("version")
-	var versionData kubeCtlVersionData
-	parseErr := parseVersionOutput(stdout, &versionData)
+	clientVersion, serverVersion, parseErr := parseVersionOutput(stdout)
 	// If the server is unreachable, we might have an error but parsable output
 	if parseErr != nil {
 		if err != nil {
@@ -113,17 +105,12 @@ func GetVersionInfo(c Client) (string, string, error) {
 		}
 		return "", "", fmt.Errorf("error parsing kubectl version output: %s", parseErr)
 	}
-	var clientVersion, serverVersion string
-	var outErr error
-	if versionData.ClientVersion != nil {
-		clientVersion = versionData.ClientVersion.GitVersion
+
+	// kubectl couldn't contact the server.
+	if serverVersion == "" {
+		err = errors.New(stderr)
 	}
-	if versionData.ServerVersion == nil {
-		outErr = errors.New(stderr)
-	} else {
-		serverVersion = versionData.ServerVersion.GitVersion
-	}
-	return clientVersion, serverVersion, outErr
+	return clientVersion, serverVersion, err
 }
 
 // GetClusterInfo gets the current Kubernetes cluster information
