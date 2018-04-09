@@ -51,32 +51,27 @@ Server Version: version.Info{Major:"1", Minor:"9", GitVersion:"v1.9.3", GitCommi
 	outputTruncated = `Client Version: version.Info{Major:"1", Minor:"9", GitVersion:"v`
 )
 
-func version(s string) *kubeCtlVersionInfo {
-	return &kubeCtlVersionInfo{GitVersion: s}
-}
-
 func TestParseVersionOutput(t *testing.T) {
 	tests := []struct {
-		stdout   string
-		valid    bool
-		expected kubeCtlVersionData
+		stdout                       string
+		valid                        bool
+		clientVersion, serverVersion string
 	}{
-		{outputVersion, true, kubeCtlVersionData{ClientVersion: version("v1.6.13"), ServerVersion: version("v1.9.3")}},
-		{outputClientOnly, true, kubeCtlVersionData{ClientVersion: version("v1.10.0")}},
+		{outputVersion, true, "v1.6.13", "v1.9.3"},
+		{outputClientOnly, true, "v1.10.0", ""},
 		// Badly formatted things, will trigger a panic and exercise the defer/recover path.
-		{outputTruncated, false, kubeCtlVersionData{}},
+		{outputTruncated, false, "", ""},
 	}
 
 	for _, test := range tests {
-		var got kubeCtlVersionData
-
-		err := parseVersionOutput(test.stdout, &got)
+		clientVersion, serverVersion, err := parseVersionOutput(test.stdout)
 		if !test.valid {
 			assert.NotNil(t, err)
 			continue
 		}
 
 		assert.NoError(t, err)
-		assert.Equal(t, test.expected, got)
+		assert.Equal(t, test.clientVersion, clientVersion)
+		assert.Equal(t, test.serverVersion, serverVersion)
 	}
 }
