@@ -33,6 +33,11 @@ func Execute(c Client, args ...string) (string, error) {
 	return c.Execute(args...)
 }
 
+// ExecuteJSON execute kubectl <args> and returns the combined json stdout and err output.
+func ExecuteJSON(c client, args ...string) (string, error) {
+	return c.Execute(append(args, "-ojson"))
+}
+
 // ClusterInfo describes a Kubernetes cluster
 type ClusterInfo struct {
 	Name          string
@@ -157,7 +162,7 @@ func isPodReady(c Client, podName, ns string) error {
 
 func checkPod(c Client, podName, ns string) (bool, error) {
 	// Retrieve current pod data.
-	podJSON, err := Execute(c, "get", "pod", podName, "-ojson", "-n", ns)
+	podJSON, err := ExecuteJSON(c, "get", "pod", podName, "-n", ns)
 	if err != nil {
 		return false, err
 	}
@@ -192,7 +197,7 @@ func TestDNS(c Client, domain string) (bool, error) {
 	}
 
 	// Initially fetch the pod, which was created above.
-	podJSON, err := Execute(c, "get", "pod", podName, "-ojson", "-n", ns)
+	podJSON, err := ExecuteJSON(c, "get", "pod", podName, "-n", ns)
 	if err != nil {
 		return false, err
 	}
@@ -215,7 +220,7 @@ func TestDNS(c Client, domain string) (bool, error) {
 	}
 
 	// Get fresh pod data.
-	podJSON, err = Execute(c, "get", "pod", podName, "-ojson", "-n", ns)
+	podJSON, err = ExecuteJSON(c, "get", "pod", podName, "-n", ns)
 	if err != nil {
 		return false, err
 	}
@@ -324,7 +329,7 @@ type secretManifest struct {
 
 // GetSecretValue returns the value of a secret
 func GetSecretValue(c Client, namespace, name, key string) (string, error) {
-	output, err := Execute(c, "get", "secret", name, fmt.Sprintf("--namespace=%s", namespace), "--output=json")
+	output, err := ExecuteJSON(c, "get", "secret", name, fmt.Sprintf("--namespace=%s", namespace))
 	if err != nil {
 		return "", err
 	}
