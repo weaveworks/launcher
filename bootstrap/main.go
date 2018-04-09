@@ -111,6 +111,21 @@ func mainImpl() {
 		}
 	}
 
+	// TODO: Should we check always?
+	if !opts.GKE {
+		ok, err := kubectl.TestDNS(kubectlClient, "kubernetes.default.svc")
+		if err != nil {
+			exitWithCapture("There was an error while performing DNS check. %s\n", err)
+		}
+
+		// We exit if the DNS pods are not up and running, as the installer needs to be
+		// able to connect to the server to correctly setup the needed resources.
+		if !ok {
+			fmt.Println("DNS is not working in this Kubernetes cluster. We require correct DNS setup in the Kubernetes cluster.")
+			os.Exit(1)
+		}
+	}
+
 	secretCreated, err := kubectl.CreateSecretFromLiteral(kubectlClient, "weave", "weave-cloud", "token", opts.Token, opts.AssumeYes)
 	if err != nil {
 		exitWithCapture("There was an error creating the secret: %s\n", err)
