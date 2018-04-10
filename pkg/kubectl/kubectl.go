@@ -34,8 +34,19 @@ func Execute(c Client, args ...string) (string, error) {
 }
 
 // ExecuteJSON execute kubectl <args> and returns the combined json stdout and err output.
-func ExecuteJSON(c client, args ...string) (string, error) {
-	return c.Execute(append(args, "-ojson"))
+func ExecuteJSON(c Client, o interface{}, args ...string) error {
+	a := append(args, "-ojson")
+	oJSON, err := c.Execute(a...)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal([]byte(oJSON), &o)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // ClusterInfo describes a Kubernetes cluster
@@ -162,12 +173,8 @@ func isPodReady(c Client, podName, ns string) error {
 
 func checkPod(c Client, podName, ns string) (bool, error) {
 	// Retrieve current pod data.
-	podJSON, err := ExecuteJSON(c, "get", "pod", podName, "-n", ns)
-	if err != nil {
-		return false, err
-	}
 	p := pod{}
-	err = json.Unmarshal([]byte(podJSON), &p)
+	err := ExecuteJSON(c, &p, "get", "pod", podName, "-n", ns)
 	if err != nil {
 		return false, err
 	}
@@ -191,18 +198,14 @@ func TestDNS(c Client, domain string) (bool, error) {
 	}
 
 	// Create pod to perform nslookup on a passed domain to check DNS is working.
-	_, err = Execute(c, "run", "-n", "weave", "--image", "busybox", "--command", podName, "nslookup --timeout=10", domain, "--restart=Never")
+	_, err = Execute(c, "run", "-n", "weave", "--image", "busybox", "--restart=Never", "--command", podName, "nslookup", domain)
 	if err != nil {
 		return false, err
 	}
 
 	// Initially fetch the pod, which was created above.
-	podJSON, err := ExecuteJSON(c, "get", "pod", podName, "-n", ns)
-	if err != nil {
-		return false, err
-	}
 	p := pod{}
-	err = json.Unmarshal([]byte(podJSON), &p)
+	err = ExecuteJSON(c, &p, "get", "pod", podName, "-n", ns)
 	if err != nil {
 		return false, err
 	}
@@ -220,11 +223,7 @@ func TestDNS(c Client, domain string) (bool, error) {
 	}
 
 	// Get fresh pod data.
-	podJSON, err = ExecuteJSON(c, "get", "pod", podName, "-n", ns)
-	if err != nil {
-		return false, err
-	}
-	err = json.Unmarshal([]byte(podJSON), &p)
+	err = ExecuteJSON(c, &p, "get", "pod", podName, "-n", ns)
 	if err != nil {
 		return false, err
 	}
@@ -329,12 +328,8 @@ type secretManifest struct {
 
 // GetSecretValue returns the value of a secret
 func GetSecretValue(c Client, namespace, name, key string) (string, error) {
-	output, err := ExecuteJSON(c, "get", "secret", name, fmt.Sprintf("--namespace=%s", namespace))
-	if err != nil {
-		return "", err
-	}
 	var secretDefn secretManifest
-	err = json.Unmarshal([]byte(output), &secretDefn)
+	err := ExecuteJSON(c, &secretDefn, "get", "secret", name, fmt.Sprintf("--namespace=%s", namespace))
 	if err != nil {
 		return "", err
 	}
