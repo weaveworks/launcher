@@ -9,6 +9,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/blang/semver"
 	raven "github.com/getsentry/raven-go"
 
 	"github.com/jessevdk/go-flags"
@@ -239,4 +240,24 @@ func checkK8sVersion(kubectlClient kubectl.Client) {
 	} else {
 		exitWithCapture("%v\nError checking kubernetes version info.\nPlease check your environment for problems by running \"kubectl version\".\n", err)
 	}
+
+	// Validate cluster version of at least 1.6.0
+	if !supportedK8sVersion(serverVersion) {
+		exitWithCapture("Kubernetes version %s not supported. We require Kubernetes cluster to be version 1.6.0 or newer.\n", serverVersion)
+	}
+}
+
+func supportedK8sVersion(clusterVersion string) bool {
+	versionStr := strings.TrimLeft(clusterVersion, "v")
+	version, err := semver.Parse(versionStr)
+	if err != nil {
+		exitWithCapture("Failed to validate Kubernetes cluster version: %v\n", err)
+	}
+
+	// We only support clusters 1.6.0 and higher.
+	if version.Major == 1 && version.Minor < 6 {
+		return false
+	}
+
+	return true
 }
