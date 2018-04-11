@@ -36,7 +36,7 @@ func TestGetSecretValue(t *testing.T) {
 	tc := NewTestClient()
 
 	json := `{"data":{"token": "c2VjcmV0IQ=="}}`
-	tc.responses["get secret weave-cloud --namespace=weave --output=json"] = json
+	tc.responses["get secret weave-cloud --namespace=weave -ojson"] = json
 	res, err := GetSecretValue(tc, "weave", "weave-cloud", "token")
 	assert.Equal(t, res, "secret!")
 	assert.NoError(t, err)
