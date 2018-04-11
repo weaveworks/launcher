@@ -32,6 +32,12 @@
   revision = "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9"
 
 [[projects]]
+  name = "github.com/blang/semver"
+  packages = ["."]
+  revision = "2ee87856327ba09384cabd113bc6b5d174e9ec0f"
+  version = "v3.5.1"
+
+[[projects]]
   name = "github.com/certifi/gocertifi"
   packages = ["."]
   revision = "deb3ae2ef2610fde3330947281941c562861188b"
@@ -769,6 +775,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "546efbffebe90295f64c651c458a1f66c8106c688334f30e7405c416bc1f3936"
+  inputs-digest = "f15aca53c593246dfbd4e543acb119de22e2ceb0e542b070935b81659026c00f"
   solver-name = "gps-cdcl"
   solver-version = 1
