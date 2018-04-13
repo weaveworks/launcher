@@ -56,6 +56,9 @@ func mainImpl() {
 		"weave_cloud_hostname": opts.WCHostname,
 	})
 
+	// Due to some users Kubernetes clusters having invalid, e.g. self-signed,
+	// certificates, we default to skipping the certificate validation.
+	otherArgs = append(otherArgs, "--insecure-skip-tls-verify")
 	kubectlClient := kubectl.LocalClient{
 		GlobalArgs: otherArgs,
 	}
