@@ -174,7 +174,8 @@ func GetClusterInfo(c Client) (ClusterInfo, error) {
 
 // Apply applies via kubectl
 func Apply(c Client, f string) error {
-	_, err := Execute(c, "apply", "-f", f)
+	// Escape ',' to prevent a url being interpreted as an array, and split
+	_, err := Execute(c, "apply", "-f", strings.Replace(f, ",", "%2C", -1))
 	return err
 }
 
