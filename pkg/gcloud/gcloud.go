@@ -12,7 +12,7 @@ func IsPresent() bool {
 }
 
 func executeCommand(args ...string) (string, error) {
-	cmdOut, err := exec.Command("gcloud", args...).CombinedOutput()
+	cmdOut, err := exec.Command("gcloud", args...).Output()
 	if err != nil {
 		return "", err
 	}
