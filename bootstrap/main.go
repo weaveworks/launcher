@@ -119,7 +119,7 @@ func mainImpl() {
 	fmt.Println("Performing a check of the Kubernetes installation setup.")
 	ok, err := kubectl.TestDNS(kubectlClient, "cloud.weave.works")
 	if err != nil {
-		exitWithCapture("There was an error while performing DNS check: %s\n", err)
+		exitWithCapture("There was an error while performing a DNS check: %s\nPlease check that your cluster can download images and run pods.", err)
 	}
 
 	// We exit if the DNS pods are not up and running, as the installer needs to be
