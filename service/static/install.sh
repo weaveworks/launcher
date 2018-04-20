@@ -1,5 +1,23 @@
-#!/bin/sh
+#!/bin/bash
 set -e
+
+# Create a temporary file for the bootstrap binary
+TMPFILE="$(mktemp -qt weave_bootstrap.XXXXXXXXXX)" || exit 1
+
+finish(){
+  # Send only when this script errors out
+  # Filter out the bootstrap errors
+  if [ $? -ne 111 ] && [ $? -ne 0 ]; then
+    curl -s >/dev/null 2>/dev/null -H "Accept: application/json" -H "Authorization: Bearer $token" -X POST -d \
+        '{"type": "onboarding_failed", "messages": {"browser": { "type": "onboarding_failed", "text": "Installation of Weave Cloud agents did not finish."}}}' \
+        {{.Scheme}}://{{.WCHostname}}/api/notification/external/events || true
+  fi
+  # Arrange for the bootstrap binary to be deleted
+  rm -f "$TMPFILE"
+}
+
+# Call finish function on exit
+trap finish EXIT
 
 # Parse command-line arguments
 for arg in "$@"; do
@@ -20,19 +38,15 @@ curl -s >/dev/null 2>/dev/null -H "Accept: application/json" -H "Authorization: 
     '{"type": "onboarding_started", "messages": {"browser": { "type": "onboarding_started", "text": "Installation of Weave Cloud agents has started"}}}' \
     {{.Scheme}}://{{.WCHostname}}/api/notification/external/events || true
 
-# Create a temporary file for the bootstrap binary
-TMPFILE="$(mktemp -qt weave_bootstrap.XXXXXXXXXX)" || exit 1
-
-# Arrange for the bootstrap binary to be deleted when the script terminates
-trap 'rm -f "$TMPFILE"' 0
-trap 'exit $?' 1 2 3 15
-
 # Get distribution
 unamestr=$(uname)
 if [ "$unamestr" = 'Darwin' ]; then
     dist='darwin'
 elif [ "$unamestr" = 'Linux' ]; then
     dist='linux'
+else
+  echo "This distribution is not supported"
+  exit 1
 fi
 
 # Download the bootstrap binary

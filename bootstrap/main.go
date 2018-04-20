@@ -182,7 +182,9 @@ func capture(skipFrames uint, msg string, args ...interface{}) {
 
 func exitWithCapture(msg string, args ...interface{}) {
 	capture(2, msg, args...)
-	os.Exit(1)
+	// Exit with a specific error which will be checked against in install script,
+	// as a way of deduplicating sending of these errors.
+	os.Exit(111)
 }
 
 func createGKEClusterRoleBinding(kubectlClient kubectl.Client) error {
