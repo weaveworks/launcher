@@ -2,9 +2,12 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 	"syscall"
@@ -48,7 +51,7 @@ func mainImpl() {
 	parser := flags.NewParser(&opts, flags.IgnoreUnknown)
 	otherArgs, err := parser.Parse()
 	if err != nil {
-		exitWithCapture("%s\n", err)
+		exitWithCapture(opts, "%s\n", err)
 	}
 	raven.SetTagsContext(map[string]string{
 		"weave_cloud_scheme":   opts.Scheme,
@@ -64,7 +67,7 @@ func mainImpl() {
 	}
 
 	if !kubectlClient.IsPresent() {
-		exitWithCapture("Could not find kubectl in PATH, please install it: https://kubernetes.io/docs/tasks/tools/install-kubectl/\n")
+		exitWithCapture(opts, "Could not find kubectl in PATH, please install it: https://kubernetes.io/docs/tasks/tools/install-kubectl/\n")
 	}
 
 	agentK8sURL, err := text.ResolveString(agentK8sURLTemplate, opts)
@@ -78,17 +81,17 @@ func mainImpl() {
 
 	// Restore stdin, making fd 0 point at the terminal
 	if err := syscall.Dup2(1, 0); err != nil {
-		exitWithCapture("Could not restore stdin\n", err)
+		exitWithCapture(opts, "Could not restore stdin\n", err)
 	}
 
 	fmt.Println("Preparing for Weave Cloud setup")
 
 	// Capture the kubernetes version info to help debug issues
-	checkK8sVersion(kubectlClient) // NB exits on error
+	checkK8sVersion(kubectlClient, opts) // NB exits on error
 
 	InstanceID, InstanceName, err := weavecloud.LookupInstanceByToken(wcOrgLookupURL, opts.Token)
 	if err != nil {
-		exitWithCapture("Error looking up Weave Cloud instance: %s\n", err)
+		exitWithCapture(opts, "Error looking up Weave Cloud instance: %s\n", err)
 	}
 	raven.SetTagsContext(map[string]string{"instance": InstanceID})
 	fmt.Printf("Connecting cluster to %q (id: %s) on Weave Cloud\n", InstanceName, InstanceID)
@@ -119,23 +122,23 @@ func mainImpl() {
 	fmt.Println("Performing a check of the Kubernetes installation setup.")
 	ok, err := kubectl.TestDNS(kubectlClient, "cloud.weave.works")
 	if err != nil {
-		exitWithCapture("There was an error while performing a DNS check: %s\nPlease check that your cluster can download images and run pods.", err)
+		exitWithCapture(opts, "There was an error while performing a DNS check: %s. Please check that your cluster can download images and run pods.", err)
 	}
 
 	// We exit if the DNS pods are not up and running, as the installer needs to be
 	// able to connect to the server to correctly setup the needed resources.
 	if !ok {
-		exitWithCapture("DNS is not working in this Kubernetes cluster. We require correct DNS setup to continue.")
+		exitWithCapture(opts, "DNS is not working in this Kubernetes cluster. We require correct DNS setup to continue.")
 	}
 
 	secretCreated, err := kubectl.CreateSecretFromLiteral(kubectlClient, "weave", "weave-cloud", "token", opts.Token, opts.AssumeYes)
 	if err != nil {
-		exitWithCapture("There was an error creating the secret: %s\n", err)
+		exitWithCapture(opts, "There was an error creating the secret: %s\n", err)
 	}
 	if !secretCreated {
 		currentToken, err := kubectl.GetSecretValue(kubectlClient, "weave", "weave-cloud", "token")
 		if err != nil {
-			exitWithCapture("There was an error checking the current secret: %s\n", err)
+			exitWithCapture(opts, "There was an error checking the current secret: %s\n", err)
 		}
 		if currentToken != opts.Token {
 			currentInstanceID, currentInstanceName, errCurrent := weavecloud.LookupInstanceByToken(wcOrgLookupURL, currentToken)
@@ -148,13 +151,13 @@ func mainImpl() {
 			confirmed, err := askForConfirmation(fmt.Sprintf(
 				"\n%s\nWould you like to continue and connect this cluster to %q (id: %s) instead?", msg, InstanceName, InstanceID))
 			if err != nil {
-				exitWithCapture("Could not ask for confirmation: %s\n", err)
+				exitWithCapture(opts, "Could not ask for confirmation: %s\n", err)
 			} else if !confirmed {
-				exitWithCapture("Installation cancelled")
+				exitWithCapture(opts, "Installation cancelled")
 			}
 			_, err = kubectl.CreateSecretFromLiteral(kubectlClient, "weave", "weave-cloud", "token", opts.Token, true)
 			if err != nil {
-				exitWithCapture("There was an error creating the secret: %s\n", err)
+				exitWithCapture(opts, "There was an error creating the secret: %s\n", err)
 			}
 		}
 	}
@@ -162,26 +165,32 @@ func mainImpl() {
 	// Apply the agent
 	err = kubectl.Apply(kubectlClient, agentK8sURL)
 	if err != nil {
-		capture(1, "There was an error applying the agent: %s\n", err)
+		captureAndSend(opts, 1, "There was an error applying the agent: %s\n", err)
 
 		// We've failed to apply the agent. kubectl apply isn't an atomic operation
 		// can leave some objects behind when encountering an error. Clean things up.
 		fmt.Println("Rolling back cluster changes")
 		kubectl.Execute(kubectlClient, "delete", "--ignore-not-found=true", "-f", agentK8sURL)
-		os.Exit(1)
+		// Exit with a specific error which will be checked against in install script,
+		// as a way of deduplicating sending of these errors.
+		os.Exit(111)
 	}
 
 	fmt.Println("Successfully installed.")
 }
 
-func capture(skipFrames uint, msg string, args ...interface{}) {
+func captureAndSend(opts options, skipFrames uint, msg string, args ...interface{}) {
 	formatted := fmt.Sprintf(msg, args...)
 	fmt.Fprintf(os.Stderr, formatted)
+	// Send errors to UI.
+	if opts.Scheme != "" {
+		sendError(formatted, opts)
+	}
 	sentry.CaptureAndWait(skipFrames, formatted, nil)
 }
 
-func exitWithCapture(msg string, args ...interface{}) {
-	capture(2, msg, args...)
+func exitWithCapture(opts options, msg string, args ...interface{}) {
+	captureAndSend(opts, 2, msg, args...)
 	// Exit with a specific error which will be checked against in install script,
 	// as a way of deduplicating sending of these errors.
 	os.Exit(111)
@@ -228,7 +237,7 @@ func askForConfirmation(s string) (bool, error) {
 	}
 }
 
-func checkK8sVersion(kubectlClient kubectl.Client) {
+func checkK8sVersion(kubectlClient kubectl.Client, opts options) {
 	fmt.Println("Checking kubectl & kubernetes versions")
 	clientVersion, serverVersion, err := kubectl.GetVersionInfo(kubectlClient)
 	if clientVersion != "" {
@@ -236,19 +245,19 @@ func checkK8sVersion(kubectlClient kubectl.Client) {
 			"kubectl_clientVersion_gitVersion": clientVersion,
 		})
 		if serverVersion == "" {
-			exitWithCapture("%v\nError checking your kubernetes server version.\nPlease check that you can connect to your cluster by running \"kubectl version\".\n", err)
+			exitWithCapture(opts, "Error checking your kubernetes server version: %v. Please check that you can connect to your cluster by running \"kubectl version\".\n", err)
 		} else {
 			raven.SetTagsContext(map[string]string{
 				"kubectl_serverVersion_gitVersion": serverVersion,
 			})
 		}
 	} else {
-		exitWithCapture("%v\nError checking kubernetes version info.\nPlease check your environment for problems by running \"kubectl version\".\n", err)
+		exitWithCapture(opts, "Error checking kubernetes version info: %v. Please check your environment for problems by running \"kubectl version\".\n", err)
 	}
 
 	// Validate cluster version of at least 1.6.0
 	if !supportedK8sVersion(serverVersion) {
-		exitWithCapture("Kubernetes version %s not supported. We require Kubernetes cluster to be version 1.6.0 or newer.\n", serverVersion)
+		exitWithCapture(opts, "Kubernetes version %s not supported. We require Kubernetes cluster to be version 1.6.0 or newer.\n", serverVersion)
 	}
 }
 
@@ -256,7 +265,7 @@ func supportedK8sVersion(clusterVersion string) bool {
 	versionStr := strings.TrimLeft(clusterVersion, "v")
 	version, err := semver.Parse(versionStr)
 	if err != nil {
-		exitWithCapture("Failed to validate Kubernetes cluster version: %v\n", err)
+		return false
 	}
 
 	// We only support clusters 1.6.0 and higher.
@@ -265,4 +274,52 @@ func supportedK8sVersion(clusterVersion string) bool {
 	}
 
 	return true
+}
+
+type errorResponse struct {
+	Type     string   `json:"type"`
+	Messages messages `json:"messages"`
+}
+
+type messages struct {
+	Browser browser `json:"browser"`
+}
+
+type browser struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
+// sendError sends the error msg to UI.
+func sendError(errMsg string, opts options) {
+	eventTypeFailed := "onboarding_failed"
+	response := errorResponse{
+		Type: eventTypeFailed,
+		Messages: messages{
+			Browser: browser{
+				Type: eventTypeFailed,
+				Text: errMsg,
+			},
+		},
+	}
+
+	jr, err := json.Marshal(response)
+	if err != nil {
+		return
+	}
+
+	url := fmt.Sprintf("%s://%s/api/notification/external/events", opts.Scheme, opts.WCHostname)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jr))
+	if err != nil {
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", opts.Token))
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
 }
