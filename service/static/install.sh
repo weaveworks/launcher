@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 # Create a temporary file for the bootstrap binary
@@ -45,7 +45,7 @@ if [ "$unamestr" = 'Darwin' ]; then
 elif [ "$unamestr" = 'Linux' ]; then
     dist='linux'
 else
-  echo "This distribution is not supported"
+  echo "This OS is not supported"
   exit 1
 fi
 
