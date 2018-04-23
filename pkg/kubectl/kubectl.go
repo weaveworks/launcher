@@ -1,6 +1,7 @@
 package kubectl
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -236,9 +237,22 @@ func checkPod(c Client, podName, ns string) (bool, error) {
 	return true, nil
 }
 
+// randomizeName appends random string of numbers to the end of the passed name.
+func randomizeName(name string) string {
+	b := make([]byte, 8)
+	_, err := rand.Read(b)
+	if err != nil {
+		// If we fail, we should rather just return the original name.
+		return name
+	}
+
+	return fmt.Sprintf("%s-%x", name, b)
+}
+
 //TestDNS creates a pod where a nslookup is called on a provided domain. It returns true only if the pod was successful.
 func TestDNS(c Client, domain string) (bool, error) {
-	podName := "launcher-pre-flight"
+	// Generate a "random" pod name, to prevent "already exists" errors.
+	podName := randomizeName("launcher-pre-flight")
 	ns := "weave"
 
 	// Create weave namespace, as this happens before any resources are created.
