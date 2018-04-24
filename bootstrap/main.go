@@ -113,8 +113,11 @@ func mainImpl() {
 			raven.SetTagsContext(map[string]string{
 				"gke_clusterrolebindingError": err.Error(),
 			})
-			fmt.Fprintln(os.Stderr, "WARNING: For GKE installations, a cluster-admin clusterrolebinding is required.")
-			fmt.Fprintf(os.Stderr, "Could not create clusterrolebinding: %s\n", err)
+
+			errText := err.Error()
+			if strings.Contains(errText, "Forbidden") || strings.Contains(errText, "forbidden") {
+				exitWithCapture(opts, "Could not create clusterrolebinding. GKE role \"Kubernetes Engine Admin\" (containers.admin) required to create resources.\n%s\n", err)
+			}
 		}
 	}
 
