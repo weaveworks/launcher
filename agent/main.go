@@ -69,7 +69,7 @@ func logError(msg string, err error, cfg *agentConfig) {
 	sentry.CaptureAndWait(1, formatted, nil)
 }
 
-func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
+func updateAgents(cfg *agentConfig, cancel <-chan interface{}) error {
 	// Self-update
 	agentPollURL, err := text.ResolveString(cfg.AgentPollURLTemplate, cfg)
 	if err != nil {
@@ -80,18 +80,19 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 	initialRevision, err := k8s.GetLatestDeploymentReplicaSetRevision(cfg.KubeClient, "weave", "weave-agent")
 	if err != nil {
 		logError("Failed to fetch latest deployment replicateset revision", err, cfg)
-		return
+		return nil
 	}
 	log.Info("Revision before self-update: ", initialRevision)
 	err = kubectl.Apply(cfg.KubectlClient, agentPollURL)
 	if err != nil {
+		// We exit so that kubernetes can take care of restarting the pod and with that retrying to apply the file.
 		logError("Failed to execute kubectl apply", err, cfg)
-		return
+		return err
 	}
 	updatedRevision, err := k8s.GetLatestDeploymentReplicaSetRevision(cfg.KubeClient, "weave", "weave-agent")
 	if err != nil {
 		logError("Failed to fetch latest deployment replicateset revision", err, cfg)
-		return
+		return nil
 	}
 	log.Info("Revision after self-update: ", updatedRevision)
 
@@ -105,19 +106,19 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 		select {
 		case <-time.After(cfg.AgentRecoveryWait):
 		case <-cancel:
-			return
+			return nil
 		}
 
 		logError("Deployment of the new agent failed. Rolling back.", errors.New("Deployment failed"), cfg)
 		_, err := cfg.KubectlClient.Execute("rollout", "undo", "--namespace=weave", "deployment/weave-agent")
 		if err != nil {
 			logError("Failed rolling back agent. Will continue to check for updates.", err, cfg)
-			return
+			return nil
 		}
 
 		// Return so we continue updating the agent until success
 		logError("The new agent was rolled back.", errors.New("Rollback success"), cfg)
-		return
+		return nil
 	}
 
 	// Get existing flux config
@@ -138,8 +139,10 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 	err = kubectl.Apply(cfg.KubectlClient, wcPollURL)
 	if err != nil {
 		logError("Failed to execute kubectl apply", err, cfg)
-		return
+		return nil
 	}
+
+	return nil
 }
 
 func setupKubeClient() (*kubeclient.Clientset, error) {
@@ -242,7 +245,10 @@ func mainImpl() {
 			func() error {
 				for {
 
-					updateAgents(cfg, cancel)
+					err := updateAgents(cfg, cancel)
+					if err != nil {
+						return err
+					}
 
 					select {
 					case <-time.After(*wcPollInterval):
