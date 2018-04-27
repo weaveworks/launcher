@@ -42,6 +42,7 @@ type agentConfig struct {
 	InstanceID           string
 	AgentPollURLTemplate string
 	AgentRecoveryWait    time.Duration
+	ReportErrors         bool
 	WCPollURLTemplate    string
 	KubeClient           *kubeclient.Clientset
 	KubectlClient        kubectl.Client
@@ -65,8 +66,9 @@ func setLogLevel(logLevel string) error {
 func logError(msg string, err error, cfg *agentConfig) {
 	formatted := fmt.Sprintf("%s: %s", msg, err)
 	log.Error(formatted)
-
-	sentry.CaptureAndWait(1, formatted, nil)
+	if cfg.ReportErrors {
+		sentry.CaptureAndWait(1, formatted, nil)
+	}
 }
 
 func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
@@ -163,6 +165,8 @@ func mainImpl() {
 
 	agentPollURLTemplate := flag.String("agent.poll-url", defaultAgentPollURL, "URL to poll for the agent manifest")
 	agentRecoveryWait := flag.Duration("agent.recovery-wait", defaultAgentRecoveryWait, "Duration to wait before recovering from a failed self update")
+	reportErrors := flag.Bool("agent.report-errors", false, "Should the agent report errors to sentry")
+
 	wcToken := flag.String("wc.token", "", "Weave Cloud instance token")
 	wcPollInterval := flag.Duration("wc.poll-interval", 1*time.Hour, "Polling interval to check WC manifests")
 	wcPollURLTemplate := flag.String("wc.poll-url", defaultWCPollURL, "URL to poll for WC manifests")
@@ -187,11 +191,15 @@ func mainImpl() {
 	cfg := &agentConfig{
 		Token:                *wcToken,
 		AgentRecoveryWait:    *agentRecoveryWait,
+		ReportErrors:         *reportErrors,
 		KubectlClient:        kubectl.LocalClient{},
 		WCHostname:           *wcHostname,
 		AgentPollURLTemplate: *agentPollURLTemplate,
 		WCPollURLTemplate:    *wcPollURLTemplate,
 	}
+	raven.SetTagsContext(map[string]string{
+		"weave_cloud_hostname": *wcHostname,
+	})
 
 	kubeClient, err := setupKubeClient()
 	if err != nil {

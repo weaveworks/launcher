@@ -34,6 +34,7 @@ type options struct {
 	WCHostname       string `long:"wc.hostname" description:"Weave Cloud hostname" default:"cloud.weave.works"`
 	Token            string `long:"token" description:"Weave Cloud token" required:"true"`
 	GKE              bool   `long:"gke" description:"Create clusterrolebinding for GKE instances"`
+	ReportErrors     bool   `long:"report-errors" description:"Should install errors be reported to sentry"`
 }
 
 func init() {
@@ -189,7 +190,9 @@ func captureAndSend(opts options, skipFrames uint, msg string, args ...interface
 	if opts.Scheme != "" {
 		sendError(formatted, opts)
 	}
-	sentry.CaptureAndWait(skipFrames, formatted, nil)
+	if opts.ReportErrors {
+		sentry.CaptureAndWait(skipFrames, formatted, nil)
+	}
 }
 
 func exitWithCapture(opts options, msg string, args ...interface{}) {
