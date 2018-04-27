@@ -78,3 +78,4 @@ items:
               - -agent.poll-url={{.Scheme}}://{{.LauncherHostname}}/k8s/agent.yaml?instanceID={{"{{.InstanceID}}"}}
               - -wc.hostname={{.WCHostname}}
               - -wc.token=$(WEAVE_CLOUD_TOKEN)
+              - -agent.report-errors=true
