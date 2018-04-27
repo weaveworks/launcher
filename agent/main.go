@@ -197,6 +197,9 @@ func mainImpl() {
 		AgentPollURLTemplate: *agentPollURLTemplate,
 		WCPollURLTemplate:    *wcPollURLTemplate,
 	}
+	raven.SetTagsContext(map[string]string{
+		"weave_cloud_hostname": *wcHostname,
+	})
 
 	kubeClient, err := setupKubeClient()
 	if err != nil {
