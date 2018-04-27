@@ -237,9 +237,9 @@ func mainImpl() {
 
 	var g run.Group
 
+	cancel := make(chan interface{})
 	// Poll for new manifests every wcPollInterval.
 	if *featureInstall {
-		cancel := make(chan interface{})
 
 		g.Add(
 			func() error {
@@ -268,7 +268,6 @@ func mainImpl() {
 	{
 		term := make(chan os.Signal)
 		signal.Notify(term, os.Interrupt, syscall.SIGTERM)
-		cancel := make(chan interface{})
 		g.Add(
 			func() error {
 				<-term
@@ -299,7 +298,6 @@ func mainImpl() {
 
 	// Report Kubernetes events
 	if *featureEvents {
-		cancel := make(chan interface{})
 		g.Add(
 			func() error {
 				for {
