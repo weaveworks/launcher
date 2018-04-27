@@ -40,6 +40,7 @@ run_self_update_test () {
     updated_service_yaml=${tests_root}/k8s/service.updated.yaml
     updated_agent_yaml=${tests_root}/k8s/agent.updated.yaml
     templatinator "config.sh" $updated_service_yaml
+    kubectl apply -f $service_yaml
 
     echo "• Take the current service agent k8s and add a new label to it and reduce the recovery wait to 60s"
     kubectl cp default/${service_pod}:static/agent.yaml $updated_agent_yaml
@@ -54,17 +55,19 @@ run_self_update_test () {
 
     echo "• Apply the updated service which will use the configmap"
     kubectl apply -f $updated_service_yaml
-
     wait_for_service
 
     echo "• Restart the weave-agent pod to force an update"
     kubectl delete pod -n weave -l name=weave-agent
+    sleep 1
 
-    echo "• Wait for the agent to start the self update"
+    echo -n "• Wait for the agent to start the self update"
     while [ $(kubectl get pods --no-headers -n weave -l name=weave-agent | wc -l | tr -d '[:space:]') = 1 ] ; do echo -n .; sleep 1; done
+    echo
 
-    echo "• Wait for the agent to finish the self update"
+    echo -n "• Wait for the agent to finish the self update"
     until [ $(kubectl get pods --no-headers -n weave -l name=weave-agent | wc -l | tr -d '[:space:]') = 1 ] ; do echo -n .; sleep 1; done
+    echo
 
     wait_for_wc_agents
 
@@ -80,10 +83,32 @@ run_self_update_failure_test () {
     echo "### Test agent self update failure"
     echo "##################################"
 
-    service_pod=$(kubectl get pods -l name=service -o jsonpath='{range .items[*]}{@.metadata.name}')
     updated_service_yaml=${tests_root}/k8s/service.updated.yaml
     updated_agent_yaml=${tests_root}/k8s/agent.updated.yaml
     templatinator "config.sh" $updated_service_yaml
+
+    kubectl apply -f $updated_service_yaml
+    wait_for_service
+    service_pod=$(kubectl get pods -l name=service -o jsonpath='{range .items[*]}{@.metadata.name}')
+
+    echo "• Disable error reports for this test"
+    kubectl cp default/${service_pod}:static/agent.yaml $updated_agent_yaml
+    yq w -i $updated_agent_yaml items.4.spec.template.spec.containers.0.args.3 '"-agent.report-errors=false"'
+    if kubectl get configmap agent-k8s; then
+        kubectl delete configmap agent-k8s
+    fi
+    kubectl create configmap agent-k8s --from-file=$updated_agent_yaml
+
+    echo "• Apply the updated service which will use the configmap"
+    kubectl apply -f $updated_service_yaml
+    kubectl delete pod ${service_pod}
+    wait_for_service
+
+    # Restart the weave-agent pod to force an update
+    kubectl delete pod -n weave -l name=weave-agent
+    echo  "• Wait for the change to be applied"
+    while ! kubectl get pods --no-headers -n weave -l name=weave-agent -o yaml | grep -q 'report-errors=false' ; do echo -n .; sleep 1; done
+    echo
 
     echo "• Take the current service agent k8s and set the image to one that does not exist"
     yq w -i $updated_agent_yaml items.4.spec.template.spec.containers.0.image example.org/does_not_exist
@@ -104,13 +129,16 @@ run_self_update_failure_test () {
     echo "• Wait for the new agent to fail to pull the image"
     JSONPATH='{range .items[*]}{@.metadata.name}:{@.status.containerStatuses[*].state.waiting.reason}{end}'
     until kubectl get pods -n weave -o jsonpath="$JSONPATH" 2>&1 | grep -q "ImagePullBackOff"; do echo -n .; sleep 1; done
+    echo
 
     echo "• Wait for the agent to begin recovery"
     JSONPATH='{range .items[*]}{@.metadata.name}:{@.status.containerStatuses[*].state.waiting.reason}{end}'
     while kubectl get pods -n weave -o jsonpath="$JSONPATH" 2>&1 | grep -q "ImagePullBackOff"; do echo -n .; sleep 1; done
+    echo
 
     echo "• Wait for the agent to finish recovery"
     until [ $(kubectl get pods --no-headers -n weave -l name=weave-agent | wc -l | tr -d '[:space:]') = 1 ] ; do echo -n .; sleep 1; done
+    echo
 
     wait_for_wc_agents
 }
