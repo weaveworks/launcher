@@ -57,4 +57,4 @@ curl -Ls "{{.Scheme}}://{{.LauncherHostname}}/bootstrap?dist=$dist" >> "$TMPFILE
 chmod +x "$TMPFILE"
 
 # Execute the bootstrap binary
-"$TMPFILE" "--scheme={{.Scheme}}" "--wc.launcher={{.LauncherHostname}}" "--wc.hostname={{.WCHostname}}" "$@"
+"$TMPFILE" "--scheme={{.Scheme}}" "--wc.launcher={{.LauncherHostname}}" "--wc.hostname={{.WCHostname}}" "--report-errors" "$@"
