@@ -238,7 +238,10 @@ workflows:
   build_deploy:
     jobs:
       - global_tests
-      - agent
+      - agent:
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)*(-[a-z]+)?/
       - bootstrap
       - service
       - integration_install_update_flow:
