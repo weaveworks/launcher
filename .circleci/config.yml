@@ -70,6 +70,8 @@ jobs:
             if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
               docker push "quay.io/weaveworks/launcher-agent:$(docker/image-tag)"
               docker push "quay.io/weaveworks/launcher-agent"
+            elif echo "${CIRCLE_TAG}" | grep -Eq "^[0-9]+(\.[0-9]+)*(-[a-z]+)?$"; then
+              docker push "quay.io/weaveworks/launcher-agent:${CIRCLE_TAG}"
             else
               docker tag "quay.io/weaveworks/launcher-agent:$(docker/image-tag)" "quay.io/weaveworks/build-tmp-public:launcher-agent-$(docker/image-tag)"
               docker push "quay.io/weaveworks/build-tmp-public:launcher-agent-$(docker/image-tag)"
