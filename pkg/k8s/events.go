@@ -19,13 +19,14 @@ const (
 )
 
 var (
-	totalEventsNum = prometheus.NewCounter(
+	totalEventsNum = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "launcher",
 			Subsystem: "events",
 			Name:      "total",
 			Help:      "The total number of events.",
-		})
+		},
+		[]string{"type", "involved_object", "reason"})
 )
 
 func init() {
@@ -54,7 +55,9 @@ event_loop:
 		}
 	}
 
-	totalEventsNum.Add(float64(len(events)))
+	for _, event := range events {
+		totalEventsNum.WithLabelValues(event.Type, event.InvolvedObject.Kind, event.Reason).Inc()
+	}
 
 	return events
 }
