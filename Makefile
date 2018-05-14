@@ -40,7 +40,7 @@ docker/Dockerfile.service: docker/Dockerfile.service.in Makefile
 build/.%.done: docker/Dockerfile.%
 	mkdir -p ./build/docker/$*
 	cp -r $^ ./build/docker/$*/
-	${DOCKER} build -t quay.io/weaveworks/launcher-$* -t quay.io/weaveworks/launcher-$*:$(IMAGE_TAG) -f build/docker/$*/Dockerfile.$* ./build/docker/$*
+	${DOCKER} build --build-arg=revision=$(GIT_HASH) -t quay.io/weaveworks/launcher-$* -t quay.io/weaveworks/launcher-$*:$(IMAGE_TAG) -f build/docker/$*/Dockerfile.$* ./build/docker/$*
 	touch $@
 
 #
