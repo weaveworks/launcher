@@ -15,6 +15,9 @@
 package k8s
 
 import (
+	"os"
+	"path/filepath"
+
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -37,21 +40,44 @@ type ClientConfig struct {
 	Username             string
 }
 
-// GetClientConfig returns an object that can be used to configure a Kubernetes
-// API client.
-func GetClientConfig(config *ClientConfig) (*rest.Config, error) {
+func homeDirectory() string {
+	if h := os.Getenv("HOME"); h != "" {
+		return h
+	}
+	return os.Getenv("USERPROFILE") // windows
+}
+
+// kubeconfigPath returns the default kubeconfig location.
+func kubeconfigPath() string {
+	home := homeDirectory()
+	if home == "" {
+		return ""
+	}
+	return filepath.Join(home, ".kube", "config")
+}
+
+// NewClientConfig returns a configuration object that can be used to configure a client in
+// order to contact an API server with.
+func NewClientConfig(config *ClientConfig) (*rest.Config, error) {
 	var restConfig *rest.Config
+	var err error
+
 	if config.Server == "" && config.Kubeconfig == "" {
-		// If no API server address or kubeconfig was provided, assume we are running
-		// inside a pod. Try to connect to the API server through its
-		// Service environment variables, using the default Service
-		// Account Token.
-		var err error
-		if restConfig, err = rest.InClusterConfig(); err != nil {
-			return nil, err
+		// If no API server address or kubeconfig was provided, assume we are
+		// running inside a pod and Try to connect to the API server through
+		// its Service environment variables, using the default Service Account
+		// Token.
+		restConfig, err = rest.InClusterConfig()
+	}
+
+	if restConfig == nil {
+		// We're not in a pod? try to use kubeconfig.
+
+		// Try the default kubeconfig location if nothing else is provided.
+		if config.Kubeconfig == "" {
+			config.Kubeconfig = kubeconfigPath()
 		}
-	} else {
-		var err error
+
 		restConfig, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 			&clientcmd.ClientConfigLoadingRules{ExplicitPath: config.Kubeconfig},
 			&clientcmd.ConfigOverrides{
@@ -74,9 +100,10 @@ func GetClientConfig(config *ClientConfig) (*rest.Config, error) {
 				CurrentContext: config.Context,
 			},
 		).ClientConfig()
-		if err != nil {
-			return nil, err
-		}
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	log.Infof("kubernetes: targeting api server %s", restConfig.Host)
