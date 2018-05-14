@@ -75,7 +75,7 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 	// Self-update
 	agentPollURL, err := text.ResolveString(cfg.AgentPollURLTemplate, cfg)
 	if err != nil {
-		log.Fatal("invalid URL template:", err)
+		log.Fatal("invalid URL template: ", err)
 	}
 	log.Info("Updating self from ", agentPollURL)
 
@@ -134,7 +134,7 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 	// Update Weave Cloud agents
 	wcPollURL, err := text.ResolveString(cfg.WCPollURLTemplate, cfg)
 	if err != nil {
-		log.Fatal("invalid URL template:", err)
+		log.Fatal("invalid URL template: ", err)
 	}
 	log.Info("Updating WC from ", wcPollURL)
 	err = kubectl.Apply(cfg.KubectlClient, wcPollURL)
