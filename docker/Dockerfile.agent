@@ -1,7 +1,13 @@
 FROM alpine:3.7
-LABEL maintainer="Weaveworks Inc <help@weave.works>"
 RUN apk add --no-cache ca-certificates
 COPY ./agent /usr/bin/launcher-agent
 COPY ./kubectl /usr/bin/kubectl
 ENTRYPOINT ["/usr/bin/launcher-agent"]
 CMD ["-help"]
+
+ARG revision
+LABEL maintainer="Weaveworks <help@weave.works>" \
+      org.opencontainers.image.title="launcher-agent" \
+      org.opencontainers.image.source="https://github.com/weaveworks/launcher" \
+      org.opencontainers.image.revision="${revision}" \
+      org.opencontainers.image.vendor="Weaveworks"
