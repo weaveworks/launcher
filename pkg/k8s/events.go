@@ -32,14 +32,14 @@ func init() {
 	prometheus.MustRegister(totalEventsNum)
 }
 
-// EventSource produces kubernetes events.
+// EventSource produces Kubernetes events.
 type EventSource struct {
 	// Large local buffer, periodically read.
 	localEventsBuffer chan *apiv1.Event
 	eventClient       kubev1core.EventInterface
 }
 
-// GetNewEvents returns the kubernetes events that have been fired since the
+// GetNewEvents returns the Kubernetes events that have been fired since the
 // previous invocation of the function.
 func (source *EventSource) GetNewEvents() []*apiv1.Event {
 	// Get all data from the buffer.
@@ -137,7 +137,7 @@ func (source *EventSource) watch(cancel <-chan interface{}) {
 	}
 }
 
-// NewEventSource listens to kuberentes events in namespace. Call GetNewEvents
+// NewEventSource listens to kubernetes events in namespace. Call GetNewEvents
 // periodically to retrieve batches of events.
 func NewEventSource(client *kubeclient.Clientset, namespace string) *EventSource {
 	eventClient := client.CoreV1().Events(namespace)
