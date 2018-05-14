@@ -4,6 +4,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,6 +13,7 @@ import (
 
 	raven "github.com/getsentry/raven-go"
 	"github.com/oklog/run"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 
 	apiv1 "k8s.io/api/core/v1"
@@ -166,6 +169,7 @@ func mainImpl() {
 	agentPollURLTemplate := flag.String("agent.poll-url", defaultAgentPollURL, "URL to poll for the agent manifest")
 	agentRecoveryWait := flag.Duration("agent.recovery-wait", defaultAgentRecoveryWait, "Duration to wait before recovering from a failed self update")
 	reportErrors := flag.Bool("agent.report-errors", false, "Should the agent report errors to sentry")
+	address := flag.String("agent.address", ":8080", "agent HTTP address")
 
 	wcToken := flag.String("wc.token", "", "Weave Cloud instance token")
 	wcPollInterval := flag.Duration("wc.poll-interval", 1*time.Hour, "Polling interval to check WC manifests")
@@ -241,6 +245,21 @@ func mainImpl() {
 	cfg.FluxConfig = existingFluxCfg
 
 	var g run.Group
+
+	// HTTP server for prometheus metrics
+	ln, err := net.Listen("tcp", *address)
+	if err != nil {
+		log.Fatal("HTTP listen: ", err)
+		os.Exit(1)
+	}
+
+	http.Handle("/metrics", promhttp.Handler())
+
+	g.Add(func() error {
+		return http.Serve(ln, nil)
+	}, func(error) {
+		ln.Close()
+	})
 
 	// Poll for new manifests every wcPollInterval.
 	if *featureInstall {
