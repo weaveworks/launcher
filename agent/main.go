@@ -188,7 +188,7 @@ func mainImpl() {
 		log.Fatal(err)
 	}
 
-	if *wcToken == "" {
+	if *featureInstall && *wcToken == "" {
 		log.Fatal("missing Weave Cloud instance token, provide one with -wc.token")
 	}
 
