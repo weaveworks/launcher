@@ -4,6 +4,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,6 +13,7 @@ import (
 
 	raven "github.com/getsentry/raven-go"
 	"github.com/oklog/run"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 
 	apiv1 "k8s.io/api/core/v1"
@@ -75,7 +78,7 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 	// Self-update
 	agentPollURL, err := text.ResolveString(cfg.AgentPollURLTemplate, cfg)
 	if err != nil {
-		log.Fatal("invalid URL template:", err)
+		log.Fatal("invalid URL template: ", err)
 	}
 	log.Info("Updating self from ", agentPollURL)
 
@@ -134,7 +137,7 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 	// Update Weave Cloud agents
 	wcPollURL, err := text.ResolveString(cfg.WCPollURLTemplate, cfg)
 	if err != nil {
-		log.Fatal("invalid URL template:", err)
+		log.Fatal("invalid URL template: ", err)
 	}
 	log.Info("Updating WC from ", wcPollURL)
 	err = kubectl.Apply(cfg.KubectlClient, wcPollURL)
@@ -145,7 +148,7 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 }
 
 func setupKubeClient() (*kubeclient.Clientset, error) {
-	kubeConfig, err := k8s.GetClientConfig(&k8s.ClientConfig{
+	kubeConfig, err := k8s.NewClientConfig(&k8s.ClientConfig{
 		// We have seen quite a few clusters in the wild with invalid certificates.
 		// Disable checking certificates as a result.
 		Insecure: true,
@@ -166,6 +169,7 @@ func mainImpl() {
 	agentPollURLTemplate := flag.String("agent.poll-url", defaultAgentPollURL, "URL to poll for the agent manifest")
 	agentRecoveryWait := flag.Duration("agent.recovery-wait", defaultAgentRecoveryWait, "Duration to wait before recovering from a failed self update")
 	reportErrors := flag.Bool("agent.report-errors", false, "Should the agent report errors to sentry")
+	address := flag.String("agent.address", ":8080", "agent HTTP address")
 
 	wcToken := flag.String("wc.token", "", "Weave Cloud instance token")
 	wcPollInterval := flag.Duration("wc.poll-interval", 1*time.Hour, "Polling interval to check WC manifests")
@@ -241,6 +245,21 @@ func mainImpl() {
 	cfg.FluxConfig = existingFluxCfg
 
 	var g run.Group
+
+	// HTTP server for prometheus metrics
+	ln, err := net.Listen("tcp", *address)
+	if err != nil {
+		log.Fatal("HTTP listen: ", err)
+		os.Exit(1)
+	}
+
+	http.Handle("/metrics", promhttp.Handler())
+
+	g.Add(func() error {
+		return http.Serve(ln, nil)
+	}, func(error) {
+		ln.Close()
+	})
 
 	// Poll for new manifests every wcPollInterval.
 	if *featureInstall {
