@@ -49,6 +49,10 @@ func homeDirectory() string {
 
 // kubeconfigPath returns the default kubeconfig location.
 func kubeconfigPath() string {
+	if env := os.Getenv("KUBECONFIG"); env != "" {
+		return env
+	}
+
 	home := homeDirectory()
 	if home == "" {
 		return ""
