@@ -31,6 +31,8 @@ items:
             - name: agent
               image: quay.io/weaveworks/launcher-agent:latest
               imagePullPolicy: IfNotPresent
+              ports:
+              - containerPort: 8080
               args:
               - -feature.install-agents=false
               - -feature.kubernetes-events=true
