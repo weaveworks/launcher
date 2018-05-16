@@ -36,5 +36,4 @@ items:
               args:
               - -feature.install-agents=false
               - -feature.kubernetes-events=true
-              - -wc.token=foo
               - -log.level=debug
