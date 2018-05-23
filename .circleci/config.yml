@@ -101,10 +101,14 @@ jobs:
             sudo chown -R $USER.$USER ~/.minikube
             sudo chown -R $USER.$USER ~/.kube
             minikube update-context
-      - &wait_for_minikube
+      - &wait_for_k8s
         run:
-          name: Wait for nodes to become ready
-          command: JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1; done
+          name: Wait for Kubernetes cluster components to be ready
+          command: |
+            # Wait for nodes to become ready
+            JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1; done
+            # Wait for DNS to be ready
+            sleep 30
       - run:
           name: Execute integration tests
           command: |
@@ -123,7 +127,7 @@ jobs:
       - checkout
       - <<: *integration_deps
       - <<: *start_minikube
-      - <<: *wait_for_minikube
+      - <<: *wait_for_k8s
       - run:
           name: Execute integration tests
           command: |
@@ -142,7 +146,7 @@ jobs:
       - checkout
       - <<: *integration_deps
       - <<: *start_minikube
-      - <<: *wait_for_minikube
+      - <<: *wait_for_k8s
       - run:
           name: Execute integration tests
           command: |
@@ -168,7 +172,7 @@ jobs:
             sudo /opt/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
             sudo /opt/google-cloud-sdk/bin/gcloud config set project $GCLOUD_PROJECT
       - <<: *start_minikube
-      - <<: *wait_for_minikube
+      - <<: *wait_for_k8s
       - run:
           name: Execute integration tests
           command: |
@@ -187,7 +191,7 @@ jobs:
       - checkout
       - <<: *integration_deps
       - <<: *start_minikube
-      - <<: *wait_for_minikube
+      - <<: *wait_for_k8s
       - run:
           name: Execute healthcheck for get.dev.weave.works
           command: WEAVE_CLOUD_TOKEN=$DEV_INSTANCE_TOKEN ./integration-tests/tests/healthcheck.sh get.dev.weave.works
@@ -200,7 +204,7 @@ jobs:
       - checkout
       - <<: *integration_deps
       - <<: *start_minikube
-      - <<: *wait_for_minikube
+      - <<: *wait_for_k8s
       - run:
           name: Execute healthcheck for get.weave.works
           command: WEAVE_CLOUD_TOKEN=$PROD_INSTANCE_TOKEN ./integration-tests/tests/healthcheck.sh get.weave.works
