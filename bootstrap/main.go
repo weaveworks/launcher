@@ -35,6 +35,7 @@ type options struct {
 	Token            string `long:"token" description:"Weave Cloud token" required:"true"`
 	GKE              bool   `long:"gke" description:"Create clusterrolebinding for GKE instances"`
 	ReportErrors     bool   `long:"report-errors" description:"Should install errors be reported to sentry"`
+	SkipChecks       bool   `long:"skip-checks" description:"Skip pre-flight checks"`
 }
 
 func init() {
@@ -122,17 +123,19 @@ func mainImpl() {
 		}
 	}
 
-	// Perform a check to make sure DNS is working correctly.
-	fmt.Println("Performing a check of the Kubernetes installation setup.")
-	ok, err := kubectl.TestDNS(kubectlClient, "cloud.weave.works")
-	if err != nil {
-		exitWithCapture(opts, "There was an error while performing a DNS check: %s. Please check that your cluster can download images and run pods.", err)
-	}
+	if !opts.SkipChecks {
+		// Perform a check to make sure DNS is working correctly.
+		fmt.Println("Performing a check of the Kubernetes installation setup.")
+		ok, err := kubectl.TestDNS(kubectlClient, "cloud.weave.works")
+		if err != nil {
+			exitWithCapture(opts, "There was an error while performing a DNS check: %s. Please check that your cluster can download images and run pods.", err)
+		}
 
-	// We exit if the DNS pods are not up and running, as the installer needs to be
-	// able to connect to the server to correctly setup the needed resources.
-	if !ok {
-		exitWithCapture(opts, "DNS is not working in this Kubernetes cluster. We require correct DNS setup to continue.")
+		// We exit if the DNS pods are not up and running, as the installer needs to be
+		// able to connect to the server to correctly setup the needed resources.
+		if !ok {
+			exitWithCapture(opts, "DNS is not working in this Kubernetes cluster. We require correct DNS setup to continue.")
+		}
 	}
 
 	secretCreated, err := kubectl.CreateSecretFromLiteral(kubectlClient, "weave", "weave-cloud", "token", opts.Token, opts.AssumeYes)
