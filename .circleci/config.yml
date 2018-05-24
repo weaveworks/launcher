@@ -118,6 +118,13 @@ jobs:
               export SERVICE_IMAGE=quay.io/weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
             fi
             ./integration-tests/tests/install-update-flow.sh
+      - &failed_test
+        run:
+          name: Output state of the k8s cluster on failed test
+          command: |
+            kubectl get all --all-namespaces
+            kubectl get events --all-namespaces --field-selector=type=Warning
+          when: on_fail
 
   integration_kube_system_migration:
     machine: true
@@ -137,6 +144,7 @@ jobs:
               export SERVICE_IMAGE=quay.io/weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
             fi
             ./integration-tests/tests/kube-system-migration.sh
+      - <<: *failed_test
 
   integration_flux_config:
     machine: true
@@ -156,6 +164,7 @@ jobs:
               export SERVICE_IMAGE=quay.io/weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
             fi
             ./integration-tests/tests/flux-config.sh
+      - <<: *failed_test
 
   integration_gke:
     machine: true
@@ -182,6 +191,7 @@ jobs:
               export SERVICE_IMAGE=quay.io/weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
             fi
             ./integration-tests/tests/gke.sh
+      - <<: *failed_test
 
   healthcheck_dev:
     machine: true
@@ -195,6 +205,7 @@ jobs:
       - run:
           name: Execute healthcheck for get.dev.weave.works
           command: WEAVE_CLOUD_TOKEN=$DEV_INSTANCE_TOKEN ./integration-tests/tests/healthcheck.sh get.dev.weave.works
+      - <<: *failed_test
 
   healthcheck_prod:
     machine: true
@@ -208,6 +219,7 @@ jobs:
       - run:
           name: Execute healthcheck for get.weave.works
           command: WEAVE_CLOUD_TOKEN=$PROD_INSTANCE_TOKEN ./integration-tests/tests/healthcheck.sh get.weave.works
+      - <<: *failed_test
 
   sentry:
     <<: *defaults
