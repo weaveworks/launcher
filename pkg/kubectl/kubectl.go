@@ -204,7 +204,7 @@ func DeleteResource(c Client, resourceType, namespace, resourceName string) erro
 
 func isPodReady(c Client, podName, ns string) error {
 	// Timeout is set for 30 seconds, as Kubernetes requires some time to create a pod.
-	timeout := time.After(30 * time.Second)
+	timeout := time.After(1 * time.Minute)
 	tick := time.Tick(1 * time.Second)
 
 	for {
