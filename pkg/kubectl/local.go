@@ -9,20 +9,26 @@ import (
 	"sync"
 )
 
+// Command is the name of kubectl command
+const Command = "kubectl"
+
 // LocalClient implements Kubectl
 type LocalClient struct {
 	GlobalArgs []string
 }
 
+// LookPath conveniently wraps exec.LookPath(Command)
+func (k LocalClient) LookPath() (string, error) { return exec.LookPath(Command) }
+
 // IsPresent returns true if there's a kubectl command in the PATH.
 func (k LocalClient) IsPresent() bool {
-	_, err := exec.LookPath("kubectl")
+	_, err := k.LookPath()
 	return err == nil
 }
 
 // Execute executes kubectl <args> and returns the combined stdout/err output.
 func (k LocalClient) Execute(args ...string) (string, error) {
-	cmd := exec.Command("kubectl", append(k.GlobalArgs, args...)...)
+	cmd := exec.Command(Command, append(k.GlobalArgs, args...)...)
 	_, stderr, combined, err := outputMatrix(cmd)
 	if err != nil {
 		// Kubectl error messages output to stdOut
@@ -33,7 +39,7 @@ func (k LocalClient) Execute(args ...string) (string, error) {
 
 // ExecuteOutputMatrix executes kubectl <args> and returns stdout, stderr, and the combined interleaved output.
 func (k LocalClient) ExecuteOutputMatrix(args ...string) (stdout, stderr, combined string, err error) {
-	cmd := exec.Command("kubectl", append(k.GlobalArgs, args...)...)
+	cmd := exec.Command(Command, append(k.GlobalArgs, args...)...)
 	return outputMatrix(cmd)
 }
 
