@@ -111,6 +111,7 @@ jobs:
             sleep 30
       - run:
           name: Execute integration tests
+          no_output_timeout: 2m
           command: |
             if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
               export SERVICE_IMAGE="quay.io/weaveworks/launcher-service:$(docker/image-tag)"
@@ -137,6 +138,7 @@ jobs:
       - <<: *wait_for_k8s
       - run:
           name: Execute integration tests
+          no_output_timeout: 2m
           command: |
             if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
               export SERVICE_IMAGE="quay.io/weaveworks/launcher-service:$(docker/image-tag)"
@@ -157,6 +159,7 @@ jobs:
       - <<: *wait_for_k8s
       - run:
           name: Execute integration tests
+          no_output_timeout: 2m
           command: |
             if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
               export SERVICE_IMAGE="quay.io/weaveworks/launcher-service:$(docker/image-tag)"
@@ -184,6 +187,7 @@ jobs:
       - <<: *wait_for_k8s
       - run:
           name: Execute integration tests
+          no_output_timeout: 2m
           command: |
             if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
               export SERVICE_IMAGE="quay.io/weaveworks/launcher-service:$(docker/image-tag)"
