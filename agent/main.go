@@ -568,22 +568,26 @@ func isValidResource(name string) bool {
 	return false
 }
 
+func validateResources(resources []string) error {
+	if len(resources) == 0 {
+		return errors.New("cloudwatch: at least one AWS resource must be specified")
+	}
+	for _, resource := range resources {
+		if !isValidResource(resource) {
+			return fmt.Errorf("cloudwatch: unknown resource '%s'", resource)
+		}
+	}
+	return nil
+}
+
 func parseCloudwatchYaml(cm string) (*cloudwatch, error) {
 	cw := cloudwatch{}
 	if err := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(cm), 1000).Decode(&cw); err != nil {
 		return nil, err
 	}
-
-	// Validate AWS resources types.
-	if len(cw.Resources) == 0 {
-		return nil, errors.New("cloudwatch: at least one AWS resource must be specified")
+	if err := validateResources(cw.Resources); err != nil {
+		return nil, err
 	}
-	for _, resource := range cw.Resources {
-		if !isValidResource(resource) {
-			return nil, fmt.Errorf("cloudwatch: unknown resource '%s'", resource)
-		}
-	}
-
 	return &cw, nil
 }
 

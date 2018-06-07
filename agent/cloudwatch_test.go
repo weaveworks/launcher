@@ -6,6 +6,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func testValidateResources(t *testing.T) {
+	tests := []struct {
+		resources []string
+		valid     bool
+	}{
+		{[]string{}, false},
+		{[]string{"rds"}, true},
+		{[]string{"rds", "classic-elb"}, true},
+		{[]string{"foo", "classic-elb"}, false},
+		{[]string{"foo"}, false},
+	}
+
+	for _, test := range tests {
+		assert.Equal(t, test.valid, validateResources(test.resources))
+	}
+}
+
 var testCloudwatchConfig = `
 region: us-east-1
 secretName: cloudwatch
