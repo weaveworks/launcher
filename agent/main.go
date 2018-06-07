@@ -569,7 +569,6 @@ func isValidResource(name string) bool {
 }
 
 func parseCloudwatchYaml(cm string) (*cloudwatch, error) {
-
 	cw := cloudwatch{}
 	if err := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(cm), 1000).Decode(&cw); err != nil {
 		return nil, err
