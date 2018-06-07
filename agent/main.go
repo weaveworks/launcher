@@ -72,6 +72,8 @@ type cloudwatch struct {
 	Resources  []string
 }
 
+var validResources = []string{"rds", "classic-elb"}
+
 func init() {
 	// https://sentry.io/weaveworks/launcher-agent/
 	raven.SetDSN("https://a31e98421db8457a8c85fb42afcfc6fa:ec43815dbf4e440ca69f53b683bb81da@sentry.io/278297")
@@ -556,8 +558,6 @@ func (cfg *agentConfig) getConfigMap(name string) (*apiv1.ConfigMap, error) {
 
 	return cm, nil
 }
-
-var validResources = []string{"rds", "classic-elb"}
 
 func isValidResource(name string) bool {
 	for _, resource := range validResources {
