@@ -10,12 +10,15 @@ spec:
   selector:
     name: service
 ---
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: service
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      name: service
   revisionHistoryLimit: 2
   template:
     metadata:
