@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"strings"
 	"syscall"
 	"time"
 
@@ -43,7 +44,7 @@ const (
 		"&git-path={{.FluxConfig.GitPath}}&git-branch={{.FluxConfig.GitBranch}}" +
 		"{{end}}"
 	defaultCloudwatchURL = "https://{{.WCHostname}}/k8s/{{.KubernetesMajorMinorVersion}}/cloudwatch.yaml?" +
-		"aws-region={{.Region}}&aws-secret={{.SecretName}}&aws-resources=rds"
+		"aws-region={{.Region}}&aws-secret={{.SecretName}}&aws-resources={.Resources}"
 )
 
 type agentConfig struct {
@@ -68,7 +69,10 @@ type agentConfig struct {
 type cloudwatch struct {
 	Region     string
 	SecretName string
+	Resources  []string
 }
+
+var validResources = []string{"rds", "classic-elb"}
 
 func init() {
 	// https://sentry.io/weaveworks/launcher-agent/
@@ -555,9 +559,33 @@ func (cfg *agentConfig) getConfigMap(name string) (*apiv1.ConfigMap, error) {
 	return cm, nil
 }
 
+func isValidResource(name string) bool {
+	for _, resource := range validResources {
+		if name == resource {
+			return true
+		}
+	}
+	return false
+}
+
+func validateResources(resources []string) error {
+	if len(resources) == 0 {
+		return errors.New("cloudwatch: at least one AWS resource must be specified")
+	}
+	for _, resource := range resources {
+		if !isValidResource(resource) {
+			return fmt.Errorf("cloudwatch: unknown resource '%s'", resource)
+		}
+	}
+	return nil
+}
+
 func parseCloudwatchYaml(cm string) (*cloudwatch, error) {
 	cw := cloudwatch{}
 	if err := yaml.NewYAMLOrJSONDecoder(bytes.NewBufferString(cm), 1000).Decode(&cw); err != nil {
+		return nil, err
+	}
+	if err := validateResources(cw.Resources); err != nil {
 		return nil, err
 	}
 	return &cw, nil
@@ -592,6 +620,7 @@ func deployCloudwatch(cfg *agentConfig, cw *cloudwatch) error {
 		"KubernetesMajorMinorVersion": k8sVersion,
 		"Region":                      cw.Region,
 		"SecretName":                  cw.SecretName,
+		"Resources":                   strings.Join(cw.Resources, ","),
 	})
 	log.Info(cwPollURL)
 	if err != nil {
