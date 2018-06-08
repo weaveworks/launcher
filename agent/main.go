@@ -44,7 +44,7 @@ const (
 		"&git-path={{.FluxConfig.GitPath}}&git-branch={{.FluxConfig.GitBranch}}" +
 		"{{end}}"
 	defaultCloudwatchURL = "https://{{.WCHostname}}/k8s/{{.KubernetesMajorMinorVersion}}/cloudwatch.yaml?" +
-		"aws-region={{.Region}}&aws-secret={{.SecretName}}&aws-resources={.Resources}"
+		"aws-region={{.Region}}&aws-secret={{.SecretName}}&aws-resources={{.Resources}}"
 )
 
 type agentConfig struct {
@@ -620,7 +620,7 @@ func deployCloudwatch(cfg *agentConfig, cw *cloudwatch) error {
 		"KubernetesMajorMinorVersion": k8sVersion,
 		"Region":                      cw.Region,
 		"SecretName":                  cw.SecretName,
-		"Resources":                   strings.Join(cw.Resources, ","),
+		"Resources":                   strings.Join(cw.Resources, "%2C"),
 	})
 	log.Info(cwPollURL)
 	if err != nil {
