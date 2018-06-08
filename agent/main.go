@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
 	"syscall"
 	"time"
 
@@ -41,7 +42,7 @@ const (
 		"&git-label={{.FluxConfig.GitLabel}}&git-url={{.FluxConfig.GitURL}}" +
 		"&git-path={{.FluxConfig.GitPath}}&git-branch={{.FluxConfig.GitBranch}}" +
 		"{{end}}"
-	defaultCloudwatchURL = "https://{{.WCHostname}}/k8s/{{.KubernetesMinorMajorVersion}}/cloudwatch.yaml?" +
+	defaultCloudwatchURL = "https://{{.WCHostname}}/k8s/{{.KubernetesMajorMinorVersion}}/cloudwatch.yaml?" +
 		"aws-region={{.Region}}&aws-secret={{.SecretName}}&aws-resources=rds"
 )
 
@@ -562,11 +563,33 @@ func parseCloudwatchYaml(cm string) (*cloudwatch, error) {
 	return &cw, nil
 }
 
+func getMajorMinorVersion(major, minor, gitVersion string) (string, error) {
+	if major == "" || minor == "" {
+		regex := regexp.MustCompile("(v\\d+\\.\\d+)\\.\\d+.*")
+		version := regex.FindAllStringSubmatch(gitVersion, 2)
+
+		if len(version) != 1 {
+			return "", fmt.Errorf("kubernetes version not formatted correctly")
+		}
+		if len(version[0]) != 2 {
+			return "", fmt.Errorf("kubernetes version not formatted correctly")
+		}
+
+		return version[0][1], nil
+	}
+
+	return fmt.Sprintf("v%s.%s", major, minor), nil
+}
+
 func deployCloudwatch(cfg *agentConfig, cw *cloudwatch) error {
-	// Get manifest file to apply
+	k8sVersion, err := getMajorMinorVersion(cfg.KubernetesMajorVersion, cfg.KubernetesMinorVersion, cfg.KubernetesVersion)
+	if err != nil {
+		log.Fatal("invalid Kubernetes version: ", err)
+	}
+
 	cwPollURL, err := text.ResolveString(defaultCloudwatchURL, map[string]string{
 		"WCHostname":                  cfg.WCHostname,
-		"KubernetesMinorMajorVersion": fmt.Sprintf("v%s.%s", cfg.KubernetesMajorVersion, cfg.KubernetesMinorVersion),
+		"KubernetesMajorMinorVersion": k8sVersion,
 		"Region":                      cw.Region,
 		"SecretName":                  cw.SecretName,
 	})
