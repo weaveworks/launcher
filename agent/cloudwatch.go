@@ -42,9 +42,10 @@ func watchConfigMaps(cfg *agentConfig) {
 
 // Triggered on all ConfigMap creation with name cloudwatch in weave ns
 func (cfg *agentConfig) handleCMAdd(obj interface{}) {
+	log.Info("ConfigMap was created")
 	cm, ok := obj.(*apiv1.ConfigMap)
 	if !ok {
-		log.Error("Failed to type assert ConfigMap")
+		log.Error("Failed to type assert ConfigMap: %v", obj)
 		return
 	}
 
@@ -56,7 +57,7 @@ func (cfg *agentConfig) handleCMUpdate(old, cur interface{}) {
 	log.Info("ConfigMap was updated")
 	cm, ok := cur.(*apiv1.ConfigMap)
 	if !ok {
-		log.Error("Failed to type assert ConfigMap")
+		log.Error("Failed to type assert ConfigMap: %v", cur)
 		return
 	}
 
@@ -93,32 +94,27 @@ func watchSecrets(cfg *agentConfig) {
 
 // Triggered on all Secret created in the weave ns
 func (cfg *agentConfig) handleSecretAdd(obj interface{}) {
+	log.Info("Secret was created")
 	_, ok := obj.(*apiv1.Secret)
 	if !ok {
 		// If the object is not a secret we should ignore.
-		log.Error("Failed to type assert Secret")
+		log.Error("Failed to type assert Secret: %v", obj)
 		return
 	}
 
-	if err := cfg.conformSecret(); err != nil {
-		log.Error(err)
-		return
-	}
+	cfg.conformSecret()
 }
 
 // Triggered on all Secret updates in the weave ns
 func (cfg *agentConfig) handleSecretUpdate(old, cur interface{}) {
 	_, ok := cur.(*apiv1.Secret)
 	if !ok {
-		// If the object is not a secret there was an error.
-		log.Error("Failed to type assert Secret")
+		// If the object is not a secret we should ignore.
+		log.Error("Failed to type assert Secret: %v", cur)
 		return
 	}
 
-	if err := cfg.conformSecret(); err != nil {
-		log.Error(err)
-		return
-	}
+	cfg.conformSecret()
 }
 
 // Triggered on all Secret deletions in the weave ns
@@ -126,16 +122,16 @@ func (cfg *agentConfig) handleSecretDelete(obj interface{}) {
 	// TODO: Handle Secret deletion. Delete individual objects that were created.
 }
 
-func (cfg *agentConfig) conformSecret() error {
+func (cfg *agentConfig) conformSecret() {
 	// Get ConfigMap
 	cm, err := cfg.getConfigMap("cloudwatch")
 	if err != nil {
 		// If we don't have the cloudwatch CM this is the wrong secret.
-		return err
+		log.Info(err)
+		return
 	}
 
 	cfg.checkOrInstallCloudWatch(cm)
-	return nil
 }
 
 // checkOrInstallCloudWatch by applying the manifest file.
