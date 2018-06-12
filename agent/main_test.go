@@ -41,7 +41,7 @@ func TestGetMinorMajorVersion(t *testing.T) {
 	}
 }
 
-func testValidateResources(t *testing.T) {
+func TestValidateResources(t *testing.T) {
 	tests := []struct {
 		resources []string
 		valid     bool
@@ -54,7 +54,7 @@ func testValidateResources(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		assert.Equal(t, test.valid, validateResources(test.resources))
+		assert.Equal(t, test.valid, validateResources(test.resources) == nil)
 	}
 }
 
