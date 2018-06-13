@@ -42,31 +42,32 @@ func watchConfigMaps(cfg *agentConfig) {
 
 // Triggered on all ConfigMap creation with name cloudwatch in weave ns
 func (cfg *agentConfig) handleCMAdd(obj interface{}) {
-	log.Info("ConfigMap was created")
 	cm, ok := obj.(*apiv1.ConfigMap)
 	if !ok {
-		log.Error("Failed to type assert ConfigMap: %v", obj)
+		log.Error("Failed to type assert ConfigMap: ", obj)
 		return
 	}
+
+	log.Debugf("ConfigMap %v/%v was created", cm.ObjectMeta.Name, cm.ObjectMeta.Name)
 
 	cfg.checkOrInstallCloudWatch(cm)
 }
 
 // Triggered on all ConfigMap update with name cloudwatch in weave ns
 func (cfg *agentConfig) handleCMUpdate(old, cur interface{}) {
-	log.Info("ConfigMap was updated")
 	cm, ok := cur.(*apiv1.ConfigMap)
 	if !ok {
-		log.Error("Failed to type assert ConfigMap: %v", cur)
+		log.Error("Failed to type assert ConfigMap: ", cur)
 		return
 	}
+
+	log.Debugf("ConfigMap %v/%v was updated", cm.ObjectMeta.Namespace, cm.ObjectMeta.Name)
 
 	cfg.checkOrInstallCloudWatch(cm)
 }
 
 // Triggered on only ConfigMap deletion with name cloudwatch in weave ns
 func (cfg *agentConfig) handleCMDelete(obj interface{}) {
-	log.Info("ConfigMap was deleted")
 	// TODO: Handle ConfigMap deletion. Delete individual objects that were created as at this point.
 }
 
@@ -94,25 +95,28 @@ func watchSecrets(cfg *agentConfig) {
 
 // Triggered on all Secret created in the weave ns
 func (cfg *agentConfig) handleSecretAdd(obj interface{}) {
-	log.Info("Secret was created")
-	_, ok := obj.(*apiv1.Secret)
+	secret, ok := obj.(*apiv1.Secret)
 	if !ok {
 		// If the object is not a secret we should ignore.
-		log.Error("Failed to type assert Secret: %v", obj)
+		log.Error("Failed to type assert Secret: ", obj)
 		return
 	}
+
+	log.Debugf("Secret %v/%v was created", secret.ObjectMeta.Namespace, secret.ObjectMeta.Name)
 
 	cfg.conformSecret()
 }
 
 // Triggered on all Secret updates in the weave ns
 func (cfg *agentConfig) handleSecretUpdate(old, cur interface{}) {
-	_, ok := cur.(*apiv1.Secret)
+	secret, ok := cur.(*apiv1.Secret)
 	if !ok {
 		// If the object is not a secret we should ignore.
-		log.Error("Failed to type assert Secret: %v", cur)
+		log.Error("Failed to type assert Secret: ", cur)
 		return
 	}
+
+	log.Debugf("Secret %v/%v was updated", secret.ObjectMeta.Namespace, secret.ObjectMeta.Name)
 
 	cfg.conformSecret()
 }
@@ -127,7 +131,7 @@ func (cfg *agentConfig) conformSecret() {
 	cm, err := cfg.getConfigMap("cloudwatch")
 	if err != nil {
 		// If we don't have the cloudwatch CM this is the wrong secret.
-		log.Info(err)
+		log.Debug(err)
 		return
 	}
 
@@ -155,7 +159,7 @@ func (cfg *agentConfig) checkOrInstallCloudWatch(cm *apiv1.ConfigMap) {
 
 		err = deployCloudwatch(cfg, cw)
 		if err != nil {
-			log.Error(err)
+			log.Error("Error while deploying cloudwatch manifest: ", err)
 			return
 		}
 	}
@@ -201,10 +205,11 @@ func deployCloudwatch(cfg *agentConfig, cw *cloudwatch) error {
 		"SecretName":                  cw.SecretName,
 		"Resources":                   strings.Join(cw.Resources, "%2C"),
 	})
-	log.Info(cwPollURL)
 	if err != nil {
 		log.Fatal("invalid URL template: ", err)
 	}
+
+	log.Info("Applying cloudwatch manifest from: ", cwPollURL)
 
 	err = kubectl.Apply(cfg.KubectlClient, cwPollURL)
 	if err != nil {
