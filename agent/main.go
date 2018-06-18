@@ -66,12 +66,6 @@ type agentConfig struct {
 	SecretInformer cache.SharedIndexInformer
 }
 
-type cloudwatch struct {
-	Region     string
-	SecretName string
-	Resources  []string
-}
-
 var validResources = []string{"rds", "classic-elb"}
 
 func init() {

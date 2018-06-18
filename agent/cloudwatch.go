@@ -18,6 +18,12 @@ import (
 	"github.com/weaveworks/launcher/pkg/text"
 )
 
+type cloudwatch struct {
+	Region     string
+	SecretName string
+	Resources  []string
+}
+
 // Watch for CM creation.
 func watchConfigMaps(cfg *agentConfig) {
 	source := cache.NewListWatchFromClient(
