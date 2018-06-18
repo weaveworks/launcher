@@ -39,7 +39,12 @@ const (
 		"&git-path={{.FluxConfig.GitPath}}&git-branch={{.FluxConfig.GitBranch}}" +
 		"{{end}}"
 	defaultCloudwatchURL = "https://{{.WCHostname}}/k8s/{{.KubernetesMajorMinorVersion}}/cloudwatch.yaml?" +
-		"aws-region={{.Region}}&aws-secret={{.SecretName}}&aws-resources={{.Resources}}"
+		"aws-region={{.Region}}" +
+		"&aws-secret={{.SecretName}}" +
+		"&aws-resources={{.Resources}}" +
+		"&aws-config={{.ConfigName}}" +
+		"&aws-config-uid={{.ConfigUID}}" +
+		"&aws-secret-uid={{.SecretUID}}"
 )
 
 type agentConfig struct {

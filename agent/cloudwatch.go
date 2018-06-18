@@ -151,13 +151,14 @@ func (cfg *agentConfig) checkOrInstallCloudWatch(cm *apiv1.ConfigMap) {
 			return
 		}
 
-		// Make sure secret exists before applying cloudwatch manifest file
-		if !cfg.secretExists(cw.SecretName) {
-			log.Errorf("Secret %s specified in the cloudwatch ConfigMap does not exist", cw.SecretName)
+		// Get the Secret UID and with that we make sure the Secret actually exists.
+		secret, err := cfg.getSecret(cw.SecretName)
+		if err != nil {
+			log.Error(err)
 			return
 		}
 
-		err = deployCloudwatch(cfg, cw)
+		err = cfg.deployCloudwatch(cw, cm.Name, string(cm.UID), string(secret.UID))
 		if err != nil {
 			log.Error("Error while deploying cloudwatch manifest: ", err)
 			return
@@ -165,13 +166,13 @@ func (cfg *agentConfig) checkOrInstallCloudWatch(cm *apiv1.ConfigMap) {
 	}
 }
 
-func (cfg *agentConfig) secretExists(secretName string) bool {
-	_, err := cfg.KubeClient.CoreV1().Secrets("weave").Get(secretName, metav1.GetOptions{})
+func (cfg *agentConfig) getSecret(name string) (*apiv1.Secret, error) {
+	s, err := cfg.KubeClient.CoreV1().Secrets("weave").Get(name, metav1.GetOptions{})
 	if err != nil {
-		return false
+		return nil, err
 	}
 
-	return true
+	return s, nil
 }
 
 func (cfg *agentConfig) getConfigMap(name string) (*apiv1.ConfigMap, error) {
@@ -192,7 +193,7 @@ func isValidResource(name string) bool {
 	return false
 }
 
-func deployCloudwatch(cfg *agentConfig, cw *cloudwatch) error {
+func (cfg *agentConfig) deployCloudwatch(cw *cloudwatch, CMName, CMUID, secretUID string) error {
 	k8sVersion, err := getMajorMinorVersion(cfg.KubernetesMajorVersion, cfg.KubernetesMinorVersion, cfg.KubernetesVersion)
 	if err != nil {
 		log.Fatal("invalid Kubernetes version: ", err)
@@ -204,6 +205,9 @@ func deployCloudwatch(cfg *agentConfig, cw *cloudwatch) error {
 		"Region":                      cw.Region,
 		"SecretName":                  cw.SecretName,
 		"Resources":                   strings.Join(cw.Resources, "%2C"),
+		"ConfigName":                  CMName,
+		"ConfigUID":                   CMUID,
+		"SecretUID":                   secretUID,
 	})
 	if err != nil {
 		log.Fatal("invalid URL template: ", err)
