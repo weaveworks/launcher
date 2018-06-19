@@ -24,7 +24,6 @@
 #   go-tests = true
 #   unused-packages = true
 
-
 [[constraint]]
   name = "github.com/jessevdk/go-flags"
   version = "1.3.0"
@@ -45,11 +44,11 @@
   branch = "master"
   name = "github.com/weaveworks/common"
 
-[[constraint]]
+[[override]]
   name = "k8s.io/client-go"
   version = "v6.0.0"
 
-[[constraint]]
+[[override]]
   name = "k8s.io/apimachinery"
   branch = "release-1.9"
 
@@ -88,3 +87,8 @@ branch = "release-1.9"
 [[constraint]]
   name = "github.com/prometheus/client_golang"
   version = "v0.9.0-pre1"
+
+[[constraint]]
+  name = "github.com/dlespiau/kube-harness"
+  revision = "ef7a1e1ed84733511a999798dc7918bb2461e164"
+

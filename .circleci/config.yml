@@ -127,6 +127,32 @@ jobs:
             kubectl get events --all-namespaces --field-selector=type=Warning
           when: on_fail
 
+  integration_cloudwatch:
+    machine: true
+    environment:
+      CHANGE_MINIKUBE_NONE_USER: true
+    working_directory: ~/.go_workspace/src/github.com/weaveworks/launcher
+    steps:
+      - checkout
+      - run: make dep
+      - <<: *integration_deps
+      - <<: *start_minikube
+      - <<: *wait_for_k8s
+      - run:
+          name: Execute integration tests
+          no_output_timeout: 10m
+          environment:
+            GOPATH: /home/circleci/.go_workspace
+          command: |
+            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
+              export SERVICE_IMAGE="quay.io/weaveworks/launcher-service:$(docker/image-tag)"
+            else
+              export SERVICE_IMAGE=quay.io/weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
+            fi
+            ./integration-tests/tests/e2e.sh
+            go test -v ./integration-tests/e2e -args -log.verbose
+      - <<: *failed_test
+
   integration_kube_system_migration:
     machine: true
     environment:
@@ -265,6 +291,11 @@ workflows:
       - bootstrap
       - service
       - integration_install_update_flow:
+          requires:
+            - agent
+            - bootstrap
+            - service
+      - integration_cloudwatch:
           requires:
             - agent
             - bootstrap
