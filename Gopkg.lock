@@ -56,6 +56,14 @@
   version = "v3.1.0"
 
 [[projects]]
+  name = "github.com/dlespiau/kube-harness"
+  packages = [
+    ".",
+    "logger"
+  ]
+  revision = "ef7a1e1ed84733511a999798dc7918bb2461e164"
+
+[[projects]]
   branch = "master"
   name = "github.com/docker/distribution"
   packages = [
@@ -488,6 +496,12 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/sync"
+  packages = ["errgroup"]
+  revision = "1d60e4601c6fd243af51cc01ddf169918a5407ca"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/sys"
   packages = [
     "unix",
@@ -778,6 +792,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "05112b81083734a0da388b3ea8699db148ccf24eb465fc6df3d2553ff7a6df47"
+  inputs-digest = "654d70c56c833eed37e748573742bb0627769d86d10c7d2bb97e60b42a37ff17"
   solver-name = "gps-cdcl"
   solver-version = 1
