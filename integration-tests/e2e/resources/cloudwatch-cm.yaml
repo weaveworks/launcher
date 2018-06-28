@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap 
+metadata:
+  name: cloudwatch
+  namespace: weave
+data:
+  cloudwatch.yaml: |
+    ---
+    region: us-east-1
+    secretName: cloudwatch
+    resources:
+      - rds
