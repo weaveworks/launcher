@@ -89,6 +89,6 @@ branch = "release-1.9"
   version = "v0.9.0-pre1"
 
 [[constraint]]
-  name = "github.com/dlespiau/kube-harness"
-  revision = "ef7a1e1ed84733511a999798dc7918bb2461e164"
+  name = "github.com/dlespiau/kube-test-harness"
+  revision = "6dfa02a8c9926e2caffa14aa405dd699363bd9d3"
 
