@@ -56,12 +56,12 @@
   version = "v3.1.0"
 
 [[projects]]
-  name = "github.com/dlespiau/kube-harness"
+  name = "github.com/dlespiau/kube-test-harness"
   packages = [
     ".",
     "logger"
   ]
-  revision = "ef7a1e1ed84733511a999798dc7918bb2461e164"
+  revision = "6dfa02a8c9926e2caffa14aa405dd699363bd9d3"
 
 [[projects]]
   branch = "master"
@@ -792,6 +792,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "654d70c56c833eed37e748573742bb0627769d86d10c7d2bb97e60b42a37ff17"
+  inputs-digest = "2ac72ff6af5667418b18c23f63d6317c04f251ae630ac6a85eeafe36d55e4e3e"
   solver-name = "gps-cdcl"
   solver-version = 1

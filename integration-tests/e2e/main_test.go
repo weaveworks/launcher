@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dlespiau/kube-harness"
-	"github.com/dlespiau/kube-harness/logger"
+	"github.com/dlespiau/kube-test-harness"
+	"github.com/dlespiau/kube-test-harness/logger"
 )
 
 var kube *harness.Harness
