@@ -262,7 +262,7 @@ func TestDNS(c Client, domain string) (bool, error) {
 	}
 
 	// Create pod to perform nslookup on a passed domain to check DNS is working.
-	_, err = Execute(c, "run", "-n", "weave", "--image", "busybox", "--restart=Never", "--command", podName, "nslookup", domain)
+	_, err = Execute(c, "run", "-n", "weave", "--image", "busybox", "--labels=launcher=dns", "--restart=Never", "--command", podName, "nslookup", domain)
 	if err != nil {
 		return false, err
 	}
