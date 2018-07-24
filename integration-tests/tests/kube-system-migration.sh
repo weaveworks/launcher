@@ -30,7 +30,7 @@ wait_for_wc_agents
 
 echo "• Wait for kube-system agents to be removed"
 JSONPATH='{range .items[*]}{@.metadata.name}{end}'
-while [ $(kubectl get pods -n kube-system -l 'app in (weave-flux, weave-cortex, weave-scope)' -o jsonpath="$JSONPATH" 2>&1 | wc -c | tr -d '[:space:]') != 0 ]; do echo -n .; sleep 1; done
+while [ $(kubectl get pods -n kube-system -l 'app in (weave-flux, weave-cortex, weave-scope)' -o jsonpath="$JSONPATH" 2>&1 | wc -c | tr -d '[:space:]') != 0 ]; do sleep 1; done
 
 echo "• Check old flux arguments have been applied to the new agent"
 args=$(kubectl get pod -n weave -l name=weave-flux-agent -o jsonpath='{.items[?(@.metadata.labels.name=="weave-flux-agent")].spec.containers[?(@.name=="flux-agent")].args[*]}')
