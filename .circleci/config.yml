@@ -125,6 +125,7 @@ jobs:
           command: |
             kubectl get all --all-namespaces
             kubectl get events --all-namespaces --field-selector=type=Warning
+            kubectl logs -n weave -l=launcher=dns
           when: on_fail
 
   integration_cloudwatch:
