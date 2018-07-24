@@ -43,7 +43,7 @@ kubectl apply -f "https://cloud.weave.works/k8s/flux.yaml?t=${WEAVE_CLOUD_TOKEN}
 
 echo "• Wait for weave-flux-agent to become ready"
 JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'
-until kubectl get pods -n weave -l name=weave-flux-agent -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do echo -n .; sleep 1; done
+until kubectl get pods -n weave -l name=weave-flux-agent -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1; done
 
 echo "• Install Weave Cloud"
 curl -Ls $(minikube service service --url) | sh -s -- --token=${WEAVE_CLOUD_TOKEN} --assume-yes

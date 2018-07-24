@@ -61,10 +61,10 @@ run_self_update_test () {
     kubectl delete pod -n weave -l name=weave-agent
 
     echo "• Wait for the agent to start the self update"
-    while [ $(kubectl get pods --no-headers -n weave -l name=weave-agent | wc -l | tr -d '[:space:]') = 1 ] ; do echo -n .; sleep 1; done
+    while [ $(kubectl get pods --no-headers -n weave -l name=weave-agent | wc -l | tr -d '[:space:]') = 1 ] ; do sleep 1; done
 
     echo "• Wait for the agent to finish the self update"
-    until [ $(kubectl get pods --no-headers -n weave -l name=weave-agent | wc -l | tr -d '[:space:]') = 1 ] ; do echo -n .; sleep 1; done
+    until [ $(kubectl get pods --no-headers -n weave -l name=weave-agent | wc -l | tr -d '[:space:]') = 1 ] ; do sleep 1; done
 
     wait_for_wc_agents
 
@@ -103,14 +103,14 @@ run_self_update_failure_test () {
 
     echo "• Wait for the new agent to fail to pull the image"
     JSONPATH='{range .items[*]}{@.metadata.name}:{@.status.containerStatuses[*].state.waiting.reason}{end}'
-    until kubectl get pods -n weave -o jsonpath="$JSONPATH" 2>&1 | grep -q "ImagePullBackOff"; do echo -n .; sleep 1; done
+    until kubectl get pods -n weave -o jsonpath="$JSONPATH" 2>&1 | grep -q "ImagePullBackOff"; do sleep 1; done
 
     echo "• Wait for the agent to begin recovery"
     JSONPATH='{range .items[*]}{@.metadata.name}:{@.status.containerStatuses[*].state.waiting.reason}{end}'
-    while kubectl get pods -n weave -o jsonpath="$JSONPATH" 2>&1 | grep -q "ImagePullBackOff"; do echo -n .; sleep 1; done
+    while kubectl get pods -n weave -o jsonpath="$JSONPATH" 2>&1 | grep -q "ImagePullBackOff"; do sleep 1; done
 
     echo "• Wait for the agent to finish recovery"
-    until [ $(kubectl get pods --no-headers -n weave -l name=weave-agent | wc -l | tr -d '[:space:]') = 1 ] ; do echo -n .; sleep 1; done
+    until [ $(kubectl get pods --no-headers -n weave -l name=weave-agent | wc -l | tr -d '[:space:]') = 1 ] ; do sleep 1; done
 
     wait_for_wc_agents
 }
