@@ -24,7 +24,10 @@ import (
 )
 
 const (
-	agentK8sURLTemplate = "{{.Scheme}}://{{.LauncherHostname}}/k8s/agent.yaml"
+	agentK8sURLTemplate = "{{.Scheme}}://{{.LauncherHostname}}/k8s/agent.yaml" +
+		"{{if .CRIEndpoint}}" +
+		"&cri-endpoint={{.CRIEndpoint}}" +
+		"{{end}}"
 )
 
 type options struct {
@@ -36,6 +39,7 @@ type options struct {
 	GKE              bool   `long:"gke" description:"Create clusterrolebinding for GKE instances"`
 	ReportErrors     bool   `long:"report-errors" description:"Should install errors be reported to sentry"`
 	SkipChecks       bool   `long:"skip-checks" description:"Skip pre-flight checks"`
+	CRIEndpoint      string `long:"cri-endpoint" description:"Set custom CRI container runtime endpoint. e.g.: 'unix:///var/run/crio/crio.sock'"`
 }
 
 func init() {
