@@ -76,6 +76,16 @@ func mainImpl() {
 		exitWithCapture(opts, "Could not find kubectl in PATH, please install it: https://kubernetes.io/docs/tasks/tools/install-kubectl/\n")
 	}
 
+	// If the user has not passed the container runtime endpoint
+	// we try our best to guess and log it.
+	if opts.CRIEndpoint == "" {
+		opts.CRIEndpoint, err = matchContainerRuntimeEndpoint(kubectlClient)
+		if err != nil {
+			log.Fatal("error detecting container runtime endpoint: ", err)
+		}
+		fmt.Println("Detected container runtime endpoint:", opts.CRIEndpoint)
+	}
+
 	agentK8sURL, err := text.ResolveString(agentK8sURLTemplate, opts)
 	if err != nil {
 		log.Fatal("invalid URL template:", err)
@@ -335,4 +345,21 @@ func sendError(errMsg string, opts options) {
 		return
 	}
 	defer resp.Body.Close()
+}
+
+// matchContainerRuntimeEndpoint tries to best match the container runtime the node
+// is using based on the container runtime name.
+func matchContainerRuntimeEndpoint(c kubectl.Client) (string, error) {
+	name, err := kubectl.GetContainerRuntimeName(c)
+	if err != nil {
+		return "", err
+	}
+	endpoints := map[string]string{
+		"cri-o":      "/var/run/crio/crio.sock",
+		"containerd": "/run/containerd/containerd.sock",
+		// TODO: figure out when docker CR name is the dockershim via CRI
+		// "docker":     "/var/run/dockershim.sock",
+	}
+
+	return endpoints[name], nil
 }
