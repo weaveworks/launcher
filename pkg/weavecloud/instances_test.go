@@ -30,8 +30,8 @@ func TestLookupInstanceByToken(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	id, name, err := LookupInstanceByToken(ts.URL, instanceToken)
+	instance, err := LookupInstanceByToken(ts.URL, instanceToken)
 	assert.NoError(t, err)
-	assert.Equal(t, instanceID, id)
-	assert.Equal(t, instanceName, name)
+	assert.Equal(t, instanceID, instance.ID)
+	assert.Equal(t, instanceName, instance.Name)
 }

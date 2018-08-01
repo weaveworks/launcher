@@ -245,11 +245,11 @@ func mainImpl() {
 	if err != nil {
 		log.Fatal("invalid URL template:", err)
 	}
-	instanceID, _, err := weavecloud.LookupInstanceByToken(wcOrgLookupURL, *wcToken)
+	instance, err := weavecloud.LookupInstanceByToken(wcOrgLookupURL, *wcToken)
 	if err != nil {
 		logError("lookup instance by token", err, &agentConfig{})
 	} else {
-		cfg.InstanceID = instanceID
+		cfg.InstanceID = instance.ID
 		raven.SetTagsContext(map[string]string{
 			"instance": cfg.InstanceID,
 		})

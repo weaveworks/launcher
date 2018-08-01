@@ -107,12 +107,12 @@ func mainImpl() {
 	// Capture the kubernetes version info to help debug issues
 	checkK8sVersion(kubectlClient, opts) // NB exits on error
 
-	InstanceID, InstanceName, err := weavecloud.LookupInstanceByToken(wcOrgLookupURL, opts.Token)
+	instance, err := weavecloud.LookupInstanceByToken(wcOrgLookupURL, opts.Token)
 	if err != nil {
 		exitWithCapture(opts, "Error looking up Weave Cloud instance: %s\n", err)
 	}
-	raven.SetTagsContext(map[string]string{"instance": InstanceID})
-	fmt.Printf("Connecting cluster to %q (id: %s) on Weave Cloud\n", InstanceName, InstanceID)
+	raven.SetTagsContext(map[string]string{"instance": instance.ID})
+	fmt.Printf("Connecting cluster to %q (id: %s) on Weave Cloud\n", instance.Name, instance.ID)
 
 	// Display information on the cluster we're about to install the agent onto.
 	//
@@ -164,15 +164,15 @@ func mainImpl() {
 			exitWithCapture(opts, "There was an error checking the current secret: %s\n", err)
 		}
 		if currentToken != opts.Token {
-			currentInstanceID, currentInstanceName, errCurrent := weavecloud.LookupInstanceByToken(wcOrgLookupURL, currentToken)
+			currentInstance, errCurrent := weavecloud.LookupInstanceByToken(wcOrgLookupURL, currentToken)
 			msg := "This cluster is currently connected to "
 			if errCurrent == nil {
-				msg += fmt.Sprintf("%q (id: %s) on Weave Cloud", currentInstanceName, currentInstanceID)
+				msg += fmt.Sprintf("%q (id: %s) on Weave Cloud", currentInstance.Name, currentInstance.ID)
 			} else {
 				msg += "a different Weave Cloud instance."
 			}
 			confirmed, err := askForConfirmation(fmt.Sprintf(
-				"\n%s\nWould you like to continue and connect this cluster to %q (id: %s) instead?", msg, InstanceName, InstanceID))
+				"\n%s\nWould you like to continue and connect this cluster to %q (id: %s) instead?", msg, instance.Name, instance.ID))
 			if err != nil {
 				exitWithCapture(opts, "Could not ask for confirmation: %s\n", err)
 			} else if !confirmed {
