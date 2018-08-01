@@ -43,6 +43,26 @@ func init() {
 	raven.SetDSN("https://44cf71b08710447888c993011b1302fc:8f57948cabd34bbe854b196635bff59f@sentry.io/288665")
 }
 
+func applyAgent(c kubectl.Client, opts *options) {
+	agentK8sURL, err := text.ResolveString(agentK8sURLTemplate, opts)
+	if err != nil {
+		log.Fatal("invalid URL template:", err)
+	}
+
+	err = kubectl.Apply(c, agentK8sURL)
+	if err != nil {
+		captureAndSend(opts, 1, "There was an error applying the agent: %s\n", err)
+
+		// We've failed to apply the agent. kubectl apply isn't an atomic operation
+		// can leave some objects behind when encountering an error. Clean things up.
+		fmt.Println("Rolling back cluster changes")
+		kubectl.Execute(c, "delete", "--ignore-not-found=true", "-f", agentK8sURL)
+		// Exit with a specific error which will be checked against in install script,
+		// as a way of deduplicating sending of these errors.
+		os.Exit(111)
+	}
+}
+
 func main() {
 	raven.CapturePanicAndWait(mainImpl, nil)
 }
@@ -72,10 +92,6 @@ func mainImpl() {
 		exitWithCapture(opts, "Could not find kubectl in PATH, please install it: https://kubernetes.io/docs/tasks/tools/install-kubectl/\n")
 	}
 
-	agentK8sURL, err := text.ResolveString(agentK8sURLTemplate, opts)
-	if err != nil {
-		log.Fatal("invalid URL template:", err)
-	}
 	wcOrgLookupURL, err := text.ResolveString(weavecloud.DefaultWCOrgLookupURLTemplate, opts)
 	if err != nil {
 		log.Fatal("invalid URL template:", err)
@@ -169,19 +185,7 @@ func mainImpl() {
 		}
 	}
 
-	// Apply the agent
-	err = kubectl.Apply(kubectlClient, agentK8sURL)
-	if err != nil {
-		captureAndSend(opts, 1, "There was an error applying the agent: %s\n", err)
-
-		// We've failed to apply the agent. kubectl apply isn't an atomic operation
-		// can leave some objects behind when encountering an error. Clean things up.
-		fmt.Println("Rolling back cluster changes")
-		kubectl.Execute(kubectlClient, "delete", "--ignore-not-found=true", "-f", agentK8sURL)
-		// Exit with a specific error which will be checked against in install script,
-		// as a way of deduplicating sending of these errors.
-		os.Exit(111)
-	}
+	applyAgent(kubectlClient, opts)
 
 	fmt.Println("Successfully installed.")
 }
