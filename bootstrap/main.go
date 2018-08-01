@@ -48,7 +48,7 @@ func main() {
 }
 
 func mainImpl() {
-	opts := options{}
+	opts := &options{}
 	// Parse arguments with go-flags so we can forward unknown arguments to kubectl
 	parser := flags.NewParser(&opts, flags.IgnoreUnknown)
 	otherArgs, err := parser.Parse()
@@ -186,7 +186,7 @@ func mainImpl() {
 	fmt.Println("Successfully installed.")
 }
 
-func captureAndSend(opts options, skipFrames uint, msg string, args ...interface{}) {
+func captureAndSend(opts *options, skipFrames uint, msg string, args ...interface{}) {
 	formatted := fmt.Sprintf(msg, args...)
 	fmt.Fprintf(os.Stderr, formatted)
 	// Send errors to UI.
@@ -198,7 +198,7 @@ func captureAndSend(opts options, skipFrames uint, msg string, args ...interface
 	}
 }
 
-func exitWithCapture(opts options, msg string, args ...interface{}) {
+func exitWithCapture(opts *options, msg string, args ...interface{}) {
 	captureAndSend(opts, 2, msg, args...)
 	// Exit with a specific error which will be checked against in install script,
 	// as a way of deduplicating sending of these errors.
@@ -246,7 +246,7 @@ func askForConfirmation(s string) (bool, error) {
 	}
 }
 
-func checkK8sVersion(kubectlClient kubectl.Client, opts options) {
+func checkK8sVersion(kubectlClient kubectl.Client, opts *options) {
 	fmt.Println("Checking kubectl & kubernetes versions")
 	clientVersion, serverVersion, err := kubectl.GetVersionInfo(kubectlClient)
 	if clientVersion != "" {
@@ -300,7 +300,7 @@ type browser struct {
 }
 
 // sendError sends the error msg to UI.
-func sendError(errMsg string, opts options) {
+func sendError(errMsg string, opts *options) {
 	eventTypeFailed := "onboarding_failed"
 	response := errorResponse{
 		Type: eventTypeFailed,
