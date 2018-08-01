@@ -22,8 +22,32 @@ type WeaveCloud struct {
 }
 
 type WeaveCloudSpec struct {
-	// Fill me
+	General    GeneralSpec    `json:"general"`
+	Flux       FluxSpec       `json:"flux"`
+	Prometheus PrometheusSpec `json:"prometheus"`
+	Scope      ScopeSpec      `json:"scope"`
 }
+
 type WeaveCloudStatus struct {
 	// Fill me
+}
+
+type GeneralSpec struct {
+	Autoupdate  bool   `json:"autoUpdate,omitempty""`
+	Environment string `json:"environment,omitempty""`
+}
+
+type FluxSpec struct {
+	Disable bool `json:"disable,omitempty"`
+}
+
+type PrometheusSpec struct {
+	Disable         bool   `json:"disable,omitempty""`
+	PodScrapePolicy string `json:"podScrapePolicy,omitempty"`
+}
+
+type ScopeSpec struct {
+	Disable                  bool   `json:"disable,omitempty""`
+	ReadOnly                 bool   `json:"readOnly,omitempty"`
+	ContainerRuntimeEndpoint string `json:"containerRuntimeEndpoint,omitempty""`
 }
