@@ -63,6 +63,44 @@ func applyAgent(c kubectl.Client, opts *options) {
 	}
 }
 
+func createWeaveCloudSecret(c kubectl.Client, instance *weavecloud.Instance, opts *options) {
+	secretCreated, err := kubectl.CreateSecretFromLiteral(c, "weave", "weave-cloud", "token", opts.Token, opts.AssumeYes)
+	if err != nil {
+		exitWithCapture(opts, "There was an error creating the secret: %s\n", err)
+	}
+	if !secretCreated {
+		currentToken, err := kubectl.GetSecretValue(c, "weave", "weave-cloud", "token")
+		if err != nil {
+			exitWithCapture(opts, "There was an error checking the current secret: %s\n", err)
+		}
+		if currentToken != opts.Token {
+			wcOrgLookupURL, err := text.ResolveString(weavecloud.DefaultWCOrgLookupURLTemplate, opts)
+			if err != nil {
+				log.Fatal("invalid URL template:", err)
+			}
+
+			currentInstance, errCurrent := weavecloud.LookupInstanceByToken(wcOrgLookupURL, currentToken)
+			msg := "This cluster is currently connected to "
+			if errCurrent == nil {
+				msg += fmt.Sprintf("%q (id: %s) on Weave Cloud", currentInstance.Name, currentInstance.ID)
+			} else {
+				msg += "a different Weave Cloud instance."
+			}
+			confirmed, err := askForConfirmation(fmt.Sprintf(
+				"\n%s\nWould you like to continue and connect this cluster to %q (id: %s) instead?", msg, instance.Name, instance.ID))
+			if err != nil {
+				exitWithCapture(opts, "Could not ask for confirmation: %s\n", err)
+			} else if !confirmed {
+				exitWithCapture(opts, "Installation cancelled")
+			}
+			_, err = kubectl.CreateSecretFromLiteral(c, "weave", "weave-cloud", "token", opts.Token, true)
+			if err != nil {
+				exitWithCapture(opts, "There was an error creating the secret: %s\n", err)
+			}
+		}
+	}
+}
+
 func main() {
 	raven.CapturePanicAndWait(mainImpl, nil)
 }
@@ -154,37 +192,7 @@ func mainImpl() {
 		}
 	}
 
-	secretCreated, err := kubectl.CreateSecretFromLiteral(kubectlClient, "weave", "weave-cloud", "token", opts.Token, opts.AssumeYes)
-	if err != nil {
-		exitWithCapture(opts, "There was an error creating the secret: %s\n", err)
-	}
-	if !secretCreated {
-		currentToken, err := kubectl.GetSecretValue(kubectlClient, "weave", "weave-cloud", "token")
-		if err != nil {
-			exitWithCapture(opts, "There was an error checking the current secret: %s\n", err)
-		}
-		if currentToken != opts.Token {
-			currentInstance, errCurrent := weavecloud.LookupInstanceByToken(wcOrgLookupURL, currentToken)
-			msg := "This cluster is currently connected to "
-			if errCurrent == nil {
-				msg += fmt.Sprintf("%q (id: %s) on Weave Cloud", currentInstance.Name, currentInstance.ID)
-			} else {
-				msg += "a different Weave Cloud instance."
-			}
-			confirmed, err := askForConfirmation(fmt.Sprintf(
-				"\n%s\nWould you like to continue and connect this cluster to %q (id: %s) instead?", msg, instance.Name, instance.ID))
-			if err != nil {
-				exitWithCapture(opts, "Could not ask for confirmation: %s\n", err)
-			} else if !confirmed {
-				exitWithCapture(opts, "Installation cancelled")
-			}
-			_, err = kubectl.CreateSecretFromLiteral(kubectlClient, "weave", "weave-cloud", "token", opts.Token, true)
-			if err != nil {
-				exitWithCapture(opts, "There was an error creating the secret: %s\n", err)
-			}
-		}
-	}
-
+	createWeaveCloudSecret(kubectlClient, instance, opts)
 	applyAgent(kubectlClient, opts)
 
 	fmt.Println("Successfully installed.")
