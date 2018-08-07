@@ -83,7 +83,9 @@ func mainImpl() {
 		if err != nil {
 			log.Fatal("error detecting container runtime endpoint: ", err)
 		}
-		fmt.Println("Detected container runtime endpoint:", opts.CRIEndpoint)
+		if opts.CRIEndpoint != "" {
+			fmt.Printf("Detected container runtime endpoint: %s. To override the container runtime endpoint set the '--cri-endpoint=<ENDPOINT>' flag.", opts.CRIEndpoint)
+		}
 	}
 
 	agentK8sURL, err := text.ResolveString(agentK8sURLTemplate, opts)
