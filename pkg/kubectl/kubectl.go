@@ -408,35 +408,35 @@ func GetSecretValue(c Client, namespace, name, key string) (string, error) {
 	return string(valueBytes), nil
 }
 
-type Nodes struct {
-	Items []NodeItems `json:"items"`
+type nodes struct {
+	Items []nodeItems `json:"items"`
 }
 
-type NodeItems struct {
-	Status NodeStatus `json:"status"`
+type nodeItems struct {
+	Status nodeStatus `json:"status"`
 }
 
-type NodeStatus struct {
+type nodeStatus struct {
 	NodeInfo map[string]string `json:"nodeInfo"`
 }
 
 // GetContainerRuntimeName returns the container runtime name the node uses.
 func GetContainerRuntimeName(c Client) (string, error) {
-	var nodes Nodes
-	err := ExecuteJSON(c, &nodes, "get", "nodes", "-owide")
+	var n nodes
+	err := ExecuteJSON(c, &n, "get", "nodes", "-owide")
 	if err != nil {
 		return "", err
 	}
 
 	// Pick the first node and match based on that.
 	// It is unlikely that different nodes would have different container runtimes.
-	containerRuntimeVersion := nodes.Items[0].Status.NodeInfo["containerRuntimeVersion"]
+	containerRuntimeVersion := n.Items[0].Status.NodeInfo["containerRuntimeVersion"]
 
 	// split version from name
 	containerRuntimeName := strings.Split(containerRuntimeVersion, "://")[0]
 
 	if containerRuntimeName == "" {
-		return "", fmt.Errorf("Could not fetch Container Runtime name information, it was empty.")
+		return "", fmt.Errorf("could not fetch Container Runtime name information as it was empty")
 	}
 
 	return containerRuntimeName, nil
