@@ -1,3 +1,0 @@
-apiVersion: agent.cloud.weave.works/v1beta1
-kind: WeaveCloud
-projectName: weave-cloud-operator

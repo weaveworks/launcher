@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -9,13 +10,17 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"runtime"
 	"syscall"
 	"time"
 
 	raven "github.com/getsentry/raven-go"
 	"github.com/oklog/run"
+	sdk "github.com/operator-framework/operator-sdk/pkg/sdk"
+	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
+	"github.com/weaveworks/launcher/agent/pkg/controller"
 
 	apiv1 "k8s.io/api/core/v1"
 	kubeclient "k8s.io/client-go/kubernetes"
@@ -255,6 +260,8 @@ func mainImpl() {
 		})
 	}
 
+	setupCRD()
+
 	// Migrate kube system and reuse any existing flux config
 	existingFluxCfg := migrateKubeSystem(cfg.KubectlClient)
 	if existingFluxCfg != nil {
@@ -404,4 +411,39 @@ func getMajorMinorVersion(major, minor, gitVersion string) (string, error) {
 	}
 
 	return fmt.Sprintf("v%s.%s", major, minor), nil
+}
+
+func setupCRD() {
+	sdk.ExposeMetricsPort()
+
+	resource := "agent.cloud.weave.works/v1beta1"
+	kind := "WeaveCloud"
+	namespace := "weave"
+	resyncPeriod := 2
+	sdk.Watch(resource, kind, namespace, resyncPeriod)
+	sdk.Handle(NewHandler())
+	sdk.Run(context.TODO())
+
+}
+
+func NewHandler() sdk.Handler {
+	return &Handler{}
+}
+
+type Handler struct {
+	// Fill me
+}
+
+func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
+	switch o := event.Object.(type) {
+	case *v1beta1.WeaveCloud:
+		watch(o)
+	}
+	return nil
+}
+
+func watch(cr *v1beta1.WeaveCloud) {
+	fmt.Println("testing...")
+	fmt.Println("cr:")
+	fmt.Printf("%#+v\n", cr)
 }
