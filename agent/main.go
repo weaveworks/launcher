@@ -37,6 +37,9 @@ const (
 		"{{if .FluxConfig}}" +
 		"&git-label={{.FluxConfig.GitLabel}}&git-url={{.FluxConfig.GitURL}}" +
 		"&git-path={{.FluxConfig.GitPath}}&git-branch={{.FluxConfig.GitBranch}}" +
+		"{{end}}" +
+		"{{if .CRIEndpoint}}" +
+		"&cri-endpoint={{.CRIEndpoint}}" +
 		"{{end}}"
 	defaultCloudwatchURL = "https://{{.WCHostname}}/k8s/{{.KubernetesMajorMinorVersion}}/cloudwatch.yaml?" +
 		"aws-region={{.Region}}" +
@@ -61,6 +64,7 @@ type agentConfig struct {
 	KubeClient             *kubeclient.Clientset
 	KubectlClient          kubectl.Client
 	FluxConfig             *FluxConfig
+	CRIEndpoint            string
 
 	CMInformer     cache.SharedIndexInformer
 	SecretInformer cache.SharedIndexInformer
@@ -186,6 +190,7 @@ func mainImpl() {
 	agentRecoveryWait := flag.Duration("agent.recovery-wait", defaultAgentRecoveryWait, "Duration to wait before recovering from a failed self update")
 	reportErrors := flag.Bool("agent.report-errors", false, "Should the agent report errors to sentry")
 	address := flag.String("agent.address", ":8080", "agent HTTP address")
+	criEndpoint := flag.String("agent.cri-endpoint", "", "Container runtime endpoint of the Kubernetes cluster.")
 
 	wcToken := flag.String("wc.token", "", "Weave Cloud instance token")
 	wcPollInterval := flag.Duration("wc.poll-interval", 1*time.Hour, "Polling interval to check WC manifests")
@@ -216,6 +221,7 @@ func mainImpl() {
 		WCHostname:           *wcHostname,
 		AgentPollURLTemplate: *agentPollURLTemplate,
 		WCPollURLTemplate:    *wcPollURLTemplate,
+		CRIEndpoint:          *criEndpoint,
 	}
 	raven.SetTagsContext(map[string]string{
 		"weave_cloud_hostname": *wcHostname,
