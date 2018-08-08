@@ -79,3 +79,4 @@ items:
               - -wc.hostname={{.WCHostname}}
               - -wc.token=$(WEAVE_CLOUD_TOKEN)
               - -agent.report-errors=true
+              - -agent.cri-endpoint={{.CRIEndpoint}}
