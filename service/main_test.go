@@ -91,8 +91,7 @@ func TestBootstrapHandler(t *testing.T) {
 func TestAgentYAMLHandler(t *testing.T) {
 	agentManifest := "---\napiVersion: extensions/v1beta1"
 	handlers := &Handlers{
-		bootstrapVersion:  "aaa000",
-		agentManifestData: []byte(agentManifest),
+		bootstrapVersion: "aaa000",
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(handlers.agentYAML))
