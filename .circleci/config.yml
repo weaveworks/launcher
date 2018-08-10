@@ -41,6 +41,7 @@ jobs:
       - checkout
       - setup_remote_docker
       - run: make dep
+      - run: make service/static/agent.yaml
       - run: go test ./service
       - run: make service
       - deploy:

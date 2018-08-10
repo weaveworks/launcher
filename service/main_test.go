@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -89,13 +90,20 @@ func TestBootstrapHandler(t *testing.T) {
 }
 
 func TestAgentYAMLHandler(t *testing.T) {
-	agentManifest := "---\napiVersion: extensions/v1beta1"
+	data := &templateData{
+		CRIEndpoint: "",
+	}
+
 	handlers := &Handlers{
-		bootstrapVersion: "aaa000",
+		templateData: data,
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(handlers.agentYAML))
 	defer server.Close()
+
+	// Set cri-endpoint param
+	criEndpoint := "cri-endpoint=foobar"
+	server.URL = fmt.Sprintf("%s/?%s", server.URL, criEndpoint)
 
 	resp, err := http.Get(server.URL)
 	if err != nil {
@@ -106,13 +114,14 @@ func TestAgentYAMLHandler(t *testing.T) {
 		t.Fatalf("Expected 200 status code, got: %d", resp.StatusCode)
 	}
 
-	// Check install script data in body
+	// Check install data in body
 	actual, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if agentManifest != string(actual) {
-		t.Errorf("Expected body '%s', got: '%s'", agentManifest, actual)
+
+	if !strings.Contains(string(actual), criEndpoint) {
+		t.Errorf("Expected: %s in agent.yaml got: %v", criEndpoint, string(actual))
 	}
 
 	contentDisposition := resp.Header.Get("Content-Disposition")
@@ -125,6 +134,7 @@ func TestLoadData(t *testing.T) {
 	ctx := &templateData{
 		Scheme:           "https",
 		LauncherHostname: "hostname.test",
+		CRIEndpoint:      "",
 	}
 	// install.sh
 	installScriptData, err := loadData("./static/install.sh", ctx)
