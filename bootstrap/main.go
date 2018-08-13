@@ -26,7 +26,7 @@ import (
 const (
 	agentK8sURLTemplate = "{{.Scheme}}://{{.LauncherHostname}}/k8s/agent.yaml" +
 		"{{if .CRIEndpoint}}" +
-		"&cri-endpoint={{.CRIEndpoint}}" +
+		"?cri-endpoint={{.CRIEndpoint}}" +
 		"{{end}}"
 )
 
