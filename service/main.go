@@ -23,6 +23,7 @@ type templateData struct {
 	Scheme           string
 	LauncherHostname string
 	WCHostname       string
+	CRIEndpoint      string
 }
 
 var (
@@ -51,20 +52,18 @@ func main() {
 		Scheme:           *scheme,
 		LauncherHostname: *launcherHostname,
 		WCHostname:       *wcHostname,
+		CRIEndpoint:      "",
 	}
 	installScriptData, err := loadData(installScriptFile, data)
 	if err != nil {
 		log.Fatal("error reading installScriptFile:", err)
 	}
-	agentManifestData, err := loadData(*agentManifest, data)
-	if err != nil {
-		log.Fatal("error reading agentYAMLFile:", err)
-	}
 
 	handlers := &Handlers{
 		bootstrapVersion:  *bootstrapVersion,
 		installScriptData: installScriptData,
-		agentManifestData: agentManifestData,
+
+		templateData: data,
 	}
 
 	server, err := server.New(serverCfg)
@@ -95,7 +94,8 @@ func loadData(filename string, ctx *templateData) ([]byte, error) {
 type Handlers struct {
 	bootstrapVersion  string
 	installScriptData []byte
-	agentManifestData []byte
+
+	templateData *templateData
 }
 
 func (h *Handlers) install(w http.ResponseWriter, r *http.Request) {
@@ -122,6 +122,12 @@ func (h *Handlers) bootstrap(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) agentYAML(w http.ResponseWriter, r *http.Request) {
+	h.templateData.CRIEndpoint = r.URL.Query().Get("cri-endpoint")
+	agentManifestData, err := loadData(*agentManifest, h.templateData)
+	if err != nil {
+		log.Fatal("error reading agentYAMLFile:", err)
+	}
+
 	w.Header().Set("Content-Disposition", "attachment")
-	http.ServeContent(w, r, "agent.yaml", time.Time{}, bytes.NewReader(h.agentManifestData))
+	http.ServeContent(w, r, "agent.yaml", time.Time{}, bytes.NewReader(agentManifestData))
 }
