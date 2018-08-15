@@ -84,7 +84,7 @@ func mainImpl() {
 			log.Fatal("error detecting container runtime endpoint: ", err)
 		}
 		if opts.CRIEndpoint != "" {
-			fmt.Printf("Detected container runtime endpoint: %s. To override the container runtime endpoint set the '--cri-endpoint=<ENDPOINT>' flag.", opts.CRIEndpoint)
+			fmt.Printf("Detected container runtime endpoint: %s. To override the container runtime endpoint set the '--cri-endpoint=<ENDPOINT>' flag.\n", opts.CRIEndpoint)
 		}
 	}
 
