@@ -29,7 +29,10 @@ import (
 )
 
 const (
-	defaultAgentPollURL      = "https://get.weave.works/k8s/agent.yaml?instanceID={{.InstanceID}}"
+	defaultAgentPollURL = "https://get.weave.works/k8s/agent.yaml?instanceID={{.InstanceID}}" +
+		"{{if .CRIEndpoint}}" +
+		"&cri-endpoint={{.CRIEndpoint}}" +
+		"{{end}}"
 	defaultAgentRecoveryWait = 5 * time.Minute
 	defaultWCHostname        = "cloud.weave.works"
 	defaultWCPollURL         = "https://{{.WCHostname}}/k8s.yaml" +
