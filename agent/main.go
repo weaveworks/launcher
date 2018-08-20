@@ -114,7 +114,9 @@ func agentManifestURL(cfg *agentConfig) string {
 		q := url.Query()
 		q.Add("cri-endpoint", cfg.CRIEndpoint)
 
+		url.RawQuery = q.Encode()
 		agentPollURL = url.String()
+
 	}
 
 	return agentPollURL
