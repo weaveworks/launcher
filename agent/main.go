@@ -98,7 +98,7 @@ func logError(msg string, err error, cfg *agentConfig) {
 	}
 }
 
-func agentManifestURL(template string, cfg *agentConfig) string {
+func agentManifestURL(cfg *agentConfig) string {
 	agentPollURL, err := text.ResolveString(cfg.AgentPollURLTemplate, cfg)
 	if err != nil {
 		log.Fatal("invalid URL template: ", err)
@@ -122,7 +122,7 @@ func agentManifestURL(template string, cfg *agentConfig) string {
 
 func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 	// Self-update
-	agentPollURL := agentManifestURL(cfg.AgentPollURLTemplate, cfg)
+	agentPollURL := agentManifestURL(cfg)
 	log.Info("Updating self from ", agentPollURL)
 
 	initialRevision, err := k8s.GetLatestDeploymentReplicaSetRevision(cfg.KubeClient, "weave", "weave-agent")
