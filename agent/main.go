@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"regexp"
@@ -97,12 +98,31 @@ func logError(msg string, err error, cfg *agentConfig) {
 	}
 }
 
-func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
-	// Self-update
+func agentManifestURL(template string, cfg *agentConfig) string {
 	agentPollURL, err := text.ResolveString(cfg.AgentPollURLTemplate, cfg)
 	if err != nil {
 		log.Fatal("invalid URL template: ", err)
 	}
+
+	// Propagate the cri-endpoint to service.
+	if cfg.CRIEndpoint != "" {
+		url, err := url.Parse(agentPollURL)
+		if err != nil {
+			log.Fatal("couldn't parse agent URL: ", err)
+		}
+
+		q := url.Query()
+		q.Add("cri-endpoint", cfg.CRIEndpoint)
+
+		agentPollURL = url.String()
+	}
+
+	return agentPollURL
+}
+
+func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
+	// Self-update
+	agentPollURL := agentManifestURL(cfg.AgentPollURLTemplate, cfg)
 	log.Info("Updating self from ", agentPollURL)
 
 	initialRevision, err := k8s.GetLatestDeploymentReplicaSetRevision(cfg.KubeClient, "weave", "weave-agent")
