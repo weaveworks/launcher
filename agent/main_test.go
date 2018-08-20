@@ -2,8 +2,11 @@ package main
 
 import (
 	"errors"
+	"net/url"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetMinorMajorVersion(t *testing.T) {
@@ -37,4 +40,17 @@ func TestGetMinorMajorVersion(t *testing.T) {
 			t.Errorf("Version was wrongl expected: %s got %s", c.version, v)
 		}
 	}
+}
+
+func TestAgentManifestURL(t *testing.T) {
+	cfg := &agentConfig{
+		AgentPollURLTemplate: "https://get.weave.works/k8s/agent.yaml",
+		CRIEndpoint:          "/foo/bar",
+	}
+
+	manifestURL := agentManifestURL(cfg)
+	v := url.Values{
+		"cri-endpoint": []string{"/foo/bar"},
+	}
+	assert.Contains(t, manifestURL, v.Encode())
 }
