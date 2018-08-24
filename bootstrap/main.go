@@ -24,10 +24,7 @@ import (
 )
 
 const (
-	agentK8sURLTemplate = "{{.Scheme}}://{{.LauncherHostname}}/k8s/agent.yaml" +
-		"{{if .CRIEndpoint}}" +
-		"?cri-endpoint={{.CRIEndpoint}}" +
-		"{{end}}"
+	agentK8sURLTemplate = "{{.Scheme}}://{{.LauncherHostname}}/k8s/agent.yaml"
 )
 
 type options struct {
@@ -39,7 +36,6 @@ type options struct {
 	GKE              bool   `long:"gke" description:"Create clusterrolebinding for GKE instances"`
 	ReportErrors     bool   `long:"report-errors" description:"Should install errors be reported to sentry"`
 	SkipChecks       bool   `long:"skip-checks" description:"Skip pre-flight checks"`
-	CRIEndpoint      string `long:"cri-endpoint" description:"Set custom CRI container runtime endpoint. e.g.: 'unix:///var/run/crio/crio.sock'"`
 }
 
 func init() {
@@ -74,18 +70,6 @@ func mainImpl() {
 
 	if !kubectlClient.IsPresent() {
 		exitWithCapture(opts, "Could not find kubectl in PATH, please install it: https://kubernetes.io/docs/tasks/tools/install-kubectl/\n")
-	}
-
-	// If the user has not passed the container runtime endpoint
-	// we try our best to guess and log it.
-	if opts.CRIEndpoint == "" {
-		opts.CRIEndpoint, err = matchContainerRuntimeEndpoint(kubectlClient)
-		if err != nil {
-			log.Fatal("error detecting container runtime endpoint: ", err)
-		}
-		if opts.CRIEndpoint != "" {
-			fmt.Printf("Detected container runtime endpoint: %s. To override the container runtime endpoint set the '--cri-endpoint=<ENDPOINT>' flag.\n", opts.CRIEndpoint)
-		}
 	}
 
 	agentK8sURL, err := text.ResolveString(agentK8sURLTemplate, opts)
