@@ -14,7 +14,6 @@ import (
 
 	"github.com/blang/semver"
 	raven "github.com/getsentry/raven-go"
-
 	"github.com/jessevdk/go-flags"
 	"github.com/weaveworks/launcher/pkg/gcloud"
 	"github.com/weaveworks/launcher/pkg/kubectl"
@@ -24,7 +23,8 @@ import (
 )
 
 const (
-	agentK8sURLTemplate = "{{.Scheme}}://{{.LauncherHostname}}/k8s/agent.yaml"
+	agentK8sURLTemplate = "{{.Scheme}}://{{.LauncherHostname}}/k8s/agent.yaml" +
+		"{{if .ReadOnly}}?read-only=true{{end}}"
 )
 
 type options struct {
@@ -36,6 +36,7 @@ type options struct {
 	GKE              bool   `long:"gke" description:"Create clusterrolebinding for GKE instances"`
 	ReportErrors     bool   `long:"report-errors" description:"Should install errors be reported to sentry"`
 	SkipChecks       bool   `long:"skip-checks" description:"Skip pre-flight checks"`
+	ReadOnly         bool   `long:"read-only" description:"Disallow scope controls"`
 }
 
 func init() {
