@@ -24,6 +24,7 @@ type templateData struct {
 	LauncherHostname string
 	WCHostname       string
 	CRIEndpoint      string
+	ReadOnly         bool
 }
 
 var (
@@ -121,8 +122,17 @@ func (h *Handlers) bootstrap(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("%s/bootstrap/%s/%s", *bootstrapBaseURL, h.bootstrapVersion, filename), 301)
 }
 
+func boolFromParam(r *http.Request, param string) bool {
+	v := r.URL.Query().Get(param)
+	if v == "true" {
+		return true
+	}
+	return false
+}
+
 func (h *Handlers) agentYAML(w http.ResponseWriter, r *http.Request) {
 	h.templateData.CRIEndpoint = r.URL.Query().Get("cri-endpoint")
+	h.templateData.ReadOnly = boolFromParam(r, "read-only")
 	agentManifestData, err := loadData(*agentManifest, h.templateData)
 	if err != nil {
 		log.Fatal("error reading agentYAMLFile:", err)

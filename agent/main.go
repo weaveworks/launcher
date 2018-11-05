@@ -33,7 +33,8 @@ const (
 	defaultAgentPollURL = "https://get.weave.works/k8s/agent.yaml?instanceID={{.InstanceID}}" +
 		"{{if .CRIEndpoint}}" +
 		"&cri-endpoint={{.CRIEndpoint}}" +
-		"{{end}}"
+		"{{end}}" +
+		"&read-only={{.ReadOnly}}"
 	defaultAgentRecoveryWait = 5 * time.Minute
 	defaultWCHostname        = "cloud.weave.works"
 	defaultWCPollURL         = "https://{{.WCHostname}}/k8s.yaml" +
@@ -44,7 +45,8 @@ const (
 		"{{end}}" +
 		"{{if .CRIEndpoint}}" +
 		"&cri-endpoint={{.CRIEndpoint}}" +
-		"{{end}}"
+		"{{end}}" +
+		"&read-only={{.ReadOnly}}"
 	defaultCloudwatchURL = "https://{{.WCHostname}}/k8s/{{.KubernetesMajorMinorVersion}}/cloudwatch.yaml?" +
 		"aws-region={{.Region}}" +
 		"&aws-secret={{.SecretName}}" +
@@ -69,6 +71,7 @@ type agentConfig struct {
 	KubectlClient          kubectl.Client
 	FluxConfig             *FluxConfig
 	CRIEndpoint            string
+	ReadOnly               bool
 
 	CMInformer     cache.SharedIndexInformer
 	SecretInformer cache.SharedIndexInformer
@@ -98,6 +101,19 @@ func logError(msg string, err error, cfg *agentConfig) {
 	}
 }
 
+func addParameter(baseURL, param, value string) string {
+	url, err := url.Parse(baseURL)
+	if err != nil {
+		log.Fatal("couldn't parse URL: ", baseURL, err)
+	}
+
+	q := url.Query()
+	q.Add(param, value)
+
+	url.RawQuery = q.Encode()
+	return url.String()
+}
+
 func agentManifestURL(cfg *agentConfig) string {
 	agentPollURL, err := text.ResolveString(cfg.AgentPollURLTemplate, cfg)
 	if err != nil {
@@ -106,17 +122,12 @@ func agentManifestURL(cfg *agentConfig) string {
 
 	// Propagate the cri-endpoint to service.
 	if cfg.CRIEndpoint != "" {
-		url, err := url.Parse(agentPollURL)
-		if err != nil {
-			log.Fatal("couldn't parse agent URL: ", err)
-		}
+		agentPollURL = addParameter(agentPollURL, "cri-endpoint", cfg.CRIEndpoint)
+	}
 
-		q := url.Query()
-		q.Add("cri-endpoint", cfg.CRIEndpoint)
-
-		url.RawQuery = q.Encode()
-		agentPollURL = url.String()
-
+	// Propagate the read-only to service.
+	if cfg.ReadOnly {
+		agentPollURL = addParameter(agentPollURL, "read-only", "true")
 	}
 
 	return agentPollURL
@@ -216,6 +227,7 @@ func mainImpl() {
 	reportErrors := flag.Bool("agent.report-errors", false, "Should the agent report errors to sentry")
 	address := flag.String("agent.address", ":8080", "agent HTTP address")
 	criEndpoint := flag.String("agent.cri-endpoint", "", "Container runtime endpoint of the Kubernetes cluster.")
+	readOnly := flag.Bool("agent.read-only", false, "Disable scope controls")
 
 	wcToken := flag.String("wc.token", "", "Weave Cloud instance token")
 	wcPollInterval := flag.Duration("wc.poll-interval", 1*time.Hour, "Polling interval to check WC manifests")
@@ -247,6 +259,7 @@ func mainImpl() {
 		AgentPollURLTemplate: *agentPollURLTemplate,
 		WCPollURLTemplate:    *wcPollURLTemplate,
 		CRIEndpoint:          *criEndpoint,
+		ReadOnly:             *readOnly,
 	}
 	raven.SetTagsContext(map[string]string{
 		"weave_cloud_hostname": *wcHostname,
