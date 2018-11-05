@@ -98,6 +98,19 @@ func logError(msg string, err error, cfg *agentConfig) {
 	}
 }
 
+func addParameter(baseURL, param, value string) string {
+	url, err := url.Parse(baseURL)
+	if err != nil {
+		log.Fatal("couldn't parse URL: ", baseURL, err)
+	}
+
+	q := url.Query()
+	q.Add(param, value)
+
+	url.RawQuery = q.Encode()
+	return url.String()
+}
+
 func agentManifestURL(cfg *agentConfig) string {
 	agentPollURL, err := text.ResolveString(cfg.AgentPollURLTemplate, cfg)
 	if err != nil {
@@ -106,16 +119,7 @@ func agentManifestURL(cfg *agentConfig) string {
 
 	// Propagate the cri-endpoint to service.
 	if cfg.CRIEndpoint != "" {
-		url, err := url.Parse(agentPollURL)
-		if err != nil {
-			log.Fatal("couldn't parse agent URL: ", err)
-		}
-
-		q := url.Query()
-		q.Add("cri-endpoint", cfg.CRIEndpoint)
-
-		url.RawQuery = q.Encode()
-		agentPollURL = url.String()
+		agentPollURL = addParameter(agentPollURL, "cri-endpoint", cfg.CRIEndpoint)
 
 	}
 
