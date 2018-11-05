@@ -80,3 +80,4 @@ items:
               - -wc.token=$(WEAVE_CLOUD_TOKEN)
               - -agent.report-errors=true
               - -agent.cri-endpoint={{.CRIEndpoint}}
+              - -agent.read-only={{.ReadOnly}}
