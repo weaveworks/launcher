@@ -233,6 +233,7 @@ func mainImpl() {
 	wcPollInterval := flag.Duration("wc.poll-interval", 1*time.Hour, "Polling interval to check WC manifests")
 	wcPollURLTemplate := flag.String("wc.poll-url", defaultWCPollURL, "URL to poll for WC manifests")
 	wcOrgLookupURLTemplate := flag.String("wc.org-lookup-url", weavecloud.DefaultWCOrgLookupURLTemplate, "URL to lookup org external ID by token")
+	wcOrgPlatformVersionURLTemplate := flag.String("wc.org-platform-version-url", weavecloud.DefaultWCOrgPlatformVersionURLTemplate, "URL to update platform version by token")
 	wcHostname := flag.String("wc.hostname", defaultWCHostname, "WC Hostname for WC agents and users API")
 
 	eventsReportInterval := flag.Duration("events.report-interval", 3*time.Second, "Minimal time interval between two reports")
@@ -297,6 +298,15 @@ func mainImpl() {
 		raven.SetTagsContext(map[string]string{
 			"instance": cfg.InstanceID,
 		})
+	}
+
+	// Send local K8s version info to Weave Cloud
+	wcOrgPlatformVersionURL, err := text.ResolveString(*wcOrgPlatformVersionURLTemplate, cfg)
+	if err != nil {
+		log.Fatal("invalid URL template:", err)
+	}
+	if err = weavecloud.UpdateInstancePlatformVersionByToken(wcOrgPlatformVersionURL, *wcToken, cfg.KubernetesVersion); err != nil {
+		logError("update instance platform version by token", err, &agentConfig{})
 	}
 
 	// Migrate kube system and reuse any existing flux config
