@@ -1,6 +1,7 @@
 package weavecloud
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -42,4 +43,39 @@ func LookupInstanceByToken(apiURL, token string) (string, string, error) {
 	}
 
 	return instance.ExternalID, instance.Name, nil
+}
+
+type platformVersionUpdate struct {
+	PlatformVersion string `json:"platformVersion"`
+}
+
+// DefaultWCOrgPlatformVersionURLTemplate is the default URL template for UpdateInstancePlatformVersionByToken
+const DefaultWCOrgPlatformVersionURLTemplate = "https://{{.WCHostname}}/api/users/org/platform_version"
+
+// UpdateInstancePlatformVersionByToken updates the instance platform version given an instance token
+func UpdateInstancePlatformVersionByToken(apiURL, token, platformVersion string) error {
+	buf := &bytes.Buffer{}
+	platformInfo := platformVersionUpdate{PlatformVersion: platformVersion}
+	if err := json.NewEncoder(buf).Encode(platformInfo); err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, apiURL, buf)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return fmt.Errorf(resp.Status)
+	}
+
+	return nil
 }
