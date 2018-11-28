@@ -73,9 +73,7 @@ func UpdateInstancePlatformVersionByToken(apiURL, token, platformVersion string)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusUnauthorized {
-		return fmt.Errorf("Invalid token")
-	} else if resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return fmt.Errorf(resp.Status)
 	}
 
