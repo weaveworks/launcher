@@ -48,10 +48,18 @@ jobs:
       - deploy:
           name: Push image
           command: |
+            sudo apt-get update -qq
+            sudo apt-get -y -qq install python-pip
+            sudo pip install awscli # The apt package doesn't support --no-include-email
+            mkdir ~/.aws
+            echo $AWS_ECR_CREDENTIALS | base64 -d > ~/.aws/credentials
+            $(unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY && aws ecr get-login --no-include-email --region us-east-1)
             docker login -u "$DOCKER_REGISTRY_USER" -p "$DOCKER_REGISTRY_PASSWORD" quay.io
             if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
               docker push "quay.io/weaveworks/launcher-service:$(docker/image-tag)"
               docker push "quay.io/weaveworks/launcher-service"
+              docker tag "quay.io/weaveworks/launcher-service:$(docker/image-tag)" "664268111851.dkr.ecr.us-east-1.amazonaws.com/launcher-service:$(docker/image-tag)"
+              docker push "664268111851.dkr.ecr.us-east-1.amazonaws.com/launcher-service:$(docker/image-tag)"
             else
               docker tag "quay.io/weaveworks/launcher-service:$(docker/image-tag)" "quay.io/weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)"
               docker push "quay.io/weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)"
