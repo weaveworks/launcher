@@ -125,7 +125,7 @@ items:
                 - '--git-path=k8s/example'
                 - '--git-branch=master'
                 - '--git-label=example'
-              image: 'quay.io/weaveworks/flux:1.2.2'
+              image: 'weaveworks/flux:1.2.2'
               imagePullPolicy: IfNotPresent
               volumeMounts:
                 - name: git-key
