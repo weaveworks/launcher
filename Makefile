@@ -40,7 +40,7 @@ docker/Dockerfile.service: docker/Dockerfile.service.in Makefile
 build/.%.done: docker/Dockerfile.%
 	mkdir -p ./build/docker/$*
 	cp -r $^ ./build/docker/$*/
-	${DOCKER} build --build-arg=revision=$(GIT_HASH) -t quay.io/weaveworks/launcher-$* -t quay.io/weaveworks/launcher-$*:$(IMAGE_TAG) -f build/docker/$*/Dockerfile.$* ./build/docker/$*
+	${DOCKER} build --build-arg=revision=$(GIT_HASH) -t weaveworks/launcher-$* -t weaveworks/launcher-$*:$(IMAGE_TAG) -f build/docker/$*/Dockerfile.$* ./build/docker/$*
 	touch $@
 
 #
@@ -108,9 +108,9 @@ build/service: service/*.go
 service/static/agent.yaml: service/static/agent.yaml.in
 	@echo Generating $@
 	if [ -z "$${CIRCLECI}" -o \( -z "$${CIRCLE_TAG}" -a "$${CIRCLE_BRANCH}" = "master" \) ]; then \
-		sed -e 's|@@IMAGE_URL@@|quay.io/weaveworks/launcher-agent:$(IMAGE_TAG)|g' < $< > $@.tmp && mv $@.tmp $@; \
+		sed -e 's|@@IMAGE_URL@@|weaveworks/launcher-agent:$(IMAGE_TAG)|g' < $< > $@.tmp && mv $@.tmp $@; \
 	else \
-		sed -e 's|@@IMAGE_URL@@|quay.io/weaveworks/build-tmp-public:launcher-agent-$(IMAGE_TAG)|g' < $< > $@.tmp && mv $@.tmp $@; \
+		sed -e 's|@@IMAGE_URL@@|weaveworks/build-tmp-public:launcher-agent-$(IMAGE_TAG)|g' < $< > $@.tmp && mv $@.tmp $@; \
 	fi
 
 build/static: service/static/* service/static/agent.yaml

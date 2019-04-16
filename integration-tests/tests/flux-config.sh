@@ -39,7 +39,7 @@ kubectl apply -f $updated_service_yaml
 wait_for_service
 
 echo "• Install flux with some configuration"
-kubectl apply -f "https://cloud.weave.works/k8s/flux.yaml?t=${WEAVE_CLOUD_TOKEN}&k8s-version=$(kubectl version | base64 | tr -d '\n')&flux-version=%5E1&git-label=example&git-url=git%40github.com%3Aweaveworks%2Fexample&git-path=k8s%2Fexample&git-branch=example"
+kubectl apply -f "https://frontend.dev.weave.works/k8s/flux.yaml?t=${WEAVE_CLOUD_TOKEN}&k8s-version=$(kubectl version | base64 | tr -d '\n')&flux-version=%5E1&git-label=example&git-url=git%40github.com%3Aweaveworks%2Fexample&git-path=k8s%2Fexample&git-branch=example"
 
 echo "• Wait for weave-flux-agent to become ready"
 JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'
