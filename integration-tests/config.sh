@@ -2,8 +2,8 @@
 
 tests_root=$(dirname "$0")
 IMAGE_TAG=$(${tests_root}/../docker/image-tag)
-DEFAULT_SERVICE_IMAGE="quay.io/weaveworks/launcher-service:${IMAGE_TAG}"
-DEFAULT_NGINX_BOOTSTRAP_IMAGE="quay.io/weaveworks/launcher-nginx-bootstrap:${IMAGE_TAG}"
+DEFAULT_SERVICE_IMAGE="weaveworks/launcher-service:${IMAGE_TAG}"
+DEFAULT_NGINX_BOOTSTRAP_IMAGE="weaveworks/launcher-nginx-bootstrap:${IMAGE_TAG}"
 DEFAULT_BOOTSTRAP_BASE_URL="https://weaveworks-launcher.s3.amazonaws.com"
 
 # When run locally, we source bootstrap from a local nginx service

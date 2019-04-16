@@ -54,15 +54,15 @@ jobs:
             mkdir ~/.aws
             echo $AWS_ECR_CREDENTIALS | base64 -d > ~/.aws/credentials
             $(unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY && aws ecr get-login --no-include-email --region us-east-1)
-            docker login -u "$DOCKER_REGISTRY_USER" -p "$DOCKER_REGISTRY_PASSWORD" quay.io
+            docker login -u "$DOCKER_REGISTRY_USER" -p "$DOCKER_REGISTRY_PASSWORD"
             if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
-              docker push "quay.io/weaveworks/launcher-service:$(docker/image-tag)"
-              docker push "quay.io/weaveworks/launcher-service"
-              docker tag "quay.io/weaveworks/launcher-service:$(docker/image-tag)" "664268111851.dkr.ecr.us-east-1.amazonaws.com/launcher-service:$(docker/image-tag)"
+              docker push "weaveworks/launcher-service:$(docker/image-tag)"
+              docker push "weaveworks/launcher-service"
+              docker tag "weaveworks/launcher-service:$(docker/image-tag)" "664268111851.dkr.ecr.us-east-1.amazonaws.com/launcher-service:$(docker/image-tag)"
               docker push "664268111851.dkr.ecr.us-east-1.amazonaws.com/launcher-service:$(docker/image-tag)"
             else
-              docker tag "quay.io/weaveworks/launcher-service:$(docker/image-tag)" "quay.io/weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)"
-              docker push "quay.io/weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)"
+              docker tag "weaveworks/launcher-service:$(docker/image-tag)" "weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)"
+              docker push "weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)"
             fi
 
   agent:
@@ -76,15 +76,15 @@ jobs:
       - deploy:
           name: Push image
           command: |
-            docker login -u "$DOCKER_REGISTRY_USER" -p "$DOCKER_REGISTRY_PASSWORD" quay.io
+            docker login -u "$DOCKER_REGISTRY_USER" -p "$DOCKER_REGISTRY_PASSWORD"
             if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
-              docker push "quay.io/weaveworks/launcher-agent:$(docker/image-tag)"
-              docker push "quay.io/weaveworks/launcher-agent"
+              docker push "weaveworks/launcher-agent:$(docker/image-tag)"
+              docker push "weaveworks/launcher-agent"
             elif echo "${CIRCLE_TAG}" | grep -Eq "^[0-9]+(\.[0-9]+)*(-[a-z]+)?$"; then
-              docker push "quay.io/weaveworks/launcher-agent:${CIRCLE_TAG}"
+              docker push "weaveworks/launcher-agent:${CIRCLE_TAG}"
             else
-              docker tag "quay.io/weaveworks/launcher-agent:$(docker/image-tag)" "quay.io/weaveworks/build-tmp-public:launcher-agent-$(docker/image-tag)"
-              docker push "quay.io/weaveworks/build-tmp-public:launcher-agent-$(docker/image-tag)"
+              docker tag "weaveworks/launcher-agent:$(docker/image-tag)" "weaveworks/build-tmp-public:launcher-agent-$(docker/image-tag)"
+              docker push "weaveworks/build-tmp-public:launcher-agent-$(docker/image-tag)"
             fi
 
   integration_install_update_flow:
@@ -124,9 +124,9 @@ jobs:
           no_output_timeout: 2m
           command: |
             if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
-              export SERVICE_IMAGE="quay.io/weaveworks/launcher-service:$(docker/image-tag)"
+              export SERVICE_IMAGE="weaveworks/launcher-service:$(docker/image-tag)"
             else
-              export SERVICE_IMAGE=quay.io/weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
+              export SERVICE_IMAGE=weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
             fi
             ./integration-tests/tests/install-update-flow.sh
       - &failed_test
@@ -156,9 +156,9 @@ jobs:
             GOPATH: /home/circleci/.go_workspace
           command: |
             if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
-              export SERVICE_IMAGE="quay.io/weaveworks/launcher-service:$(docker/image-tag)"
+              export SERVICE_IMAGE="weaveworks/launcher-service:$(docker/image-tag)"
             else
-              export SERVICE_IMAGE=quay.io/weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
+              export SERVICE_IMAGE=weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
             fi
             ./integration-tests/tests/e2e.sh
             go test -v ./integration-tests/e2e -args -log.verbose
@@ -178,9 +178,9 @@ jobs:
           no_output_timeout: 2m
           command: |
             if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
-              export SERVICE_IMAGE="quay.io/weaveworks/launcher-service:$(docker/image-tag)"
+              export SERVICE_IMAGE="weaveworks/launcher-service:$(docker/image-tag)"
             else
-              export SERVICE_IMAGE=quay.io/weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
+              export SERVICE_IMAGE=weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
             fi
             ./integration-tests/tests/kube-system-migration.sh
       - <<: *failed_test
@@ -199,9 +199,9 @@ jobs:
           no_output_timeout: 2m
           command: |
             if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
-              export SERVICE_IMAGE="quay.io/weaveworks/launcher-service:$(docker/image-tag)"
+              export SERVICE_IMAGE="weaveworks/launcher-service:$(docker/image-tag)"
             else
-              export SERVICE_IMAGE=quay.io/weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
+              export SERVICE_IMAGE=weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
             fi
             ./integration-tests/tests/flux-config.sh
       - <<: *failed_test
@@ -227,9 +227,9 @@ jobs:
           no_output_timeout: 2m
           command: |
             if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
-              export SERVICE_IMAGE="quay.io/weaveworks/launcher-service:$(docker/image-tag)"
+              export SERVICE_IMAGE="weaveworks/launcher-service:$(docker/image-tag)"
             else
-              export SERVICE_IMAGE=quay.io/weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
+              export SERVICE_IMAGE=weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
             fi
             ./integration-tests/tests/gke.sh
       - <<: *failed_test
