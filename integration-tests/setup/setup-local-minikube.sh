@@ -24,7 +24,7 @@ echo "• Building agent image on minikube"
 echo "• Building nginx image serving bootstrap"
 dockerfile=$root/../build/Dockerfile.nginx-bootstrap
 cp $root/docker/Dockerfile.nginx-bootstrap ${dockerfile}
-docker build -t quay.io/weaveworks/launcher-nginx-bootstrap:${IMAGE_TAG} --build-arg version=${GIT_HASH} -f ${dockerfile} $root/../build/
+docker build -t weaveworks/launcher-nginx-bootstrap:${IMAGE_TAG} --build-arg version=${GIT_HASH} -f ${dockerfile} $root/../build/
 
 ###
 echo "• Starting nginx image serving bootstrap"

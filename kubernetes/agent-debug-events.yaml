@@ -29,7 +29,7 @@ items:
         spec:
           containers:
             - name: agent
-              image: quay.io/weaveworks/launcher-agent:latest
+              image: weaveworks/launcher-agent:latest
               imagePullPolicy: IfNotPresent
               ports:
               - containerPort: 8080
