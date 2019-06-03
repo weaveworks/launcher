@@ -261,6 +261,10 @@ jobs:
           name: Execute healthcheck for get.weave.works
           command: WEAVE_CLOUD_TOKEN=$PROD_INSTANCE_TOKEN ./integration-tests/tests/healthcheck.sh get.weave.works
       - <<: *failed_test
+      - run:
+          name: Increment failure count metric
+          command: |
+            echo -e '# TYPE launcher_e2e_test_failures_total counter\nlauncher_e2e_test_failures_total 1\n' | curl -H 'Content-Type: text/plain; version=0.0.4' --data-binary @- https://cloud.weave.works/api/ui/metrics
 
   sentry:
     <<: *defaults
