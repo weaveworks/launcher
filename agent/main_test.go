@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -37,7 +38,7 @@ func TestGetMinorMajorVersion(t *testing.T) {
 			return
 		}
 		if v != c.version {
-			t.Errorf("Version was wrongl expected: %s got %s", c.version, v)
+			t.Errorf("Version was wrong; expected: %s got %s", c.version, v)
 		}
 	}
 }
@@ -52,5 +53,36 @@ func TestAgentManifestURL(t *testing.T) {
 	v := url.Values{
 		"cri-endpoint": []string{"/foo/bar"},
 	}
+	assert.Contains(t, manifestURL, v.Encode())
+}
+
+func TestAgentFluxURL(t *testing.T) {
+	// Not an exhaustive test; just representative
+	gitPath := []string{"config/helloworld"}
+	memcachedService := ""
+	gitCISkip := false
+	gitTimeout := 40 * time.Second
+
+	fluxCfg := &FluxConfig{
+		GitPath:          gitPath,
+		MemcachedService: &memcachedService,
+		GitCISkip:        &gitCISkip,
+		GitTimeout:       &gitTimeout,
+	}
+
+	cfg := &agentConfig{
+		AgentPollURLTemplate: defaultWCPollURL,
+		FluxConfig:           fluxCfg,
+	}
+
+	manifestURL := agentManifestURL(cfg)
+
+	v := url.Values{
+		"git-path":          gitPath,
+		"memcached-service": []string{""},
+		"git-ci-skip":       []string{"false"},
+		"git-timeout":       []string{"40s"},
+	}
+
 	assert.Contains(t, manifestURL, v.Encode())
 }
