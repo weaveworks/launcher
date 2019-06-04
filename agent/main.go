@@ -40,8 +40,7 @@ const (
 	defaultWCPollURL         = "https://{{.WCHostname}}/k8s.yaml" +
 		"?k8s-version={{.KubernetesVersion}}&t={{.Token}}&omit-support-info=true" +
 		"{{if .FluxConfig}}" +
-		"&git-label={{.FluxConfig.GitLabel}}&git-url={{.FluxConfig.GitURL}}" +
-		"&git-path={{.FluxConfig.GitPath}}&git-branch={{.FluxConfig.GitBranch}}" +
+		"&{{.FluxConfig.AsQueryParams}}" +
 		"{{end}}" +
 		"{{if .CRIEndpoint}}" +
 		"&cri-endpoint={{.CRIEndpoint}}" +
