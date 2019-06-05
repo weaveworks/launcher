@@ -112,5 +112,9 @@ func getFluxConfig(k kubectl.Client, namespace string) (*FluxConfig, error) {
 		return nil, err
 	}
 
+	if cfg.AsQueryParams() == "" {
+		return nil, nil
+	}
+
 	return cfg, nil
 }
