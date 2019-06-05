@@ -38,7 +38,8 @@ Start by setting up a minikube instance to run the tests on:
 
 Run the tests:
 ```
-make integration-tests
+make
+make integration-tests WEAVE_CLOUD_TOKEN=<YOUR_TEST_INSTANCE_ON_FRONTEND.DEV.WEAVE.WORKS>
 ```
 
 This script will first ensure the dependencies are built and then run:
