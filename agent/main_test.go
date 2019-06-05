@@ -58,7 +58,7 @@ func TestAgentManifestURL(t *testing.T) {
 
 func TestAgentFluxURL(t *testing.T) {
 	// Not an exhaustive test; just representative
-	gitPath := []string{"config/helloworld"}
+	gitPath := []string{"config/helloworld", "config/hej-world"}
 	memcachedService := ""
 	gitCISkip := false
 	gitTimeout := 40 * time.Second
