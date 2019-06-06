@@ -86,3 +86,53 @@ func TestAgentFluxURL(t *testing.T) {
 
 	assert.Contains(t, manifestURL, v.Encode())
 }
+
+func TestParseFluxArgs(t *testing.T) {
+	// nothing
+	argString := ""
+	fluxCfg, err := ParseFluxArgs(argString)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "", fluxCfg.AsQueryParams())
+
+	// Test handling boolean flags w/out `=true|false`
+	argString = "--git-ci-skip"
+	fluxCfg, err = ParseFluxArgs(argString)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, true, *fluxCfg.GitCISkip)
+
+	// Test handling boolean flags w `=true|false`
+	argString = "--git-ci-skip=true"
+	fluxCfg, err = ParseFluxArgs(argString)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, true, *fluxCfg.GitCISkip)
+
+	argString = "--git-ci-skip=false"
+	fluxCfg, err = ParseFluxArgs(argString)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, false, *fluxCfg.GitCISkip)
+
+	// Test we only serialize props that we provided
+	argString = "--git-label=foo --git-path=derp"
+	fluxCfg, err = ParseFluxArgs(argString)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "foo", *fluxCfg.GitLabel)
+	assert.Equal(t, "git-label=foo&git-path=derp", fluxCfg.AsQueryParams())
+
+	// string[]
+	argString = "--git-path=zing --git-path=derp"
+	fluxCfg, err = ParseFluxArgs(argString)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "git-path=zing&git-path=derp", fluxCfg.AsQueryParams())
+
+	// unknown
+	argString = "--token=derp"
+	fluxCfg, err = ParseFluxArgs(argString)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "", fluxCfg.AsQueryParams())
+
+	// some unknown
+	argString = "--git-path=zing --token=derp"
+	fluxCfg, err = ParseFluxArgs(argString)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "git-path=zing", fluxCfg.AsQueryParams())
+}
