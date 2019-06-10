@@ -13,19 +13,19 @@ import (
 // FluxConfig stores existing flux arguments which will be used when updating WC agents
 type FluxConfig struct {
 	// git parameters
-	GitLabel *string
-	GitURL   *string
+	GitLabel string
+	GitURL   string
 	// This arg is multi-valued, or can be passed as comma-separated
 	// values. This accounts for either form.
 	GitPath         []string
-	GitBranch       *string
-	GitTimeout      *time.Duration
-	GitPollInterval *time.Duration
-	GitSetAuthor    *bool
-	GitCISkip       *bool
+	GitBranch       string
+	GitTimeout      time.Duration
+	GitPollInterval time.Duration
+	GitSetAuthor    bool
+	GitCISkip       bool
 
 	// sync behaviour
-	GarbageCollection *bool
+	GarbageCollection bool
 
 	// For specifying ECR region from outside AWS (fluxd detects it when inside AWS)
 	RegistryECRRegion []string
@@ -38,11 +38,13 @@ type FluxConfig struct {
 	// This is now hard-wired to empty in launch-generator, to tell flux
 	// _not_ to use service discovery. But: maybe someone needs to use
 	// service discovery.
-	MemcachedService *string
+	MemcachedService string
 
 	// Just in case we more explicitly support restricting Weave
 	// Cloud, or just Flux to particular namespaces
 	AllowNamespace []string
+
+	fs *pflag.FlagSet
 }
 
 // AsQueryParams returns the configuration as a fragment of query
@@ -56,14 +58,14 @@ func (c *FluxConfig) AsQueryParams() string {
 	}
 
 	// String-valued arguments
-	for arg, val := range map[string]*string{
+	for arg, val := range map[string]string{
 		"git-label":         c.GitLabel,
 		"git-url":           c.GitURL,
 		"git-branch":        c.GitBranch,
 		"memcached-service": c.MemcachedService,
 	} {
-		if val != nil {
-			vals.Add(arg, *val)
+		if c.fs.Changed(arg) {
+			vals.Add(arg, val)
 		}
 	}
 
@@ -81,59 +83,48 @@ func (c *FluxConfig) AsQueryParams() string {
 	}
 
 	// duration-valued arguments
-	for arg, dur := range map[string]*time.Duration{
+	for arg, dur := range map[string]time.Duration{
 		"git-timeout":       c.GitTimeout,
 		"git-poll-interval": c.GitPollInterval,
 	} {
-		if dur != nil {
+		if c.fs.Changed(arg) {
 			vals.Add(arg, dur.String())
 		}
 	}
 
-	for arg, flag := range map[string]*bool{
+	for arg, flag := range map[string]bool{
 		"sync-garbage-collection": c.GarbageCollection,
 		"git-set-author":          c.GitSetAuthor,
 		"git-ci-skip":             c.GitCISkip,
 	} {
-		if flag != nil {
-			vals.Add(arg, strconv.FormatBool(*flag))
+		if c.fs.Changed(arg) {
+			vals.Add(arg, strconv.FormatBool(flag))
 		}
 	}
 
 	return vals.Encode()
 }
 
-func isFlagPassed(fs *pflag.FlagSet, name string) bool {
-	found := false
-	fs.Visit(func(f *pflag.Flag) {
-		if f.Name == name {
-			found = true
-		}
-	})
-	return found
-}
-
 // ParseFluxArgs parses a string of args into a nice FluxConfig
 func ParseFluxArgs(argString string) (*FluxConfig, error) {
-	cfg := &FluxConfig{}
-
 	fs := pflag.NewFlagSet("default", pflag.ContinueOnError)
 	fs.ParseErrorsWhitelist.UnknownFlags = true
+	cfg := &FluxConfig{fs: fs}
 
 	// strings
-	cfg.GitLabel = fs.String("git-label", "", "")
-	cfg.GitURL = fs.String("git-url", "", "")
-	cfg.GitBranch = fs.String("git-branch", "", "")
-	cfg.MemcachedService = fs.String("memcached-service", "", "")
+	fs.StringVar(&cfg.GitLabel, "git-label", "", "")
+	fs.StringVar(&cfg.GitURL, "git-url", "", "")
+	fs.StringVar(&cfg.GitBranch, "git-branch", "", "")
+	fs.StringVar(&cfg.MemcachedService, "memcached-service", "", "")
 
 	// durations
-	cfg.GitTimeout = fs.Duration("git-timeout", time.Second, "")
-	cfg.GitPollInterval = fs.Duration("git-poll-interval", time.Minute, "")
+	fs.DurationVar(&cfg.GitTimeout, "git-timeout", time.Second, "")
+	fs.DurationVar(&cfg.GitPollInterval, "git-poll-interval", time.Minute, "")
 
 	// bools
-	cfg.GitSetAuthor = fs.Bool("git-set-author", false, "")
-	cfg.GitCISkip = fs.Bool("git-ci-skip", false, "")
-	cfg.GarbageCollection = fs.Bool("sync-garbage-collection", false, "")
+	fs.BoolVar(&cfg.GitSetAuthor, "git-set-author", false, "")
+	fs.BoolVar(&cfg.GitCISkip, "git-ci-skip", false, "")
+	fs.BoolVar(&cfg.GarbageCollection, "sync-garbage-collection", false, "")
 
 	// string slices
 	fs.StringSliceVar(&cfg.GitPath, "git-path", nil, "")
@@ -145,41 +136,10 @@ func ParseFluxArgs(argString string) (*FluxConfig, error) {
 	// Parse it all
 	fs.Parse(strings.Split(argString, " "))
 
-	// Cleanup anything that wasn't explicitly set
-	for arg, val := range map[string]**string{
-		"git-label":         &cfg.GitLabel,
-		"git-url":           &cfg.GitURL,
-		"git-branch":        &cfg.GitBranch,
-		"memcached-service": &cfg.MemcachedService,
-	} {
-		if !isFlagPassed(fs, arg) {
-			*val = nil
-		}
+	if fs.NFlag() > 0 {
+		return cfg, nil
 	}
-	for arg, val := range map[string]**time.Duration{
-		"git-timeout":       &cfg.GitTimeout,
-		"git-poll-interval": &cfg.GitPollInterval,
-	} {
-		if !isFlagPassed(fs, arg) {
-			*val = nil
-		}
-	}
-	for arg, val := range map[string]**bool{
-		"sync-garbage-collection": &cfg.GarbageCollection,
-		"git-set-author":          &cfg.GitSetAuthor,
-		"git-ci-skip":             &cfg.GitCISkip,
-	} {
-		if !isFlagPassed(fs, arg) {
-			*val = nil
-		}
-	}
-
-	// Did we find anything?
-	if cfg.AsQueryParams() == "" {
-		return nil, nil
-	}
-
-	return cfg, nil
+	return nil, nil
 }
 
 func getFluxConfig(k kubectl.Client, namespace string) (*FluxConfig, error) {

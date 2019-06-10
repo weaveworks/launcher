@@ -2,10 +2,11 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"reflect"
+	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -59,16 +60,11 @@ func TestAgentManifestURL(t *testing.T) {
 func TestAgentFluxURL(t *testing.T) {
 	// Not an exhaustive test; just representative
 	gitPath := []string{"config/helloworld", "config/hej-world"}
-	memcachedService := ""
-	gitCISkip := false
-	gitTimeout := 40 * time.Second
 
-	fluxCfg := &FluxConfig{
-		GitPath:          gitPath,
-		MemcachedService: &memcachedService,
-		GitCISkip:        &gitCISkip,
-		GitTimeout:       &gitTimeout,
-	}
+	argsStr := fmt.Sprintf(`--git-path=%s --memcached-service= --git-ci-skip=false --git-timeout=40s`, strings.Join(gitPath, ","))
+
+	fluxCfg, err := ParseFluxArgs(argsStr)
+	assert.NoError(t, err)
 
 	cfg := &agentConfig{
 		AgentPollURLTemplate: defaultWCPollURL,
@@ -98,24 +94,24 @@ func TestParseFluxArgs(t *testing.T) {
 	argString = "--git-ci-skip"
 	fluxCfg, err = ParseFluxArgs(argString)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, true, *fluxCfg.GitCISkip)
+	assert.Equal(t, true, fluxCfg.GitCISkip)
 
 	// Test handling boolean flags w `=true|false`
 	argString = "--git-ci-skip=true"
 	fluxCfg, err = ParseFluxArgs(argString)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, true, *fluxCfg.GitCISkip)
+	assert.Equal(t, true, fluxCfg.GitCISkip)
 
 	argString = "--git-ci-skip=false"
 	fluxCfg, err = ParseFluxArgs(argString)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, false, *fluxCfg.GitCISkip)
+	assert.Equal(t, false, fluxCfg.GitCISkip)
 
 	// Test we only serialize props that we provided
 	argString = "--git-label=foo --git-path=derp"
 	fluxCfg, err = ParseFluxArgs(argString)
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "foo", *fluxCfg.GitLabel)
+	assert.Equal(t, "foo", fluxCfg.GitLabel)
 	assert.Equal(t, "git-label=foo&git-path=derp", fluxCfg.AsQueryParams())
 
 	// string[]

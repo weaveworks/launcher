@@ -39,9 +39,7 @@ const (
 	defaultWCHostname        = "cloud.weave.works"
 	defaultWCPollURL         = "https://{{.WCHostname}}/k8s.yaml" +
 		"?k8s-version={{.KubernetesVersion}}&t={{.Token}}&omit-support-info=true" +
-		"{{if .FluxConfig}}" +
-		"&{{.FluxConfig.AsQueryParams}}" +
-		"{{end}}" +
+		"{{if .FluxConfig.AsQueryParams}}&{{.FluxConfig.AsQueryParams}}{{end}}" +
 		"{{if .CRIEndpoint}}" +
 		"&cri-endpoint={{.CRIEndpoint}}" +
 		"{{end}}" +
