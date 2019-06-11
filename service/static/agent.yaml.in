@@ -42,7 +42,7 @@ items:
       - kind: ServiceAccount
         name: weave-agent
         namespace: weave
-  - apiVersion: apps/v1beta1
+  - apiVersion: apps/v1
     kind: Deployment
     metadata:
       name: weave-agent
