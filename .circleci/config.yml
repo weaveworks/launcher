@@ -19,7 +19,7 @@ jobs:
       - checkout
       - run: make lint
       - run: make dep
-      - run: go test ./pkg/...
+      - run: go test $(go list ./pkg/... | grep -v /vendor/)
 
   bootstrap:
     <<: *defaults
