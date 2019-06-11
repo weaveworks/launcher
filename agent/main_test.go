@@ -131,4 +131,10 @@ func TestParseFluxArgs(t *testing.T) {
 	fluxCfg, err = ParseFluxArgs(argString)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "git-path=zing", fluxCfg.AsQueryParams())
+
+	// Preserves empty values
+	argString = "--memcached-service="
+	fluxCfg, err = ParseFluxArgs(argString)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "memcached-service=", fluxCfg.AsQueryParams())
 }
