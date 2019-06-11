@@ -9,8 +9,7 @@ notify:
 defaults: &defaults
   working_directory: /go/src/github.com/weaveworks/launcher
   docker:
-    # 1.10.0 and dnsName: https://github.com/golang/go/issues/23995
-    - image: circleci/golang:1.9
+    - image: circleci/golang:1.12
 
 jobs:
   global_tests:
@@ -19,7 +18,7 @@ jobs:
       - checkout
       - run: make lint
       - run: make dep
-      - run: go test $(go list ./pkg/... | grep -v /vendor/)
+      - run: go test ./pkg/...
 
   bootstrap:
     <<: *defaults

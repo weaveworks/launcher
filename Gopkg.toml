@@ -45,28 +45,36 @@
   name = "github.com/weaveworks/common"
 
 [[override]]
+  name = "gopkg.in/yaml.v2"
+  version = "v2.2.1"
+
+[[override]]
   name = "k8s.io/api"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.14.0"
 
 [[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.14.0"
 
 [[override]]
   name = "k8s.io/code-generator"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.14.0"
 
 [[override]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.14.0"
 
 [[override]]
   name = "k8s.io/apiextensions-apiserver"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.14.0"
 
 [[override]]
   name = "k8s.io/apiserver"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.14.0"
+
+[[override]]
+  name = "github.com/json-iterator/go"
+  revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
 
 [prune]
   go-tests = true
@@ -75,12 +83,6 @@
 [[constraint]]
   branch = "master"
   name = "github.com/getsentry/raven-go"
-
-# To use reference package:
-#   vendor/k8s.io/kubernetes/pkg/util/parsers/parsers.go:36:16: undefined: reference.ParseNormalizedNamed
-[[override]]
-  name = "github.com/docker/distribution"
-  branch = "master"
 
 # Pin to v0.9.0-pre1 until there is a more recent stable release:
 #   https://github.com/prometheus/client_golang/issues/375
