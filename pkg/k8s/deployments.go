@@ -11,7 +11,7 @@ import (
 // GetLatestDeploymentReplicaSetRevision gets the latest revision of replica sets of a deployment
 func GetLatestDeploymentReplicaSetRevision(kubeClient *kubeclient.Clientset, namespace, name string) (int64, error) {
 	// Based on https://github.com/kubernetes/kubernetes/blob/release-1.9/pkg/kubectl/history.go
-	versionedClient := kubeClient.ExtensionsV1beta1()
+	versionedClient := kubeClient.AppsV1()
 
 	deployment, err := versionedClient.Deployments(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
