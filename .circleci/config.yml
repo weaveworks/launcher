@@ -265,6 +265,7 @@ jobs:
           name: Increment failure count metric
           command: |
             echo -e '# TYPE launcher_e2e_test_failures_total counter\nlauncher_e2e_test_failures_total 1\n' | curl -H 'Content-Type: text/plain; version=0.0.4' --data-binary @- https://cloud.weave.works/api/ui/metrics
+          when: on_fail
 
   sentry:
     <<: *defaults
