@@ -12,6 +12,12 @@ defaults: &defaults
     # 1.10.0 and dnsName: https://github.com/golang/go/issues/23995
     - image: circleci/golang:1.9
 
+job_defaults: &job_defaults
+  requires:
+    - agent
+    - bootstrap
+    - service
+
 jobs:
   global_tests:
     <<: *defaults
@@ -87,10 +93,13 @@ jobs:
               docker push "weaveworks/build-tmp-public:launcher-agent-$(docker/image-tag)"
             fi
 
-  integration_install_update_flow:
+  integration_install_update_flow: &integration_install_update_flow
     machine: true
     environment:
       CHANGE_MINIKUBE_NONE_USER: true
+      KUBE_SERVER_VERSION: v1.9.4
+      KUBECTL_VERSION: v1.9.4
+      MINIKUBE_VERSION: v0.25.2
     steps:
       - checkout
       - &integration_deps
@@ -98,16 +107,16 @@ jobs:
           name: Install integration test dependencies
           command: |
             # Install kubectl
-            curl --retry 5 -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.9.4/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+            curl --retry 5 -Lo kubectl "https://storage.googleapis.com/kubernetes-release/release/$KUBECTL_VERSION/bin/linux/amd64/kubectl" && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
             # Install minikube
-            curl --retry 5 -Lo minikube https://storage.googleapis.com/minikube/releases/v0.25.2/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+            curl --retry 5 -Lo minikube "https://storage.googleapis.com/minikube/releases/$MINIKUBE_VERSION/minikube-linux-amd64" && chmod +x minikube && sudo mv minikube /usr/local/bin/
             # Install yq
             curl --retry 5 -Lo yq https://github.com/mikefarah/yq/releases/download/1.14.0/yq_linux_amd64 && chmod +x yq && sudo mv yq /usr/local/bin/
       - &start_minikube
         run:
           name: Start minikube
           command: |
-            sudo minikube start --vm-driver=none --kubernetes-version v1.9.4
+            sudo minikube start --vm-driver=none --kubernetes-version "$KUBE_SERVER_VERSION"
             sudo chown -R $USER.$USER ~/.minikube
             sudo chown -R $USER.$USER ~/.kube
             minikube update-context
@@ -137,6 +146,14 @@ jobs:
             kubectl get events --all-namespaces --field-selector=type=Warning
             kubectl logs -n weave -l=launcher=dns
           when: on_fail
+
+  integration_install_update_flow_1_14_2:
+    <<: *integration_install_update_flow
+    environment:
+      CHANGE_MINIKUBE_NONE_USER: true
+      KUBE_SERVER_VERSION: v1.14.2
+      KUBECTL_VERSION: v1.14.2
+      MINIKUBE_VERSION: latest
 
   integration_cloudwatch:
     machine: true
@@ -307,30 +324,17 @@ workflows:
       - bootstrap
       - service
       - integration_install_update_flow:
-          requires:
-            - agent
-            - bootstrap
-            - service
+          <<: &job_defaults
+      - integration_install_update_flow_1_14_2:
+          <<: &job_defaults
       - integration_cloudwatch:
-          requires:
-            - agent
-            - bootstrap
-            - service
+          <<: &job_defaults
       - integration_kube_system_migration:
-          requires:
-            - agent
-            - bootstrap
-            - service
+          <<: &job_defaults
       - integration_flux_config:
-          requires:
-            - agent
-            - bootstrap
-            - service
+          <<: &job_defaults
       - integration_gke:
-          requires:
-            - agent
-            - bootstrap
-            - service
+          <<: &job_defaults
       - sentry:
           filters:
             branches:
