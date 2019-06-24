@@ -153,7 +153,7 @@ jobs:
       CHANGE_MINIKUBE_NONE_USER: true
       KUBE_SERVER_VERSION: v1.14.2
       KUBECTL_VERSION: v1.14.2
-      MINIKUBE_VERSION: latest
+      MINIKUBE_VERSION: v1.1.1
 
   integration_cloudwatch:
     machine: true
