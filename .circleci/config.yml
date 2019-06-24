@@ -116,7 +116,7 @@ jobs:
         run:
           name: Start minikube
           command: |
-            sudo minikube start --vm-driver=none --kubernetes-version "$KUBE_SERVER_VERSION"
+            sudo minikube start --vm-driver=none --kubernetes-version "$KUBE_SERVER_VERSION" --extra-config=kubelet.cgroup-driver=systemd
             sudo chown -R $USER.$USER ~/.minikube
             sudo chown -R $USER.$USER ~/.kube
             minikube update-context
@@ -323,8 +323,8 @@ workflows:
               only: /[0-9]+(\.[0-9]+)*(-[a-z]+)?/
       - bootstrap
       - service
-      - integration_install_update_flow:
-          <<: *job_defaults
+      # - integration_install_update_flow:
+          # <<: *job_defaults
       - integration_install_update_flow_1_14_2:
           <<: *job_defaults
       # - integration_cloudwatch:
