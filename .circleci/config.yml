@@ -13,6 +13,22 @@ defaults: &defaults
     - image: circleci/golang:1.9
 
 job_defaults: &job_defaults
+  machine:
+    image: ubuntu-1604:201903-01
+  environment:
+    CHANGE_MINIKUBE_NONE_USER: true
+    KUBE_SERVER_VERSION: v1.9.4
+    KUBECTL_VERSION: v1.9.4
+    MINIKUBE_VERSION: v0.25.2
+
+job_environment_1_14_2: &job_environment_1_14_2
+  environment:
+    CHANGE_MINIKUBE_NONE_USER: true
+    KUBE_SERVER_VERSION: v1.14.2
+    KUBECTL_VERSION: v1.14.2
+    MINIKUBE_VERSION: v1.1.1
+
+workflow_job_defaults: &workflow_job_defaults
   requires:
     - agent
     - bootstrap
@@ -94,13 +110,7 @@ jobs:
             fi
 
   integration_install_update_flow: &integration_install_update_flow
-    machine:
-      image: ubuntu-1604:201903-01
-    environment:
-      CHANGE_MINIKUBE_NONE_USER: true
-      KUBE_SERVER_VERSION: v1.9.4
-      KUBECTL_VERSION: v1.9.4
-      MINIKUBE_VERSION: v0.25.2
+    <<: *job_defaults
     steps:
       - checkout
       - &integration_deps
@@ -148,18 +158,8 @@ jobs:
             kubectl logs -n weave -l=launcher=dns
           when: on_fail
 
-  integration_install_update_flow_1_14_2:
-    <<: *integration_install_update_flow
-    environment:
-      CHANGE_MINIKUBE_NONE_USER: true
-      KUBE_SERVER_VERSION: v1.14.2
-      KUBECTL_VERSION: v1.14.2
-      MINIKUBE_VERSION: v1.1.1
-
-  integration_cloudwatch:
-    machine: true
-    environment:
-      CHANGE_MINIKUBE_NONE_USER: true
+  integration_cloudwatch: &integration_cloudwatch
+    <<: *job_defaults
     working_directory: ~/.go_workspace/src/github.com/weaveworks/launcher
     steps:
       - checkout
@@ -182,10 +182,8 @@ jobs:
             go test -v ./integration-tests/e2e -args -log.verbose
       - <<: *failed_test
 
-  integration_kube_system_migration:
-    machine: true
-    environment:
-      CHANGE_MINIKUBE_NONE_USER: true
+  integration_kube_system_migration: &integration_kube_system_migration
+    <<: *job_defaults
     steps:
       - checkout
       - <<: *integration_deps
@@ -203,10 +201,8 @@ jobs:
             ./integration-tests/tests/kube-system-migration.sh
       - <<: *failed_test
 
-  integration_flux_config:
-    machine: true
-    environment:
-      CHANGE_MINIKUBE_NONE_USER: true
+  integration_flux_config: &integration_flux_config
+    <<: *job_defaults
     steps:
       - checkout
       - <<: *integration_deps
@@ -224,10 +220,8 @@ jobs:
             ./integration-tests/tests/flux-config.sh
       - <<: *failed_test
 
-  integration_gke:
-    machine: true
-    environment:
-      CHANGE_MINIKUBE_NONE_USER: true
+  integration_gke: &integration_gke
+    <<: *job_defaults
     steps:
       - checkout
       - <<: *integration_deps
@@ -252,10 +246,8 @@ jobs:
             ./integration-tests/tests/gke.sh
       - <<: *failed_test
 
-  healthcheck_dev:
-    machine: true
-    environment:
-      CHANGE_MINIKUBE_NONE_USER: true
+  healthcheck_dev: &healthcheck_dev
+    <<: *job_defaults
     steps:
       - checkout
       - <<: *integration_deps
@@ -266,10 +258,8 @@ jobs:
           command: WEAVE_CLOUD_TOKEN=$DEV_INSTANCE_TOKEN ./integration-tests/tests/healthcheck.sh get.dev.weave.works
       - <<: *failed_test
 
-  healthcheck_prod:
-    machine: true
-    environment:
-      CHANGE_MINIKUBE_NONE_USER: true
+  healthcheck_prod: &healthcheck_prod
+    <<: *job_defaults
     steps:
       - checkout
       - <<: *integration_deps
@@ -284,6 +274,34 @@ jobs:
           command: |
             echo -e '# TYPE launcher_e2e_test_failures_total counter\nlauncher_e2e_test_failures_total 1\n' | curl -H 'Content-Type: text/plain; version=0.0.4' --data-binary @- https://cloud.weave.works/api/ui/metrics
           when: on_fail
+
+  integration_kube_system_migration_1_14_2:
+    <<: *integration_kube_system_migration
+    <<: *job_environment_1_14_2
+
+  integration_install_update_flow_1_14_2:
+    <<: *integration_install_update_flow
+    <<: *job_environment_1_14_2
+
+  integration_cloudwatch_1_14_2:
+    <<: *integration_cloudwatch
+    <<: *job_environment_1_14_2
+
+  integration_flux_config_1_14_2:
+    <<: *integration_flux_config
+    <<: *job_environment_1_14_2
+
+  integration_gke_1_14_2:
+    <<: *integration_gke
+    <<: *job_environment_1_14_2
+
+  healthcheck_dev_1_14_2:
+    <<: *healthcheck_dev
+    <<: *job_environment_1_14_2
+
+  healthcheck_prod_1_14_2:
+    <<: *healthcheck_prod
+    <<: *job_environment_1_14_2
 
   sentry:
     <<: *defaults
@@ -324,18 +342,28 @@ workflows:
               only: /[0-9]+(\.[0-9]+)*(-[a-z]+)?/
       - bootstrap
       - service
-      # - integration_install_update_flow:
-          # <<: *job_defaults
+      # v1.9.4 jobs
+      - integration_install_update_flow:
+          <<: *workflow_job_defaults
+      - integration_cloudwatch:
+          <<: *workflow_job_defaults
+      - integration_kube_system_migration:
+          <<: *workflow_job_defaults
+      - integration_flux_config:
+          <<: *workflow_job_defaults
+      - integration_gke:
+          <<: *workflow_job_defaults
+      # v1.14.2 jobs
       - integration_install_update_flow_1_14_2:
-          <<: *job_defaults
-      # - integration_cloudwatch:
-          # <<: *job_defaults
-      # - integration_kube_system_migration:
-          # <<: *job_defaults
-      # - integration_flux_config:
-          # <<: *job_defaults
-      # - integration_gke:
-          # <<: *job_defaults
+          <<: *workflow_job_defaults
+      - integration_cloudwatch_1_14_2:
+          <<: *workflow_job_defaults
+      - integration_kube_system_migration_1_14_2:
+          <<: *workflow_job_defaults
+      - integration_flux_config_1_14_2:
+          <<: *workflow_job_defaults
+      - integration_gke_1_14_2:
+          <<: *workflow_job_defaults
       - sentry:
           filters:
             branches:
