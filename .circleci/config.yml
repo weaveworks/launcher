@@ -95,7 +95,7 @@ jobs:
 
   integration_install_update_flow: &integration_install_update_flow
     machine:
-      image: circleci/classic:edge
+      image: ubuntu-1604:201903-01
     environment:
       CHANGE_MINIKUBE_NONE_USER: true
       KUBE_SERVER_VERSION: v1.9.4
