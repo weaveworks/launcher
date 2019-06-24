@@ -324,17 +324,17 @@ workflows:
       - bootstrap
       - service
       - integration_install_update_flow:
-          <<: &job_defaults
+          <<: *job_defaults
       - integration_install_update_flow_1_14_2:
-          <<: &job_defaults
-      - integration_cloudwatch:
-          <<: &job_defaults
-      - integration_kube_system_migration:
-          <<: &job_defaults
-      - integration_flux_config:
-          <<: &job_defaults
-      - integration_gke:
-          <<: &job_defaults
+          <<: *job_defaults
+      # - integration_cloudwatch:
+          # <<: *job_defaults
+      # - integration_kube_system_migration:
+          # <<: *job_defaults
+      # - integration_flux_config:
+          # <<: *job_defaults
+      # - integration_gke:
+          # <<: *job_defaults
       - sentry:
           filters:
             branches:
