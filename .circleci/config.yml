@@ -94,7 +94,8 @@ jobs:
             fi
 
   integration_install_update_flow: &integration_install_update_flow
-    machine: true
+    machine:
+      image: circleci/classic:edge
     environment:
       CHANGE_MINIKUBE_NONE_USER: true
       KUBE_SERVER_VERSION: v1.9.4
@@ -116,7 +117,7 @@ jobs:
         run:
           name: Start minikube
           command: |
-            sudo minikube start --vm-driver=none --kubernetes-version "$KUBE_SERVER_VERSION" --extra-config=kubelet.cgroup-driver=systemd
+            sudo minikube start --vm-driver=none --kubernetes-version "$KUBE_SERVER_VERSION"
             sudo chown -R $USER.$USER ~/.minikube
             sudo chown -R $USER.$USER ~/.kube
             minikube update-context
