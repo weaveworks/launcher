@@ -17,23 +17,23 @@ integration_test_defaults: &integration_test_defaults
     image: ubuntu-1604:201903-01
   environment:
     CHANGE_MINIKUBE_NONE_USER: true
-    KUBE_SERVER_VERSION: v1.9.4
-    KUBECTL_VERSION: v1.9.4
-    MINIKUBE_VERSION: v0.25.2
+    KUBE_SERVER_VERSION: echo v1.9.4
+    KUBECTL_VERSION: echo v1.9.4
+    MINIKUBE_VERSION: echo v0.25.2
 
 job_environment_v1_14_2: &job_environment_v1_14_2
   environment:
     CHANGE_MINIKUBE_NONE_USER: true
-    KUBE_SERVER_VERSION: v1.14.2
-    KUBECTL_VERSION: v1.14.2
-    MINIKUBE_VERSION: latest
+    KUBE_SERVER_VERSION: echo v1.14.2
+    KUBECTL_VERSION: echo v1.14.2
+    MINIKUBE_VERSION: echo latest
 
 job_environment_vstable: &job_environment_vstable
   environment:
     CHANGE_MINIKUBE_NONE_USER: true
-    KUBE_SERVER_VERSION: (curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)
-    KUBECTL_VERSION: (curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)
-    MINIKUBE_VERSION: latest
+    KUBE_SERVER_VERSION: curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt
+    KUBECTL_VERSION: curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt
+    MINIKUBE_VERSION: echo latest
 
 workflow_job_defaults: &workflow_job_defaults
   requires:
@@ -125,16 +125,16 @@ jobs:
           name: Install integration test dependencies
           command: |
             # Install kubectl
-            curl --retry 5 -Lo kubectl "https://storage.googleapis.com/kubernetes-release/release/$KUBECTL_VERSION/bin/linux/amd64/kubectl" && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+            curl --retry 5 -Lo kubectl "https://storage.googleapis.com/kubernetes-release/release/$($KUBECTL_VERSION)/bin/linux/amd64/kubectl" && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
             # Install minikube
-            curl --retry 5 -Lo minikube "https://storage.googleapis.com/minikube/releases/$MINIKUBE_VERSION/minikube-linux-amd64" && chmod +x minikube && sudo mv minikube /usr/local/bin/
+            curl --retry 5 -Lo minikube "https://storage.googleapis.com/minikube/releases/$($MINIKUBE_VERSION)/minikube-linux-amd64" && chmod +x minikube && sudo mv minikube /usr/local/bin/
             # Install yq
             curl --retry 5 -Lo yq https://github.com/mikefarah/yq/releases/download/1.14.0/yq_linux_amd64 && chmod +x yq && sudo mv yq /usr/local/bin/
       - &start_minikube
         run:
           name: Start minikube
           command: |
-            sudo minikube start --vm-driver=none --kubernetes-version "$KUBE_SERVER_VERSION"
+            sudo minikube start --vm-driver=none --kubernetes-version "$($KUBE_SERVER_VERSION)"
             sudo chown -R $USER.$USER ~/.minikube
             sudo chown -R $USER.$USER ~/.kube
             minikube update-context
@@ -433,8 +433,8 @@ workflows:
                 - master
     jobs:
       - healthcheck_dev
-      - healthcheck_dev_v1_14_2
-      - healthcheck_dev_vstable
       - healthcheck_prod
+      - healthcheck_dev_v1_14_2
       - healthcheck_prod_v1_14_2
+      - healthcheck_dev_vstable
       - healthcheck_prod_vstable
