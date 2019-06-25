@@ -12,6 +12,35 @@ defaults: &defaults
     # 1.10.0 and dnsName: https://github.com/golang/go/issues/23995
     - image: circleci/golang:1.9
 
+integration_test_defaults: &integration_test_defaults
+  machine:
+    image: ubuntu-1604:201903-01
+  environment:
+    CHANGE_MINIKUBE_NONE_USER: true
+    KUBE_SERVER_VERSION: echo v1.9.4
+    KUBECTL_VERSION: echo v1.9.4
+    MINIKUBE_VERSION: echo v0.25.2
+
+job_environment_v1_14_2: &job_environment_v1_14_2
+  environment:
+    CHANGE_MINIKUBE_NONE_USER: true
+    KUBE_SERVER_VERSION: echo v1.14.2
+    KUBECTL_VERSION: echo v1.14.2
+    MINIKUBE_VERSION: echo latest
+
+job_environment_vstable: &job_environment_vstable
+  environment:
+    CHANGE_MINIKUBE_NONE_USER: true
+    KUBE_SERVER_VERSION: curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt
+    KUBECTL_VERSION: curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt
+    MINIKUBE_VERSION: echo latest
+
+workflow_job_defaults: &workflow_job_defaults
+  requires:
+    - agent
+    - bootstrap
+    - service
+
 jobs:
   global_tests:
     <<: *defaults
@@ -87,10 +116,8 @@ jobs:
               docker push "weaveworks/build-tmp-public:launcher-agent-$(docker/image-tag)"
             fi
 
-  integration_install_update_flow:
-    machine: true
-    environment:
-      CHANGE_MINIKUBE_NONE_USER: true
+  integration_install_update_flow: &integration_install_update_flow
+    <<: *integration_test_defaults
     steps:
       - checkout
       - &integration_deps
@@ -98,16 +125,16 @@ jobs:
           name: Install integration test dependencies
           command: |
             # Install kubectl
-            curl --retry 5 -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.9.4/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+            curl --retry 5 -Lo kubectl "https://storage.googleapis.com/kubernetes-release/release/$($KUBECTL_VERSION)/bin/linux/amd64/kubectl" && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
             # Install minikube
-            curl --retry 5 -Lo minikube https://storage.googleapis.com/minikube/releases/v0.25.2/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+            curl --retry 5 -Lo minikube "https://storage.googleapis.com/minikube/releases/$($MINIKUBE_VERSION)/minikube-linux-amd64" && chmod +x minikube && sudo mv minikube /usr/local/bin/
             # Install yq
             curl --retry 5 -Lo yq https://github.com/mikefarah/yq/releases/download/1.14.0/yq_linux_amd64 && chmod +x yq && sudo mv yq /usr/local/bin/
       - &start_minikube
         run:
           name: Start minikube
           command: |
-            sudo minikube start --vm-driver=none --kubernetes-version v1.9.4
+            sudo minikube start --vm-driver=none --kubernetes-version "$($KUBE_SERVER_VERSION)"
             sudo chown -R $USER.$USER ~/.minikube
             sudo chown -R $USER.$USER ~/.kube
             minikube update-context
@@ -138,10 +165,8 @@ jobs:
             kubectl logs -n weave -l=launcher=dns
           when: on_fail
 
-  integration_cloudwatch:
-    machine: true
-    environment:
-      CHANGE_MINIKUBE_NONE_USER: true
+  integration_cloudwatch: &integration_cloudwatch
+    <<: *integration_test_defaults
     working_directory: ~/.go_workspace/src/github.com/weaveworks/launcher
     steps:
       - checkout
@@ -164,10 +189,8 @@ jobs:
             go test -v ./integration-tests/e2e -args -log.verbose
       - <<: *failed_test
 
-  integration_kube_system_migration:
-    machine: true
-    environment:
-      CHANGE_MINIKUBE_NONE_USER: true
+  integration_kube_system_migration: &integration_kube_system_migration
+    <<: *integration_test_defaults
     steps:
       - checkout
       - <<: *integration_deps
@@ -185,10 +208,8 @@ jobs:
             ./integration-tests/tests/kube-system-migration.sh
       - <<: *failed_test
 
-  integration_flux_config:
-    machine: true
-    environment:
-      CHANGE_MINIKUBE_NONE_USER: true
+  integration_flux_config: &integration_flux_config
+    <<: *integration_test_defaults
     steps:
       - checkout
       - <<: *integration_deps
@@ -206,10 +227,8 @@ jobs:
             ./integration-tests/tests/flux-config.sh
       - <<: *failed_test
 
-  integration_gke:
-    machine: true
-    environment:
-      CHANGE_MINIKUBE_NONE_USER: true
+  integration_gke: &integration_gke
+    <<: *integration_test_defaults
     steps:
       - checkout
       - <<: *integration_deps
@@ -234,10 +253,8 @@ jobs:
             ./integration-tests/tests/gke.sh
       - <<: *failed_test
 
-  healthcheck_dev:
-    machine: true
-    environment:
-      CHANGE_MINIKUBE_NONE_USER: true
+  healthcheck_dev: &healthcheck_dev
+    <<: *integration_test_defaults
     steps:
       - checkout
       - <<: *integration_deps
@@ -248,10 +265,8 @@ jobs:
           command: WEAVE_CLOUD_TOKEN=$DEV_INSTANCE_TOKEN ./integration-tests/tests/healthcheck.sh get.dev.weave.works
       - <<: *failed_test
 
-  healthcheck_prod:
-    machine: true
-    environment:
-      CHANGE_MINIKUBE_NONE_USER: true
+  healthcheck_prod: &healthcheck_prod
+    <<: *integration_test_defaults
     steps:
       - checkout
       - <<: *integration_deps
@@ -266,6 +281,66 @@ jobs:
           command: |
             echo -e '# TYPE launcher_e2e_test_failures_total counter\nlauncher_e2e_test_failures_total 1\n' | curl -H 'Content-Type: text/plain; version=0.0.4' --data-binary @- https://cloud.weave.works/api/ui/metrics
           when: on_fail
+
+  # v1.14.2 jobs
+
+  integration_kube_system_migration_v1_14_2:
+    <<: *integration_kube_system_migration
+    <<: *job_environment_v1_14_2
+
+  integration_install_update_flow_v1_14_2:
+    <<: *integration_install_update_flow
+    <<: *job_environment_v1_14_2
+
+  integration_cloudwatch_v1_14_2:
+    <<: *integration_cloudwatch
+    <<: *job_environment_v1_14_2
+
+  integration_flux_config_v1_14_2:
+    <<: *integration_flux_config
+    <<: *job_environment_v1_14_2
+
+  integration_gke_v1_14_2:
+    <<: *integration_gke
+    <<: *job_environment_v1_14_2
+
+  healthcheck_dev_v1_14_2:
+    <<: *healthcheck_dev
+    <<: *job_environment_v1_14_2
+
+  healthcheck_prod_v1_14_2:
+    <<: *healthcheck_prod
+    <<: *job_environment_v1_14_2
+
+  # vstable jobs
+
+  integration_kube_system_migration_vstable:
+    <<: *integration_kube_system_migration
+    <<: *job_environment_vstable
+
+  integration_install_update_flow_vstable:
+    <<: *integration_install_update_flow
+    <<: *job_environment_vstable
+
+  integration_cloudwatch_vstable:
+    <<: *integration_cloudwatch
+    <<: *job_environment_vstable
+
+  integration_flux_config_vstable:
+    <<: *integration_flux_config
+    <<: *job_environment_vstable
+
+  integration_gke_vstable:
+    <<: *integration_gke
+    <<: *job_environment_vstable
+
+  healthcheck_dev_vstable:
+    <<: *healthcheck_dev
+    <<: *job_environment_vstable
+
+  healthcheck_prod_vstable:
+    <<: *healthcheck_prod
+    <<: *job_environment_vstable
 
   sentry:
     <<: *defaults
@@ -306,31 +381,43 @@ workflows:
               only: /[0-9]+(\.[0-9]+)*(-[a-z]+)?/
       - bootstrap
       - service
+
+      # v1.9.4 jobs
       - integration_install_update_flow:
-          requires:
-            - agent
-            - bootstrap
-            - service
+          <<: *workflow_job_defaults
       - integration_cloudwatch:
-          requires:
-            - agent
-            - bootstrap
-            - service
+          <<: *workflow_job_defaults
       - integration_kube_system_migration:
-          requires:
-            - agent
-            - bootstrap
-            - service
+          <<: *workflow_job_defaults
       - integration_flux_config:
-          requires:
-            - agent
-            - bootstrap
-            - service
+          <<: *workflow_job_defaults
       - integration_gke:
-          requires:
-            - agent
-            - bootstrap
-            - service
+          <<: *workflow_job_defaults
+
+      # v1.14.2 jobs
+      - integration_install_update_flow_v1_14_2:
+          <<: *workflow_job_defaults
+      - integration_cloudwatch_v1_14_2:
+          <<: *workflow_job_defaults
+      - integration_kube_system_migration_v1_14_2:
+          <<: *workflow_job_defaults
+      - integration_flux_config_v1_14_2:
+          <<: *workflow_job_defaults
+      - integration_gke_v1_14_2:
+          <<: *workflow_job_defaults
+
+      # vstable jobs
+      - integration_install_update_flow_vstable:
+          <<: *workflow_job_defaults
+      - integration_cloudwatch_vstable:
+          <<: *workflow_job_defaults
+      - integration_kube_system_migration_vstable:
+          <<: *workflow_job_defaults
+      - integration_flux_config_vstable:
+          <<: *workflow_job_defaults
+      - integration_gke_vstable:
+          <<: *workflow_job_defaults
+
       - sentry:
           filters:
             branches:
@@ -347,3 +434,29 @@ workflows:
     jobs:
       - healthcheck_dev
       - healthcheck_prod
+      - healthcheck_dev_v1_14_2
+      - healthcheck_prod_v1_14_2
+      - healthcheck_dev_vstable
+      - healthcheck_prod_vstable
+
+  # re-run $stable jobs once a day as a new
+  # version of kubernetes might have been released
+  stable_kubernetes_still_works:
+    triggers:
+      - schedule:
+          cron: "0 0 * * *"
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - integration_install_update_flow_vstable:
+          <<: *workflow_job_defaults
+      - integration_cloudwatch_vstable:
+          <<: *workflow_job_defaults
+      - integration_kube_system_migration_vstable:
+          <<: *workflow_job_defaults
+      - integration_flux_config_vstable:
+          <<: *workflow_job_defaults
+      - integration_gke_vstable:
+          <<: *workflow_job_defaults
