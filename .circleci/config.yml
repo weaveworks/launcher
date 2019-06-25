@@ -438,3 +438,25 @@ workflows:
       - healthcheck_prod_v1_14_2
       - healthcheck_dev_vstable
       - healthcheck_prod_vstable
+
+  # re-run $stable jobs once a day as a new
+  # version of kubernetes might have been released
+  stable_kubernetes_still_works:
+    triggers:
+      - schedule:
+          cron: "0 0 * * *"
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - integration_install_update_flow_vstable:
+          <<: *workflow_job_defaults
+      - integration_cloudwatch_vstable:
+          <<: *workflow_job_defaults
+      - integration_kube_system_migration_vstable:
+          <<: *workflow_job_defaults
+      - integration_flux_config_vstable:
+          <<: *workflow_job_defaults
+      - integration_gke_vstable:
+          <<: *workflow_job_defaults
