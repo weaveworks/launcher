@@ -143,7 +143,7 @@ func ParseFluxArgs(argString string) (*FluxConfig, error) {
 }
 
 func getFluxConfig(k kubectl.Client, namespace string) (*FluxConfig, error) {
-	out, err := k.Execute("get", "pod", "-n", namespace, "-l", "name=weave-flux-agent", "-o", "jsonpath='{.items[?(@.metadata.labels.name==\"weave-flux-agent\")].spec.containers[0].args[*]}'")
+	out, err := k.Execute("get", "deploy", "-n", namespace, "-l", "name=weave-flux-agent", "-o", "jsonpath='{.items[?(@.metadata.labels.name==\"weave-flux-agent\")].spec.template.spec.containers[0].args[*]}'")
 	if err != nil {
 		return nil, err
 	}
