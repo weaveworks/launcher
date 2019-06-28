@@ -77,7 +77,7 @@ func (c *FluxConfig) AsQueryParams() string {
 		"registry-exclude-image": c.RegistryExcludeImage,
 		"k8s-allow-namespace":    c.AllowNamespace,
 	} {
-		for _, val := range slice {
+		for _, val := range deduplicate(slice) {
 			vals.Add(arg, val)
 		}
 	}
@@ -149,4 +149,20 @@ func getFluxConfig(k kubectl.Client, namespace string) (*FluxConfig, error) {
 	}
 
 	return ParseFluxArgs(out)
+}
+
+func deduplicate(s []string) []string {
+	if len(s) <= 1 {
+		return s
+	}
+
+	res := []string{}
+	seen := make(map[string]bool)
+	for _, val := range s {
+		if _, ok := seen[val]; !ok {
+			res = append(res, val)
+			seen[val] = true
+		}
+	}
+	return res
 }
