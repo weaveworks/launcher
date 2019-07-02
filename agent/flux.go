@@ -142,6 +142,63 @@ func ParseFluxArgs(argString string) (*FluxConfig, error) {
 	return nil, nil
 }
 
+// MemcachedConfig stores existing memcached arguments which will be
+// used when updating WC agents
+type MemcachedConfig struct {
+	// Memory holds the -m argument value,
+	// MB memory max to use for object storage
+	Memory string
+	// ItemSizeLimits holds the -I argument value,
+	// the default size of each slab page, default is 1m,
+	// minimum is 1k, max is 128m.
+	ItemSizeLimit string
+
+	fs *pflag.FlagSet
+}
+
+// AsQueryParams returns the configuration as a fragment of query
+// string, so it can be interpolated into a text template.
+func (c *MemcachedConfig) AsQueryParams() string {
+	// Nothing clever here.
+	vals := url.Values{}
+
+	if c == nil {
+		return ""
+	}
+
+	// String-valued arguments
+	for arg, val := range map[string]string{
+		"memcached-memory":    c.Memory,
+		"memcached-item-size": c.ItemSizeLimit,
+	} {
+		if c.fs.Changed(arg) {
+			vals.Add(arg, val)
+		}
+	}
+
+	return vals.Encode()
+}
+
+// ParseMemcachedArgs parses a string of args into a nice
+// MemcachedConfig
+func ParseMemcachedArgs(argString string) (*MemcachedConfig, error) {
+	fs := pflag.NewFlagSet("default", pflag.ContinueOnError)
+	fs.ParseErrorsWhitelist.UnknownFlags = true
+	cmg := &MemcachedConfig{fs: fs}
+
+	// strings
+	fs.StringVarP(&cmg.Memory, "memcached-memory", "m", "", "")
+	fs.StringVarP(&cmg.ItemSizeLimit, "memcached-item-size", "I", "", "")
+
+	// Parse it all
+	fs.Parse(strings.Split(argString, " "))
+
+	if fs.NFlag() > 0 {
+		return cmg, nil
+	}
+	return nil, nil
+}
+
 func getFluxConfig(k kubectl.Client, namespace string) (*FluxConfig, error) {
 	out, err := k.Execute("get", "deploy", "-n", namespace, "-l", "name=weave-flux-agent", "-o", "jsonpath='{.items[?(@.metadata.labels.name==\"weave-flux-agent\")].spec.template.spec.containers[0].args[*]}'")
 	if err != nil {
@@ -149,6 +206,15 @@ func getFluxConfig(k kubectl.Client, namespace string) (*FluxConfig, error) {
 	}
 
 	return ParseFluxArgs(out)
+}
+
+func getMemcachedConfig(k kubectl.Client, namespace string) (*MemcachedConfig, error) {
+	out, err := k.Execute("get", "deploy", "-n", namespace, "-l", "name=weave-flux-memcached", "-o", "jsonpath='{.items[?(@.metadata.labels.name==\"weave-flux-memcached\")].spec.template.spec.containers[0].args[*]}'")
+	if err != nil {
+		return nil, err
+	}
+
+	return ParseMemcachedArgs(out)
 }
 
 func deduplicate(s []string) []string {

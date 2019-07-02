@@ -40,6 +40,7 @@ const (
 	defaultWCPollURL         = "https://{{.WCHostname}}/k8s.yaml" +
 		"?k8s-version={{.KubernetesVersion}}&t={{.Token}}&omit-support-info=true" +
 		"{{if .FluxConfig.AsQueryParams}}&{{.FluxConfig.AsQueryParams}}{{end}}" +
+		"{{if .MemcachedConfig.AsQueryParams}}&{{.MemcachedConfig.AsQueryParams}}{{end}}" +
 		"{{if .CRIEndpoint}}" +
 		"&cri-endpoint={{.CRIEndpoint}}" +
 		"{{end}}" +
@@ -67,6 +68,7 @@ type agentConfig struct {
 	KubeClient             *kubeclient.Clientset
 	KubectlClient          kubectl.Client
 	FluxConfig             *FluxConfig
+	MemcachedConfig        *MemcachedConfig
 	CRIEndpoint            string
 	ReadOnly               bool
 
@@ -185,6 +187,15 @@ func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
 	}
 	if fluxCfg != nil {
 		cfg.FluxConfig = fluxCfg
+	}
+
+	// Get existing flux memcached config
+	memcachedCfg, err := getMemcachedConfig(cfg.KubectlClient, "weave")
+	if err != nil {
+		logError("Failed getting existing flux memcached config", err, cfg)
+	}
+	if memcachedCfg != nil {
+		cfg.MemcachedConfig = memcachedCfg
 	}
 
 	// Update Weave Cloud agents
