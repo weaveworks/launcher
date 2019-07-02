@@ -83,6 +83,27 @@ func TestAgentFluxURL(t *testing.T) {
 	assert.Contains(t, manifestURL, v.Encode())
 }
 
+func TestAgentMemcachedURL(t *testing.T) {
+	argsStr := "-m 1024 -p 11211 -I 10m"
+
+	memcachedCfg, err := ParseMemcachedArgs(argsStr)
+	assert.NoError(t, err)
+
+	cfg := &agentConfig{
+		AgentPollURLTemplate: defaultWCPollURL,
+		MemcachedConfig:      memcachedCfg,
+	}
+
+	manifestURL := agentManifestURL(cfg)
+
+	v := url.Values{
+		"memcached-memory":    []string{"1024"},
+		"memcached-item-size": []string{"10m"},
+	}
+
+	assert.Contains(t, manifestURL, v.Encode())
+}
+
 func TestParseFluxArgs(t *testing.T) {
 	// nothing
 	argString := ""
@@ -143,4 +164,31 @@ func TestParseFluxArgs(t *testing.T) {
 	fluxCfg, err = ParseFluxArgs(argString)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "memcached-service=", fluxCfg.AsQueryParams())
+}
+
+func TestParseMemcachedArgs(t *testing.T) {
+	// nothing
+	argString := ""
+	memcachedCfg, err := ParseMemcachedArgs(argString)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "", memcachedCfg.AsQueryParams())
+
+	// Test we only serialize props that we provided
+	argString = "-m 1024 -I 10m"
+	memcachedCfg, err = ParseMemcachedArgs(argString)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "1024", memcachedCfg.Memory)
+	assert.Equal(t, "memcached-item-size=10m&memcached-memory=1024", memcachedCfg.AsQueryParams())
+
+	// unknown
+	argString = "-p 11211"
+	memcachedCfg, err = ParseMemcachedArgs(argString)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "", memcachedCfg.AsQueryParams())
+
+	// some unknown
+	argString = "-m 1024 -p 11211"
+	memcachedCfg, err = ParseMemcachedArgs(argString)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "memcached-memory=1024", memcachedCfg.AsQueryParams())
 }
