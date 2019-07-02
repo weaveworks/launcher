@@ -120,6 +120,12 @@ func TestParseFluxArgs(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "git-path=zing&git-path=derp", fluxCfg.AsQueryParams())
 
+	// string[] with duplicates
+	argString = "--git-path=zing --git-path=derp --git-path=zing"
+	fluxCfg, err = ParseFluxArgs(argString)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "git-path=zing&git-path=derp", fluxCfg.AsQueryParams())
+
 	// unknown
 	argString = "--token=derp"
 	fluxCfg, err = ParseFluxArgs(argString)
