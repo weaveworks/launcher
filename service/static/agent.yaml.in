@@ -42,13 +42,16 @@ items:
       - kind: ServiceAccount
         name: weave-agent
         namespace: weave
-  - apiVersion: apps/v1beta1
+  - apiVersion: apps/v1
     kind: Deployment
     metadata:
       name: weave-agent
       namespace: weave
     spec:
       replicas: 1
+      selector:
+        matchLabels:
+          name: weave-agent
       # Wait 30 seconds to see if new version crashes before rolling next pod
       minReadySeconds: 30
       # Rolling update with 1 new instance added before removing any old instances
