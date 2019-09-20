@@ -71,6 +71,8 @@ run_self_update_test () {
     echo "• Check the agent updated correctly"
     if [[ $(kubectl get pods -n weave -l name=weave-agent -o jsonpath="{.items[0].metadata.labels.newLabel}") != "foo" ]]; then
         echo "Failed to self update. Label newLabel=foo does not exist."
+        echo "Logs from weave-agent pods:"
+        kubectl logs -n weave -l name=weave-agent
         exit 1
     fi
 }

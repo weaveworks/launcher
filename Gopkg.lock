@@ -50,14 +50,16 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:0c96723229ea95763787eda71768de13d24e856c351549dfe44310b9b80422a3"
+  branch = "master"
+  digest = "1:a34bbf57784a63bc2f4987edbf9deb8654396fc8b6663eceb300d163f42f59f8"
   name = "github.com/dlespiau/kube-test-harness"
   packages = [
     ".",
     "logger",
+    "testing",
   ]
   pruneopts = "UT"
-  revision = "6dfa02a8c9926e2caffa14aa405dd699363bd9d3"
+  revision = "17e399757ec17d609a8707cc9764366544a48260"
 
 [[projects]]
   branch = "master"

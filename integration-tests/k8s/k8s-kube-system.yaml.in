@@ -43,7 +43,7 @@ items:
     metadata:
       name: flux-git-deploy
     type: Opaque
-  - apiVersion: apps/v1beta1
+  - apiVersion: apps/v1
     kind: Deployment
     metadata:
       name: weave-flux-memcached
@@ -54,6 +54,12 @@ items:
         weave-flux-component: memcached
     spec:
       replicas: 1
+      selector:
+        matchLabels:
+          name: weave-flux-memcached
+          app: weave-flux
+          weave-cloud-component: flux
+          weave-flux-component: memcached
       template:
         metadata:
           annotations:
@@ -93,7 +99,7 @@ items:
         app: weave-flux
         weave-cloud-component: flux
         weave-flux-component: memcached
-  - apiVersion: apps/v1beta1
+  - apiVersion: apps/v1
     kind: Deployment
     metadata:
       name: weave-flux-agent
@@ -104,6 +110,12 @@ items:
         weave-flux-component: agent
     spec:
       replicas: 1
+      selector:
+        matchLabels:
+          name: weave-flux-agent
+          app: weave-flux
+          weave-cloud-component: flux
+          weave-flux-component: agent
       strategy:
         type: Recreate
       template:
@@ -172,7 +184,7 @@ items:
       - kind: ServiceAccount
         name: weave-scope
         namespace: kube-system
-  - apiVersion: extensions/v1beta1
+  - apiVersion: apps/v1
     kind: DaemonSet
     metadata:
       name: weave-scope-agent
@@ -182,6 +194,12 @@ items:
         weave-cloud-component: scope
         weave-scope-component: agent
     spec:
+      selector:
+        matchLabels:
+          name: weave-scope-agent
+          app: weave-scope
+          weave-cloud-component: scope
+          weave-scope-component: agent
       template:
         metadata:
           labels:
@@ -265,7 +283,7 @@ items:
       - kind: ServiceAccount
         name: weave-cortex
         namespace: kube-system
-  - apiVersion: apps/v1beta1
+  - apiVersion: apps/v1
     kind: Deployment
     metadata:
       name: weave-cortex-agent
@@ -276,6 +294,12 @@ items:
         weave-cortex-component: agent
     spec:
       replicas: 1
+      selector:
+        matchLabels:
+          name: weave-cortex-agent
+          app: weave-cortex
+          weave-cloud-component: cortex
+          weave-cortex-component: agent
       template:
         metadata:
           annotations:
@@ -305,7 +329,7 @@ items:
             - name: agent-config-volume
               configMap:
                 name: weave-cortex-agent-config
-  - apiVersion: extensions/v1beta1
+  - apiVersion: apps/v1
     kind: DaemonSet
     metadata:
       name: weave-cortex-node-exporter
@@ -315,6 +339,12 @@ items:
         weave-cloud-component: cortex
         weave-cortex-component: node-exporter
     spec:
+      selector:
+        matchLabels:
+          name: weave-cortex-node-exporter
+          app: weave-cortex
+          weave-cloud-component: cortex
+          weave-cortex-component: node-exporter
       template:
         metadata:
           annotations:
@@ -342,7 +372,7 @@ items:
               operator: Exists
       updateStrategy:
         type: RollingUpdate
-  - apiVersion: apps/v1beta1
+  - apiVersion: apps/v1
     kind: Deployment
     metadata:
       name: weave-cortex-state-metrics
@@ -353,6 +383,12 @@ items:
         weave-cortex-component: state-metrics
     spec:
       replicas: 1
+      selector:
+        matchLabels:
+          name: weave-cortex-state-metrics
+          app: weave-cortex
+          weave-cloud-component: cortex
+          weave-cortex-component: state-metrics
       template:
         metadata:
           annotations:
