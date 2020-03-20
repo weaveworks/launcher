@@ -40,11 +40,12 @@ docker/Dockerfile.service: docker/Dockerfile.service.in Makefile
 	@echo Generating $@
 	@sed -e 's/@@GIT_HASH@@/$(GIT_HASH)/g' < $< > $@.tmp && mv $@.tmp $@
 
-build/.%.done: docker/Dockerfile.%
-	mkdir -p ./build/docker/$*
-	cp -r $^ ./build/docker/$*/
-	${DOCKER} build --build-arg=revision=$(GIT_HASH) -t weaveworks/launcher-$* -t weaveworks/launcher-$*:$(IMAGE_TAG) -f build/docker/$*/Dockerfile.$* ./build/docker/$*
-	touch $@
+# Temporarily disabled
+# build/.%.done: docker/Dockerfile.%
+# 	mkdir -p ./build/docker/$*
+# 	cp -r $^ ./build/docker/$*/
+# 	${DOCKER} build --build-arg=revision=$(GIT_HASH) -t weaveworks/launcher-$* -t weaveworks/launcher-$*:$(IMAGE_TAG) -f build/docker/$*/Dockerfile.$* ./build/docker/$*
+# 	touch $@
 
 #
 # Vendoring
