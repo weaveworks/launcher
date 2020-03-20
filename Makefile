@@ -10,8 +10,8 @@ DOCKER ?= docker
 # new); use the full path to the pretend-new file, e.g.,
 #  `make -W $PWD/registry/registry.go`
 godeps=$(shell go list -f '{{join .Deps "\n"}}' $1 | grep -v /vendor/ | xargs go list -f '{{if not .Standard}}{{ $$dep := . }}{{range .GoFiles}}{{$$dep.Dir}}/{{.}} {{end}}{{end}}' 2>/dev/null)
-AGENT_DEPS   := $(call godeps,./agent)
 
+AGENT_DEPS   := $(call godeps,./agent)
 BOOTSTRAP_DEPS := $(call godeps,./bootstrap)
 SERVICE_DEPS := $(call godeps,./service)
 
@@ -36,16 +36,15 @@ agent: build/.agent.done
 bootstrap: build/.bootstrap.done
 service: build/.service.done
 
-docker/Dockerfile.service: docker/Dockerfile.service Makefile
+docker/Dockerfile.service: docker/Dockerfile.service.in Makefile
 	@echo Generating $@
 	@sed -e 's/@@GIT_HASH@@/$(GIT_HASH)/g' < $< > $@.tmp && mv $@.tmp $@
 
-# Temporarily disabled
-# build/.%.done: docker/Dockerfile.%
-# 	mkdir -p ./build/docker/$*
-# 	cp -r $^ ./build/docker/$*/
-# 	${DOCKER} build --build-arg=revision=$(GIT_HASH) -t weaveworks/launcher-$* -t weaveworks/launcher-$*:$(IMAGE_TAG) -f build/docker/$*/Dockerfile.$* ./build/docker/$*
-# 	touch $@
+build/.%.done: docker/Dockerfile.%
+	mkdir -p ./build/docker/$*
+	cp -r $^ ./build/docker/$*/
+	${DOCKER} build --build-arg=revision=$(GIT_HASH) -t weaveworks/launcher-$* -t weaveworks/launcher-$*:$(IMAGE_TAG) -f build/docker/$*/Dockerfile.$* ./build/docker/$*
+	touch $@
 
 #
 # Vendoring
@@ -89,6 +88,7 @@ cache/kubectl-$(KUBECTL_VERSION):
 build/.bootstrap.done: $(BOOTSTRAP_DEPS)
 build/.bootstrap.done: bootstrap/*.go
 	CGO_ENABLED=0 GOOS=$(LOCAL_GOOS) GOARCH=$(LOCAL_GOARCH) go build $(BUILDFLAGS) -o "build/bootstrap/bootstrap_$(LOCAL_GOOS)_$(LOCAL_GOARCH)" $(LDFLAGS) ./bootstrap; \
+
 	touch $@
 
 #
