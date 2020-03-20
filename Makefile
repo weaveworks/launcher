@@ -10,14 +10,17 @@ DOCKER ?= docker
 # new); use the full path to the pretend-new file, e.g.,
 #  `make -W $PWD/registry/registry.go`
 godeps=$(shell go list -f '{{join .Deps "\n"}}' $1 | grep -v /vendor/ | xargs go list -f '{{if not .Standard}}{{ $$dep := . }}{{range .GoFiles}}{{$$dep.Dir}}/{{.}} {{end}}{{end}}' 2>/dev/null)
-
 AGENT_DEPS   := $(call godeps,./agent)
+
 BOOTSTRAP_DEPS := $(call godeps,./bootstrap)
 SERVICE_DEPS := $(call godeps,./service)
 
 GIT_VERSION :=$(shell git describe --always --long --dirty)
 GIT_HASH :=$(shell git rev-parse HEAD)
 IMAGE_TAG:=$(shell ./docker/image-tag)
+
+LOCAL_GOARCH ?= $(shell go env GOARCH)
+LOCAL_GOOS ?= $(shell go env GOOS)
 
 # We can't install go packages on CircleCI without being root (or using sudo).
 # Because the compilation is done only once there, it doesn't matter if we
@@ -67,7 +70,7 @@ build/.agent.done: build/agent build/kubectl
 
 build/agent: $(AGENT_DEPS)
 build/agent: agent/*.go
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(BUILDFLAGS) -o $@ $(LDFLAGS) ./agent
+	CGO_ENABLED=0 GOOS=$(LOCAL_GOOS) GOARCH=$(LOCAL_GOARCH) go build $(BUILDFLAGS) -o $@ $(LDFLAGS) ./agent
 
 include docker/kubectl.version
 
@@ -80,12 +83,12 @@ cache/kubectl-$(KUBECTL_VERSION):
 	mkdir -p cache
 	curl -L -o $@ "https://storage.googleapis.com/kubernetes-release/release/$(KUBECTL_VERSION)/bin/linux/amd64/kubectl"
 
+# 
 # Bootstrap
 #
-
 build/.bootstrap.done: $(BOOTSTRAP_DEPS)
 build/.bootstrap.done: bootstrap/*.go
-	for arch in amd64; do \
+	for arch in arm arm64 amd64; do \
 		for os in linux darwin; do \
 			CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build $(BUILDFLAGS) -o "build/bootstrap/bootstrap_"$$os"_"$$arch $(LDFLAGS) ./bootstrap; \
 		done; \
@@ -95,12 +98,11 @@ build/.bootstrap.done: bootstrap/*.go
 #
 # Service
 #
-
 build/.service.done: build/service build/static
 
 build/service: $(SERVICE_DEPS)
 build/service: service/*.go
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(BUILDFLAGS) -o $@ $(LDFLAGS) ./service
+	CGO_ENABLED=0 GOOS=$(LOCAL_GOOS) GOARCH=$(LOCAL_GOARCH) go build $(BUILDFLAGS) -o $@ $(LDFLAGS) ./service
 
 # If we are not in CircleCI, we are local so use launcher-agent
 # If we are in CircleCI, only use launcher-agent if we are building master, otherwise
@@ -121,7 +123,6 @@ build/static: service/static/* service/static/agent.yaml
 #
 # Local integration tests
 #
-
 integration-tests: all
 	./integration-tests/setup/reset-local-minikube.sh
 	./integration-tests/setup/setup-local-minikube.sh
