@@ -36,7 +36,7 @@ agent: build/.agent.done
 bootstrap: build/.bootstrap.done
 service: build/.service.done
 
-docker/Dockerfile.service: docker/Dockerfile.service.in Makefile
+docker/Dockerfile.service: docker/Dockerfile.service Makefile
 	@echo Generating $@
 	@sed -e 's/@@GIT_HASH@@/$(GIT_HASH)/g' < $< > $@.tmp && mv $@.tmp $@
 
@@ -88,11 +88,7 @@ cache/kubectl-$(KUBECTL_VERSION):
 #
 build/.bootstrap.done: $(BOOTSTRAP_DEPS)
 build/.bootstrap.done: bootstrap/*.go
-	for arch in arm arm64 amd64; do \
-		for os in linux darwin; do \
-			CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build $(BUILDFLAGS) -o "build/bootstrap/bootstrap_"$$os"_"$$arch $(LDFLAGS) ./bootstrap; \
-		done; \
-	done
+	CGO_ENABLED=0 GOOS=$(LOCAL_GOOS) GOARCH=$(LOCAL_GOARCH) go build $(BUILDFLAGS) -o "build/bootstrap/bootstrap_$(LOCAL_GOOS)_$(LOCAL_GOARCH)" $(LDFLAGS) ./bootstrap; \
 	touch $@
 
 #

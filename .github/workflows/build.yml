@@ -23,24 +23,46 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      - name: Build Container Image
+      - name: Build Agent Container Image Non-Master
         if: github.ref != 'refs/heads/master'
         run: |
           docker buildx build \
             --platform linux/amd64,linux/arm64,linux/arm/v7 \
             --build-arg=REVISION=${{ env.REVISION }} \
             --tag raspbernetes/launcher-agent:${{ github.sha }} \
-            -f docker/new.agent.Dockerfile \
+            -f docker/agent.Dockerfile \
             . \
             --push
 
-      - name: Build Container Image
+      - name: Build Agent Container Image Master
         if: github.ref == 'refs/heads/master'
         run: |
           docker buildx build \
             --platform linux/amd64,linux/arm64,linux/arm/v7 \
             --build-arg=REVISION=${{ env.REVISION }} \
             --tag raspbernetes/launcher-agent:latest \
-            -f docker/new.agent.Dockerfile \
+            -f docker/agent.Dockerfile \
+            . \
+            --push
+
+      - name: Build Service Container Image Non-Master
+        if: github.ref != 'refs/heads/master'
+        run: |
+          docker buildx build \
+            --platform linux/amd64,linux/arm64,linux/arm/v7 \
+            --build-arg=REVISION=${{ env.REVISION }} \
+            --tag raspbernetes/launcher-service:${{ github.sha }} \
+            -f docker/service.Dockerfile \
+            . \
+            --push
+
+      - name: Build Service Container Image Master
+        if: github.ref == 'refs/heads/master'
+        run: |
+          docker buildx build \
+            --platform linux/amd64,linux/arm64,linux/arm/v7 \
+            --build-arg=REVISION=${{ env.REVISION }} \
+            --tag raspbernetes/launcher-service:latest \
+            -f docker/service.Dockerfile \
             . \
             --push

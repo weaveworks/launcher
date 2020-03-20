@@ -16,9 +16,11 @@ RUN export GOOS=$(echo ${TARGETPLATFORM} | cut -d / -f1) && \
 
 FROM alpine:3.7
 
+ARG REVISION
+
 RUN apk add --no-cache ca-certificates
 
-COPY --from=build /go/src/github.com/weaveworks/launcher/agent /usr/bin/launcher-agent
+COPY --from=build /go/src/github.com/weaveworks/launcher/build/agent /usr/bin/launcher-agent
 
 COPY --from=build /go/src/github.com/weaveworks/launcher/build/kubectl /usr/bin/kubectl
 
@@ -26,10 +28,9 @@ ENTRYPOINT ["/usr/bin/launcher-agent"]
 
 CMD ["-help"]
 
-ARG REVISION
 
 LABEL maintainer="Weaveworks <help@weave.works>" \
     org.opencontainers.image.title="launcher-agent" \
     org.opencontainers.image.source="https://github.com/weaveworks/launcher" \
-    org.opencontainers.image.revision="${revision}" \
+    org.opencontainers.image.revision="${REVISION}" \
     org.opencontainers.image.vendor="Weaveworks"
