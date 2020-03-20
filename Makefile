@@ -65,7 +65,6 @@ lint:
 #
 # Agent
 #
-
 build/.agent.done: build/agent build/kubectl
 
 build/agent: $(AGENT_DEPS)

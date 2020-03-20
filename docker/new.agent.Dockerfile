@@ -5,7 +5,7 @@ ARG TARGETPLATFORM
 ENV GO111MODULE=off \
     CGO_ENABLED=0
 
-RUN apk add --no-cache git make bash curl strip
+RUN apk add --no-cache git make bash curl binutils
 
 WORKDIR /go/src/github.com/weaveworks/launcher
 
