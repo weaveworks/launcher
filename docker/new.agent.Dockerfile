@@ -26,7 +26,7 @@ ENTRYPOINT ["/usr/bin/launcher-agent"]
 
 CMD ["-help"]
 
-ARG revision
+ARG REVISION
 
 LABEL maintainer="Weaveworks <help@weave.works>" \
     org.opencontainers.image.title="launcher-agent" \
