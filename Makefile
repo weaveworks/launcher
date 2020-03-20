@@ -81,7 +81,7 @@ build/kubectl: cache/kubectl-$(KUBECTL_VERSION) docker/kubectl.version
 
 cache/kubectl-$(KUBECTL_VERSION):
 	mkdir -p cache
-	curl -L -o $@ "https://storage.googleapis.com/kubernetes-release/release/$(KUBECTL_VERSION)/bin/linux/amd64/kubectl"
+	curl -L -o $@ "https://storage.googleapis.com/kubernetes-release/release/$(KUBECTL_VERSION)/bin/$(LOCAL_GOOS)/$(LOCAL_GOARCH)/kubectl"
 
 # 
 # Bootstrap
