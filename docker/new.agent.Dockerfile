@@ -20,7 +20,7 @@ RUN apk add --no-cache ca-certificates
 
 COPY --from=build /go/src/github.com/weaveworks/launcher/agent /usr/bin/launcher-agent
 
-COPY --from=build /go/src/github.com/weaveworks/launcher/kubectl /usr/bin/kubectl
+COPY --from=build /go/src/github.com/weaveworks/launcher/build/kubectl /usr/bin/kubectl
 
 ENTRYPOINT ["/usr/bin/launcher-agent"]
 
