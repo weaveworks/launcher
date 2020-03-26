@@ -124,7 +124,6 @@ jobs:
         run:
           name: Install integration test dependencies
           command: |
-            sudo apt-get update -y
             sudo apt-get -y install ebtables conntrack
             # Install kubectl
             curl --retry 5 -Lo kubectl "https://storage.googleapis.com/kubernetes-release/release/$($KUBECTL_VERSION)/bin/linux/amd64/kubectl" && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
