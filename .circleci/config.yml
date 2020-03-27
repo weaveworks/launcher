@@ -33,7 +33,7 @@ job_environment_vstable: &job_environment_vstable
     CHANGE_MINIKUBE_NONE_USER: true
     KUBE_SERVER_VERSION: curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt
     KUBECTL_VERSION: curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt
-    MINIKUBE_VERSION: echo v1.2.0
+    MINIKUBE_VERSION: echo v1.8.2
 
 workflow_job_defaults: &workflow_job_defaults
   requires:
@@ -124,6 +124,8 @@ jobs:
         run:
           name: Install integration test dependencies
           command: |
+            sudo apt-get update -y
+            sudo apt-get -y install ebtables conntrack
             # Install kubectl
             curl --retry 5 -Lo kubectl "https://storage.googleapis.com/kubernetes-release/release/$($KUBECTL_VERSION)/bin/linux/amd64/kubectl" && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
             # Install minikube
