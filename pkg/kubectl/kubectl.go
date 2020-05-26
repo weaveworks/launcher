@@ -26,7 +26,7 @@ type status struct {
 // Client implements a kubectl client to execute commands
 type Client interface {
 	Execute(args ...string) (string, error)
-	ExecuteOutputMatrix(args ...string) (stdout, stderr, combined string, err error)
+	ExecuteOutputMatrix(args ...string) (stdout, stderr string, err error)
 }
 
 // Execute executes kubectl <args> and returns the combined stdout/err output.
@@ -124,7 +124,7 @@ func parseVersionOutput(stdout string) (clientVersion, serverVersion string, err
 // May return a value for the kubectl client version, despite also returning an error
 func GetVersionInfo(c Client) (string, string, error) {
 	// Capture stdout only (to ignore server reachability errors)
-	stdout, stderr, _, err := c.ExecuteOutputMatrix("version")
+	stdout, stderr, err := c.ExecuteOutputMatrix("version")
 	clientVersion, serverVersion, parseErr := parseVersionOutput(stdout)
 	// If the server is unreachable, we might have an error but parsable output
 	if parseErr != nil {
