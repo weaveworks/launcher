@@ -55,10 +55,15 @@ func outputMatrix(cmd *exec.Cmd) (stdout, stderr, combined string, err error) {
 	stdoutWriter := io.MultiWriter(&combinedBuf, &stdoutBuf)
 	stderrWriter := io.MultiWriter(&combinedBuf, &stderrBuf)
 
+	var mutex sync.Mutex
+
 	var wg sync.WaitGroup
 	copy := func(dst io.Writer, src io.Reader) {
 		defer wg.Done()
+
+		mutex.Lock()
 		_, _ = io.Copy(dst, src)
+		mutex.Unlock()
 	}
 
 	err = cmd.Start()

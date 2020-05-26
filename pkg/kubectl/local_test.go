@@ -35,6 +35,6 @@ func TestOutputMatrix(t *testing.T) {
 	stdout, stderr, combined, err := outputMatrix(cmd)
 	assert.Equal(t, "stdout\nstdout\n", stdout)
 	assert.Equal(t, "stderr\n", stderr)
-	assert.Equal(t, "stdout\nstderr\nstdout\n", combined)
+	assert.Equal(t, "stdout\nstdout\nstderr\n", combined)
 	assert.NoError(t, err)
 }
