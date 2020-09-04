@@ -15,6 +15,7 @@ import (
 	"github.com/blang/semver"
 	raven "github.com/getsentry/raven-go"
 	"github.com/jessevdk/go-flags"
+	"github.com/weaveworks/common/localcmd"
 	"github.com/weaveworks/launcher/pkg/gcloud"
 	"github.com/weaveworks/launcher/pkg/kubectl"
 	"github.com/weaveworks/launcher/pkg/sentry"
@@ -67,7 +68,8 @@ func mainImpl() {
 	// Due to some users Kubernetes clusters having invalid, e.g. self-signed,
 	// certificates, we default to skipping the certificate validation.
 	otherArgs = append(otherArgs, "--insecure-skip-tls-verify")
-	kubectlClient := kubectl.LocalClient{
+	kubectlClient := localcmd.LocalCmd{
+		Command:    "kubectl",
 		GlobalArgs: otherArgs,
 	}
 

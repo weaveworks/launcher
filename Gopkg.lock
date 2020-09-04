@@ -384,15 +384,24 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:fcce8c26e13e3d5018d5c42de857e8b700354d36afb900dd82bc642383981661"
+  digest = "1:6af9abb18b93116e6b6aa2305e1434afbbb17f93814a84ef440ddbf03934fd2d"
   name = "github.com/prometheus/common"
   packages = [
+    "config",
     "expfmt",
     "internal/bitbucket.org/ww/goautoneg",
     "model",
   ]
   pruneopts = "UT"
   revision = "89604d197083d4781071d3c65855d24ecfb0a563"
+
+[[projects]]
+  digest = "1:e7a5b266fa392a250de6096e295fec79de1b486eefec4629047840741c6b6aaa"
+  name = "github.com/prometheus/node_exporter"
+  packages = ["https"]
+  pruneopts = "UT"
+  revision = "3715be6ae899f2a9b9dbfd9c39f3e09a7bd4559f"
+  version = "v1.0.1"
 
 [[projects]]
   branch = "master"
@@ -468,14 +477,16 @@
   version = "v1.5.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:02f3c97ad4d732d7b83c3e3fda919508e614118b79068d11bab854ce52501e23"
+  branch = "local-cmd"
+  digest = "1:0ced0225ca599db3a867117af8590f684dbebecb8ad2a5ab4174679614c08d62"
   name = "github.com/weaveworks/common"
   packages = [
     "errors",
+    "grpc",
     "httpgrpc",
     "httpgrpc/server",
     "instrument",
+    "localcmd",
     "logging",
     "middleware",
     "server",
@@ -483,7 +494,7 @@
     "user",
   ]
   pruneopts = "UT"
-  revision = "02b9c3fc5b90b294b61e167321cfbc64c5d57b9a"
+  revision = "7508d7abccf3503453bc426b31dca2ce65278285"
 
 [[projects]]
   digest = "1:bb40f7ff970145324f2a2acafdff3a23ed3f05db49cb5eb519b3d6bee86a5887"
@@ -495,9 +506,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:af865b7eaadddec9229ee4cd13d846c44ac0e85c5cf04934a26074b3a8efea19"
+  digest = "1:24925cee86edc6511b87587b0ce46aa35014cdab9eebb7752c9949bdc2655c20"
   name = "golang.org/x/crypto"
   packages = [
+    "bcrypt",
+    "blowfish",
     "ed25519",
     "ed25519/internal/edwards25519",
     "pbkdf2",
@@ -890,6 +903,7 @@
     "github.com/sirupsen/logrus",
     "github.com/spf13/pflag",
     "github.com/stretchr/testify/assert",
+    "github.com/weaveworks/common/localcmd",
     "github.com/weaveworks/common/server",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/apis/meta/v1",

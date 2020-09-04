@@ -18,6 +18,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/weaveworks/common/localcmd"
 	apiv1 "k8s.io/api/core/v1"
 	kubeclient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -263,7 +264,7 @@ func mainImpl() {
 		Token:                *wcToken,
 		AgentRecoveryWait:    *agentRecoveryWait,
 		ReportErrors:         *reportErrors,
-		KubectlClient:        kubectl.LocalClient{},
+		KubectlClient:        localcmd.LocalCmd{Command: "kubectl"},
 		WCHostname:           *wcHostname,
 		AgentPollURLTemplate: *agentPollURLTemplate,
 		WCPollURLTemplate:    *wcPollURLTemplate,
