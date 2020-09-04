@@ -100,7 +100,7 @@ func mainImpl() {
 
 	// Restore stdin, making fd 0 point at the terminal
 	if err := syscall.Dup2(1, 0); err != nil {
-		exitWithCapture(opts, "Could not restore stdin\n", err)
+		exitWithCapture(opts, "Could not restore stdin: %s\n", err)
 	}
 
 	fmt.Println("Preparing for Weave Cloud setup")
@@ -205,7 +205,7 @@ func mainImpl() {
 
 func captureAndSend(opts options, skipFrames uint, msg string, args ...interface{}) {
 	formatted := fmt.Sprintf(msg, args...)
-	fmt.Fprintf(os.Stderr, formatted)
+	fmt.Fprint(os.Stderr, formatted)
 	// Send errors to UI.
 	if opts.Scheme != "" {
 		sendError(formatted, opts)
