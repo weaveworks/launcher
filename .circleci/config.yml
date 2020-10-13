@@ -13,7 +13,7 @@ defaults: &defaults
 
 integration_test_defaults: &integration_test_defaults
   machine:
-    image: ubuntu-1604:201903-01
+    image: ubuntu-1604:202007-01
   environment:
     CHANGE_MINIKUBE_NONE_USER: true
     KUBE_SERVER_VERSION: echo v1.9.4
@@ -232,9 +232,9 @@ jobs:
           name: Configure gcloud with launcher-integration-tests project
           command: |
             echo $GCLOUD_SERVICE_KEY | base64 --decode --ignore-garbage > ${HOME}/gcloud-service-key.json
-            sudo /opt/google-cloud-sdk/bin/gcloud --quiet components update
-            sudo /opt/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
-            sudo /opt/google-cloud-sdk/bin/gcloud config set project $GCLOUD_PROJECT
+            sudo gcloud --quiet components update
+            sudo gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
+            sudo gcloud config set project $GCLOUD_PROJECT
       - <<: *start_minikube
       - <<: *wait_for_k8s
       - run:
