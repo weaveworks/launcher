@@ -46,7 +46,6 @@ jobs:
     steps:
       - checkout
       - run: make lint
-      - run: make dep
       - run: go test ./pkg/...
 
   bootstrap:
@@ -54,7 +53,6 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
-      - run: make dep
       - run: go test ./bootstrap
       - run: make bootstrap
       - deploy:
@@ -69,7 +67,6 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
-      - run: make dep
       - run: make service/static/agent.yaml
       - run: go test ./service
       - run: make service
@@ -98,7 +95,6 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
-      - run: make dep
       - run: go test ./agent
       - run: make agent
       - deploy:
@@ -171,7 +167,6 @@ jobs:
     working_directory: ~/.go_workspace/src/github.com/weaveworks/launcher
     steps:
       - checkout
-      - run: make dep
       - <<: *integration_deps
       - <<: *start_minikube
       - <<: *wait_for_k8s

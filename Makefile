@@ -1,4 +1,4 @@
-.PHONY: all clean dep lint agent bootstrap service
+.PHONY: all clean lint agent bootstrap service
 .SUFFIXES:
 
 DOCKER ?= docker
@@ -28,7 +28,7 @@ endif
 BUILDFLAGS   := $(INSTALL_FLAG)
 LDFLAGS:=-ldflags "-X github.com/weaveworks/launcher/pkg/version.Version=$(GIT_VERSION) -X github.com/weaveworks/launcher/pkg/version.Revision=$(GIT_HASH)"
 
-all: dep agent bootstrap service
+all: agent bootstrap service
 agent: build/.agent.done
 bootstrap: build/.bootstrap.done
 service: build/.service.done
@@ -41,16 +41,6 @@ build/.%.done: docker/Dockerfile.%
 	mkdir -p ./build/docker/$*
 	cp -r $^ ./build/docker/$*/
 	${DOCKER} build --build-arg=revision=$(GIT_HASH) -t weaveworks/launcher-$* -t weaveworks/launcher-$*:$(IMAGE_TAG) -f build/docker/$*/Dockerfile.$* ./build/docker/$*
-	touch $@
-
-#
-# Vendoring
-#
-dep: build/dep.done
-build/dep.done:
-	go get -u github.com/golang/dep/cmd/dep
-	dep ensure -vendor-only
-	mkdir -p ./build
 	touch $@
 
 #
