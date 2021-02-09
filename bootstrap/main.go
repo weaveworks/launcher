@@ -15,6 +15,7 @@ import (
 	"github.com/blang/semver"
 	raven "github.com/getsentry/raven-go"
 	"github.com/jessevdk/go-flags"
+	"github.com/weaveworks/common/localcmd"
 	"github.com/weaveworks/launcher/pkg/gcloud"
 	"github.com/weaveworks/launcher/pkg/kubectl"
 	"github.com/weaveworks/launcher/pkg/sentry"
@@ -67,7 +68,8 @@ func mainImpl() {
 	// Due to some users Kubernetes clusters having invalid, e.g. self-signed,
 	// certificates, we default to skipping the certificate validation.
 	otherArgs = append(otherArgs, "--insecure-skip-tls-verify")
-	kubectlClient := kubectl.LocalClient{
+	kubectlClient := localcmd.LocalCmd{
+		Command:    "kubectl",
 		GlobalArgs: otherArgs,
 	}
 
@@ -98,7 +100,7 @@ func mainImpl() {
 
 	// Restore stdin, making fd 0 point at the terminal
 	if err := syscall.Dup2(1, 0); err != nil {
-		exitWithCapture(opts, "Could not restore stdin\n", err)
+		exitWithCapture(opts, "Could not restore stdin: %s\n", err)
 	}
 
 	fmt.Println("Preparing for Weave Cloud setup")
@@ -203,7 +205,7 @@ func mainImpl() {
 
 func captureAndSend(opts options, skipFrames uint, msg string, args ...interface{}) {
 	formatted := fmt.Sprintf(msg, args...)
-	fmt.Fprintf(os.Stderr, formatted)
+	fmt.Fprint(os.Stderr, formatted)
 	// Send errors to UI.
 	if opts.Scheme != "" {
 		sendError(formatted, opts)
