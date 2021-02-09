@@ -71,6 +71,7 @@ type agentConfig struct {
 	MemcachedConfig        *MemcachedConfig
 	CRIEndpoint            string
 	ReadOnly               bool
+	SelfUpdate             bool
 
 	CMInformer     cache.SharedIndexInformer
 	SecretInformer cache.SharedIndexInformer
@@ -133,51 +134,53 @@ func agentManifestURL(cfg *agentConfig) string {
 }
 
 func updateAgents(cfg *agentConfig, cancel <-chan interface{}) {
-	// Self-update
-	agentPollURL := agentManifestURL(cfg)
-	log.Info("Updating self from ", agentPollURL)
+	if cfg.SelfUpdate {
+		// Self-update
+		agentPollURL := agentManifestURL(cfg)
+		log.Info("Updating self from ", agentPollURL)
 
-	initialRevision, err := k8s.GetLatestDeploymentReplicaSetRevision(cfg.KubeClient, "weave", "weave-agent")
-	if err != nil {
-		logError("Failed to fetch latest deployment replicateset revision", err, cfg)
-		return
-	}
-	log.Info("Revision before self-update: ", initialRevision)
-	err = kubectl.Apply(cfg.KubectlClient, agentPollURL)
-	if err != nil {
-		logError("Failed to execute kubectl apply", err, cfg)
-		return
-	}
-	updatedRevision, err := k8s.GetLatestDeploymentReplicaSetRevision(cfg.KubeClient, "weave", "weave-agent")
-	if err != nil {
-		logError("Failed to fetch latest deployment replicateset revision", err, cfg)
-		return
-	}
-	log.Info("Revision after self-update: ", updatedRevision)
-
-	// If the agent replica set is updating, we will be killed via SIGTERM.
-	// The agent uses a RollingUpdate strategy, so we are only killed when the
-	// new agent is ready. If we are not killed after 5 minutes we assume that
-	// the new agent did not become ready and so we recover by rolling back.
-	if updatedRevision > initialRevision {
-		log.Infof("The agent replica set updated. Rollback if we are not killed within %s...", cfg.AgentRecoveryWait)
-
-		select {
-		case <-time.After(cfg.AgentRecoveryWait):
-		case <-cancel:
-			return
-		}
-
-		logError("Deployment of the new agent failed. Rolling back.", errors.New("Deployment failed"), cfg)
-		_, err := cfg.KubectlClient.Execute("rollout", "undo", "--namespace=weave", "deployment/weave-agent")
+		initialRevision, err := k8s.GetLatestDeploymentReplicaSetRevision(cfg.KubeClient, "weave", "weave-agent")
 		if err != nil {
-			logError("Failed rolling back agent. Will continue to check for updates.", err, cfg)
+			logError("Failed to fetch latest deployment replicateset revision", err, cfg)
 			return
 		}
+		log.Info("Revision before self-update: ", initialRevision)
+		err = kubectl.Apply(cfg.KubectlClient, agentPollURL)
+		if err != nil {
+			logError("Failed to execute kubectl apply", err, cfg)
+			return
+		}
+		updatedRevision, err := k8s.GetLatestDeploymentReplicaSetRevision(cfg.KubeClient, "weave", "weave-agent")
+		if err != nil {
+			logError("Failed to fetch latest deployment replicateset revision", err, cfg)
+			return
+		}
+		log.Info("Revision after self-update: ", updatedRevision)
 
-		// Return so we continue updating the agent until success
-		logError("The new agent was rolled back.", errors.New("Rollback success"), cfg)
-		return
+		// If the agent replica set is updating, we will be killed via SIGTERM.
+		// The agent uses a RollingUpdate strategy, so we are only killed when the
+		// new agent is ready. If we are not killed after 5 minutes we assume that
+		// the new agent did not become ready and so we recover by rolling back.
+		if updatedRevision > initialRevision {
+			log.Infof("The agent replica set updated. Rollback if we are not killed within %s...", cfg.AgentRecoveryWait)
+
+			select {
+			case <-time.After(cfg.AgentRecoveryWait):
+			case <-cancel:
+				return
+			}
+
+			logError("Deployment of the new agent failed. Rolling back.", errors.New("Deployment failed"), cfg)
+			_, err := cfg.KubectlClient.Execute("rollout", "undo", "--namespace=weave", "deployment/weave-agent")
+			if err != nil {
+				logError("Failed rolling back agent. Will continue to check for updates.", err, cfg)
+				return
+			}
+
+			// Return so we continue updating the agent until success
+			logError("The new agent was rolled back.", errors.New("Rollback success"), cfg)
+			return
+		}
 	}
 
 	// Get existing flux config
@@ -247,6 +250,7 @@ func mainImpl() {
 	eventsReportInterval := flag.Duration("events.report-interval", 3*time.Second, "Minimal time interval between two reports")
 
 	featureInstall := flag.Bool("feature.install-agents", true, "Whether the agent should install anything in the cluster or not")
+	featureSelfUpdate := flag.Bool("feature.self-update", true, "Whether the agent should attempt to update it own Deployment")
 	featureEvents := flag.Bool("feature.kubernetes-events", false, "Whether the agent should forward kubernetes events to Weave Cloud or not")
 
 	flag.Parse()
@@ -269,6 +273,7 @@ func mainImpl() {
 		WCPollURLTemplate:    *wcPollURLTemplate,
 		CRIEndpoint:          *criEndpoint,
 		ReadOnly:             *readOnly,
+		SelfUpdate:           *featureSelfUpdate,
 	}
 	raven.SetTagsContext(map[string]string{
 		"weave_cloud_hostname": *wcHostname,
