@@ -1,9 +1,9 @@
 FROM alpine:3.7
 WORKDIR /
-COPY service /launcher-service
+COPY build/service /launcher-service
 RUN mkdir static
-COPY static/install.sh /static/
-COPY static/agent.yaml /static/
+COPY service/static/install.sh /static/
+COPY service/static/agent.yaml /static/
 EXPOSE 80
 ENTRYPOINT ["/launcher-service", "--bootstrap-version=@@GIT_HASH@@"]
 
