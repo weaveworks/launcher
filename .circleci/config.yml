@@ -9,12 +9,12 @@ notify:
 defaults: &defaults
   working_directory: /go/src/github.com/weaveworks/launcher
   docker:
-    # 1.10.0 and dnsName: https://github.com/golang/go/issues/23995
-    - image: circleci/golang:1.9
+    - image: circleci/golang:1.16
 
 integration_test_defaults: &integration_test_defaults
   machine:
-    image: ubuntu-1604:201903-01
+    # Why a machine? No idea
+    image: ubuntu-2004:202107-02
   environment:
     CHANGE_MINIKUBE_NONE_USER: true
     KUBE_SERVER_VERSION: echo v1.9.4
@@ -33,7 +33,7 @@ job_environment_vstable: &job_environment_vstable
     CHANGE_MINIKUBE_NONE_USER: true
     KUBE_SERVER_VERSION: curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt
     KUBECTL_VERSION: curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt
-    MINIKUBE_VERSION: echo v1.8.2
+    MINIKUBE_VERSION: echo v1.22.0
 
 workflow_job_defaults: &workflow_job_defaults
   requires:
