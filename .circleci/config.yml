@@ -382,7 +382,9 @@ workflows:
             tags:
               only: /[0-9]+(\.[0-9]+)*(-[a-z]+)?/
       - bootstrap
-      - service
+      - service:
+          context:
+            - ecr_upload
 
       # v1.9.4 jobs
       - integration_install_update_flow:
