@@ -6,7 +6,7 @@ wait_for_service () {
     until kubectl get pods -l name=service -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1; done
 
     echo "• Wait for launcher/service to be fully reachable"
-    until curl -Ls $(minikube service service --url) > /dev/null 2>/dev/null; do sleep 1; done
+    until curl -Ls -m1 $(minikube service service --url); do sleep 1; done
 }
 
 wait_for_wc_agents () {
