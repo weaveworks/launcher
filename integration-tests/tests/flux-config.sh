@@ -25,7 +25,7 @@ templatinator "config.sh" $updated_service_yaml
 
 echo "• Take the current service agent k8s and reduce the poll interval to 10 seconds"
 kubectl cp default/${service_pod}:static/agent.yaml $updated_agent_yaml
-yq w -i $updated_agent_yaml items.4.spec.template.spec.containers.0.args.3 '"-wc.poll-interval=10s"'
+yq eval -i '.items.4.spec.template.spec.containers.0.args.3 = "-wc.poll-interval=10s"' $updated_agent_yaml
 
 echo "• Create a configmap for the updated yaml which will be mounted as a volume"
 if kubectl get configmap agent-k8s; then
