@@ -27,29 +27,23 @@
 ## Running the integration tests locally
 
 Launcher has quite few components and we provide a way to test the full end to
-end flow in a local minukube:
+end flow in a local cluster:
 
-Start by setting up a minikube instance to run the tests on:
-
-```
-# minikube profile launcher-tests
-# minikube start
-```
-
-Run the tests:
+To run the tests:
 ```
 make
 make integration-tests WEAVE_CLOUD_TOKEN=<YOUR_TEST_INSTANCE_ON_FRONTEND.DEV.WEAVE.WORKS>
 ```
 
 This script will first ensure the dependencies are built and then run:
-- `reset-local-minikube.sh`
-- `setup-local-minikube.sh`
+- `reset-local-cluster.sh`
+- `setup-local-cluster.sh`
 - `run.sh`
 
 One can also use the local launcher service to provision a cluster:
 ```
-curl -Ls $(minikube service service --url) | sh -s -- --token=${WEAVE_CLOUD_TOKEN}
+LOCAL_IP=$(kubectl --context=kind-launcher-tests get nodes -o=jsonpath='{range .items[*]}{.status.addresses[?(@.type=="InternalIP")].address}{end}')
+curl -Ls $LOCAL_IP:30080 | sh -s -- --token=${WEAVE_CLOUD_TOKEN}
 ```
 
 ## <a name="help"></a>Getting Help

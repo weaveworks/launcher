@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 
 notify:
   webhooks:
@@ -6,40 +6,100 @@ notify:
     - url: https://hooks.zapier.com/hooks/catch/2669140/zma7dg/
     - url: https://hooks.zapier.com/hooks/catch/2669140/ziw81i/
 
+
+# Environment for build & unit testing
 defaults: &defaults
   working_directory: /go/src/github.com/weaveworks/launcher
   docker:
     # 1.10.0 and dnsName: https://github.com/golang/go/issues/23995
     - image: circleci/golang:1.9
 
+# Environment for integration testing
 integration_test_defaults: &integration_test_defaults
   machine:
-    image: ubuntu-1604:201903-01
-  environment:
-    CHANGE_MINIKUBE_NONE_USER: true
-    KUBE_SERVER_VERSION: echo v1.9.4
-    KUBECTL_VERSION: echo v1.9.4
-    MINIKUBE_VERSION: echo v0.25.2
+    image: ubuntu-2004:202107-02
+  parameters:
+    k8s_version:
+      type: string
 
-job_environment_v1_14_2: &job_environment_v1_14_2
-  environment:
-    CHANGE_MINIKUBE_NONE_USER: true
-    KUBE_SERVER_VERSION: echo v1.14.2
-    KUBECTL_VERSION: echo v1.14.2
-    MINIKUBE_VERSION: echo v1.2.0
+# All kubernetes versions we want to be testing against
+run_for_k8s_versions: &run_for_k8s_versions
+  matrix:
+    parameters:
+      k8s_version: ['v1.12.10', 'v1.14.10', 'latest']
 
-job_environment_vstable: &job_environment_vstable
-  environment:
-    CHANGE_MINIKUBE_NONE_USER: true
-    KUBE_SERVER_VERSION: curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt
-    KUBECTL_VERSION: curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt
-    MINIKUBE_VERSION: echo v1.23.0
-
+# Integration tests should all depend on all main build jobs
 workflow_job_defaults: &workflow_job_defaults
   requires:
     - agent
     - bootstrap
     - service
+
+commands:
+  start_integration_env:
+    parameters:
+      k8s_version:
+        type: string
+    steps:
+      - checkout
+      - run:
+          name: Install tools
+          command: |
+            KUBERNETES_VERSION=<< parameters.k8s_version >>
+            if [ "<< parameters.k8s_version >>" == "latest" ]; then
+              KUBERNETES_VERSION=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)
+            fi
+            echo "export KUBERNETES_VERSION='$KUBERNETES_VERSION'" >> $BASH_ENV
+            KIND_VERSION=v0.11.1
+            if [[ $KUBERNETES_VERSION == v1.12* ]]; then
+              KIND_VERSION=v0.8.1
+            fi
+            curl --retry 5 -Lo kubectl "https://storage.googleapis.com/kubernetes-release/release/${KUBERNETES_VERSION}/bin/linux/amd64/kubectl" && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+            curl --retry 5 -Lo yq https://github.com/mikefarah/yq/releases/download/v4.12.2/yq_linux_amd64 && chmod +x yq && sudo mv yq /usr/local/bin/
+            curl --retry 5 -Lo kind https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-linux-amd64 && chmod +x kind && sudo mv kind /usr/local/bin/
+      - run:
+          name: Create cluster
+          command: |
+            kind create cluster --name=launcher-tests --image=kindest/node:${KUBERNETES_VERSION}
+            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
+              echo 'export SERVICE_IMAGE="weaveworks/launcher-service:'$(docker/image-tag)'"' >> $BASH_ENV
+            else
+              echo 'export SERVICE_IMAGE="weaveworks/build-tmp-public:launcher-service-'$(docker/image-tag)'"' >> $BASH_ENV
+            fi
+            source $BASH_ENV
+            docker pull $SERVICE_IMAGE
+            kind load docker-image --name=launcher-tests $SERVICE_IMAGE
+      - run:
+          name: Wait for nodes & DNS to be ready
+          command: |
+            JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'
+            until kubectl get nodes -o jsonpath="$JSONPATH" --request-timeout=1s | grep -q "Ready=True"; do
+              sleep 1
+              echo "wait for node to be available"
+              kubectl get nodes
+            done
+            JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'
+            until kubectl -n kube-system get pods -lk8s-app=kube-dns -o jsonpath="$JSONPATH" --request-timeout=1s | grep -q "Ready=True"; do
+              sleep 1
+              echo "waiting for kube-dns to be available"
+              kubectl get pods -n kube-system
+            done
+
+  grab_logs:
+    steps:
+      - run:
+          name: Output state of the k8s cluster on failed test
+          command: |
+            kubectl get all --all-namespaces
+            kubectl get events --all-namespaces --field-selector=type=Warning
+            kubectl logs -n weave -l=launcher=dns
+          when: on_fail
+      - run:
+          name: Export k8s cluster logs
+          command: kind export logs --name=launcher-tests cluster_logs
+          when: on_fail
+      - store_artifacts:
+          path: ./cluster_logs
 
 jobs:
   global_tests:
@@ -116,233 +176,86 @@ jobs:
               docker push "weaveworks/build-tmp-public:launcher-agent-$(docker/image-tag)"
             fi
 
-  integration_install_update_flow: &integration_install_update_flow
+  integration_install_update_flow:
     <<: *integration_test_defaults
     steps:
-      - checkout
-      - &integration_deps
-        run:
-          name: Install integration test dependencies
-          command: |
-            sudo apt-get update -y
-            sudo apt-get -y install ebtables conntrack
-            # Install kubectl
-            curl --retry 5 -Lo kubectl "https://storage.googleapis.com/kubernetes-release/release/$($KUBECTL_VERSION)/bin/linux/amd64/kubectl" && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
-            # Install minikube
-            curl --retry 5 -Lo minikube "https://storage.googleapis.com/minikube/releases/$($MINIKUBE_VERSION)/minikube-linux-amd64" && chmod +x minikube && sudo mv minikube /usr/local/bin/
-            # Install yq
-            curl --retry 5 -Lo yq https://github.com/mikefarah/yq/releases/download/v4.12.2/yq_linux_amd64 && chmod +x yq && sudo mv yq /usr/local/bin/
-      - &start_minikube
-        run:
-          name: Start minikube
-          command: |
-            sudo minikube start --vm-driver=none --kubernetes-version "$($KUBE_SERVER_VERSION)"
-            sudo chown -R $USER.$USER ~/.minikube
-            sudo chown -R $USER.$USER ~/.kube
-            minikube update-context
-      - &wait_for_k8s
-        run:
-          name: Wait for Kubernetes cluster components to be ready
-          command: |
-            # Wait for nodes to become ready
-            JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1; done
-            # Wait for DNS to be ready
-            JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl -n kube-system get pods -lk8s-app=kube-dns -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1;echo "waiting for kube-dns to be available"; kubectl get pods -n kube-system; done
+      - start_integration_env:
+          k8s_version: << parameters.k8s_version >>
       - run:
           name: Execute integration tests
-          no_output_timeout: 2m
-          command: |
-            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
-              export SERVICE_IMAGE="weaveworks/launcher-service:$(docker/image-tag)"
-            else
-              export SERVICE_IMAGE=weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
-            fi
-            ./integration-tests/tests/install-update-flow.sh
-      - &failed_test
-        run:
-          name: Output state of the k8s cluster on failed test
-          command: |
-            kubectl get all --all-namespaces
-            kubectl get events --all-namespaces --field-selector=type=Warning
-            kubectl logs -n weave -l=launcher=dns
-          when: on_fail
+          command: ./integration-tests/tests/install-update-flow.sh
+      - grab_logs
 
-  integration_cloudwatch: &integration_cloudwatch
+  integration_cloudwatch:
     <<: *integration_test_defaults
-    working_directory: ~/.go_workspace/src/github.com/weaveworks/launcher
+    working_directory: "~/.go_workspace/src/github.com/weaveworks/launcher"
+    environment:
+      GO111MODULE: "off"
+      GOPATH: "/home/circleci/.go_workspace"
     steps:
-      - checkout
-      - run: make dep
-      - <<: *integration_deps
-      - <<: *start_minikube
-      - <<: *wait_for_k8s
+      - start_integration_env:
+          k8s_version: << parameters.k8s_version >>
       - run:
           name: Execute integration tests
-          no_output_timeout: 10m
-          environment:
-            GOPATH: /home/circleci/.go_workspace
           command: |
-            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
-              export SERVICE_IMAGE="weaveworks/launcher-service:$(docker/image-tag)"
-            else
-              export SERVICE_IMAGE=weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
-            fi
             ./integration-tests/tests/e2e.sh
+            make dep
             go test -v ./integration-tests/e2e -args -log.verbose
-      - <<: *failed_test
+      - grab_logs
 
-  integration_kube_system_migration: &integration_kube_system_migration
+  integration_kube_system_migration:
     <<: *integration_test_defaults
     steps:
-      - checkout
-      - <<: *integration_deps
-      - <<: *start_minikube
-      - <<: *wait_for_k8s
+      - start_integration_env:
+          k8s_version: << parameters.k8s_version >>
       - run:
           name: Execute integration tests
-          no_output_timeout: 2m
-          command: |
-            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
-              export SERVICE_IMAGE="weaveworks/launcher-service:$(docker/image-tag)"
-            else
-              export SERVICE_IMAGE=weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
-            fi
-            ./integration-tests/tests/kube-system-migration.sh
-      - <<: *failed_test
+          command: ./integration-tests/tests/kube-system-migration.sh
+      - grab_logs
 
-  integration_flux_config: &integration_flux_config
+  integration_flux_config:
     <<: *integration_test_defaults
     steps:
-      - checkout
-      - <<: *integration_deps
-      - <<: *start_minikube
-      - <<: *wait_for_k8s
+      - start_integration_env:
+          k8s_version: << parameters.k8s_version >>
       - run:
           name: Execute integration tests
-          no_output_timeout: 2m
-          command: |
-            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
-              export SERVICE_IMAGE="weaveworks/launcher-service:$(docker/image-tag)"
-            else
-              export SERVICE_IMAGE=weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
-            fi
-            ./integration-tests/tests/flux-config.sh
-      - <<: *failed_test
+          command: ./integration-tests/tests/flux-config.sh
+      - grab_logs
 
-  integration_gke: &integration_gke
+  integration_gke:
     <<: *integration_test_defaults
     steps:
-      - checkout
-      - <<: *integration_deps
       - run:
           name: Configure gcloud with launcher-integration-tests project
           command: |
             echo $GCLOUD_SERVICE_KEY | base64 --decode --ignore-garbage > ${HOME}/gcloud-service-key.json
-            sudo /opt/google-cloud-sdk/bin/gcloud --quiet components update
-            sudo /opt/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
-            sudo /opt/google-cloud-sdk/bin/gcloud config set project $GCLOUD_PROJECT
-      - <<: *start_minikube
-      - <<: *wait_for_k8s
+            /opt/google/google-cloud-sdk/bin/gcloud --quiet components update
+            /opt/google/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
+            /opt/google/google-cloud-sdk/bin/gcloud config set project $GCLOUD_PROJECT
+      - start_integration_env:
+          k8s_version: << parameters.k8s_version >>
       - run:
           name: Execute integration tests
-          no_output_timeout: 2m
           command: |
-            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
-              export SERVICE_IMAGE="weaveworks/launcher-service:$(docker/image-tag)"
-            else
-              export SERVICE_IMAGE=weaveworks/build-tmp-public:launcher-service-$(docker/image-tag)
-            fi
             ./integration-tests/tests/gke.sh
-      - <<: *failed_test
+      - grab_logs
 
-  healthcheck_dev: &healthcheck_dev
+  integration_healthcheck:
     <<: *integration_test_defaults
+    parameters:
+      k8s_version:
+        type: string
+      domain:
+        type: string
     steps:
-      - checkout
-      - <<: *integration_deps
-      - <<: *start_minikube
-      - <<: *wait_for_k8s
+      - start_integration_env:
+          k8s_version: << parameters.k8s_version >>
       - run:
-          name: Execute healthcheck for get.dev.weave.works
-          command: WEAVE_CLOUD_TOKEN=$DEV_INSTANCE_TOKEN ./integration-tests/tests/healthcheck.sh get.dev.weave.works
-      - <<: *failed_test
+          name: Execute healthcheck for << parameters.domain >>
+          command: WEAVE_CLOUD_TOKEN=$DEV_INSTANCE_TOKEN ./integration-tests/tests/healthcheck.sh << parameters.domain >>
+      - grab_logs
 
-  healthcheck_prod: &healthcheck_prod
-    <<: *integration_test_defaults
-    steps:
-      - checkout
-      - <<: *integration_deps
-      - <<: *start_minikube
-      - <<: *wait_for_k8s
-      - run:
-          name: Execute healthcheck for get.weave.works
-          command: WEAVE_CLOUD_TOKEN=$PROD_INSTANCE_TOKEN ./integration-tests/tests/healthcheck.sh get.weave.works
-      - <<: *failed_test
-      - run:
-          name: Increment failure count metric
-          command: |
-            echo -e '# TYPE launcher_e2e_test_failures_total counter\nlauncher_e2e_test_failures_total 1\n' | curl -H 'Content-Type: text/plain; version=0.0.4' --data-binary @- https://cloud.weave.works/api/ui/metrics
-          when: on_fail
-
-  # v1.14.2 jobs
-
-  integration_kube_system_migration_v1_14_2:
-    <<: *job_environment_v1_14_2
-    <<: *integration_kube_system_migration
-
-  integration_install_update_flow_v1_14_2:
-    <<: *job_environment_v1_14_2
-    <<: *integration_install_update_flow
-
-  integration_cloudwatch_v1_14_2:
-    <<: *job_environment_v1_14_2
-    <<: *integration_cloudwatch
-
-  integration_flux_config_v1_14_2:
-    <<: *job_environment_v1_14_2
-    <<: *integration_flux_config
-
-  integration_gke_v1_14_2:
-    <<: *job_environment_v1_14_2
-    <<: *integration_gke
-
-  healthcheck_dev_v1_14_2:
-    <<: *job_environment_v1_14_2
-    <<: *healthcheck_dev
-
-  healthcheck_prod_v1_14_2:
-    <<: *job_environment_v1_14_2
-    <<: *healthcheck_prod
-
-  # vstable jobs
-
-  integration_kube_system_migration_vstable:
-    <<: *job_environment_vstable
-    <<: *integration_kube_system_migration
-
-  integration_install_update_flow_vstable:
-    <<: *job_environment_vstable
-    <<: *integration_install_update_flow
-
-  integration_cloudwatch_vstable:
-    <<: *job_environment_vstable
-    <<: *integration_cloudwatch
-
-  integration_flux_config_vstable:
-    <<: *job_environment_vstable
-    <<: *integration_flux_config
-
-  integration_gke_vstable:
-    <<: *job_environment_vstable
-    <<: *integration_gke
-
-  healthcheck_dev_vstable:
-    <<: *job_environment_vstable
-    <<: *healthcheck_dev
-
-  healthcheck_prod_vstable:
-    <<: *job_environment_vstable
-    <<: *healthcheck_prod
 
   sentry:
     <<: *defaults
@@ -373,7 +286,6 @@ jobs:
             '
 
 workflows:
-  version: 2
   build_deploy:
     jobs:
       - global_tests
@@ -386,40 +298,24 @@ workflows:
           context:
             - ecr_upload
 
-      # v1.9.4 jobs
       - integration_install_update_flow:
+          <<: *run_for_k8s_versions
           <<: *workflow_job_defaults
+
       - integration_cloudwatch:
+          <<: *run_for_k8s_versions
           <<: *workflow_job_defaults
+
       - integration_kube_system_migration:
+          <<: *run_for_k8s_versions
           <<: *workflow_job_defaults
+
       - integration_flux_config:
+          <<: *run_for_k8s_versions
           <<: *workflow_job_defaults
+
       - integration_gke:
-          <<: *workflow_job_defaults
-
-      # v1.14.2 jobs
-      - integration_install_update_flow_v1_14_2:
-          <<: *workflow_job_defaults
-      - integration_cloudwatch_v1_14_2:
-          <<: *workflow_job_defaults
-      - integration_kube_system_migration_v1_14_2:
-          <<: *workflow_job_defaults
-      - integration_flux_config_v1_14_2:
-          <<: *workflow_job_defaults
-      - integration_gke_v1_14_2:
-          <<: *workflow_job_defaults
-
-      # vstable jobs
-      - integration_install_update_flow_vstable:
-          <<: *workflow_job_defaults
-      - integration_cloudwatch_vstable:
-          <<: *workflow_job_defaults
-      - integration_kube_system_migration_vstable:
-          <<: *workflow_job_defaults
-      - integration_flux_config_vstable:
-          <<: *workflow_job_defaults
-      - integration_gke_vstable:
+          <<: *run_for_k8s_versions
           <<: *workflow_job_defaults
 
       - sentry:
@@ -436,12 +332,11 @@ workflows:
               only:
                 - master
     jobs:
-      - healthcheck_dev
-      - healthcheck_prod
-      - healthcheck_dev_v1_14_2
-      - healthcheck_prod_v1_14_2
-      - healthcheck_dev_vstable
-      - healthcheck_prod_vstable
+      - integration_healthcheck:
+          matrix:
+            parameters:
+              k8s_version: ['v1.12.10', 'v1.14.10', 'latest']
+              domain: ['get.dev.weave.works', 'get.weave.works']
 
   # re-run $stable jobs once a day as a new
   # version of kubernetes might have been released
@@ -462,13 +357,18 @@ workflows:
       - service:
           context:
             - ecr_upload
-      - integration_install_update_flow_vstable:
-          <<: *workflow_job_defaults
-      - integration_cloudwatch_vstable:
-          <<: *workflow_job_defaults
-      - integration_kube_system_migration_vstable:
-          <<: *workflow_job_defaults
-      - integration_flux_config_vstable:
-          <<: *workflow_job_defaults
-      - integration_gke_vstable:
-          <<: *workflow_job_defaults
+
+      - integration_install_update_flow:
+          k8s_version: 'latest'
+
+      - integration_cloudwatch:
+          k8s_version: 'latest'
+
+      - integration_kube_system_migration:
+          k8s_version: 'latest'
+
+      - integration_flux_config:
+          k8s_version: 'latest'
+
+      - integration_gke:
+          k8s_version: 'latest'

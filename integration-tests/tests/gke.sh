@@ -11,15 +11,15 @@ echo "####################"
 echo "• Set WEAVE_CLOUD_TOKEN if it is not already set"
 [ -z "$WEAVE_CLOUD_TOKEN" ] && WEAVE_CLOUD_TOKEN="abcd1234"
 
-echo "• Start launcher/service on minikube"
+echo "• Start launcher/service on test cluster"
 service_yaml=${tests_root}/k8s/service.yaml
 templatinator "config.sh" $service_yaml
 kubectl apply -f $service_yaml
 
 wait_for_service
 
-echo "• Install Weave Cloud on the minikube cluster with --gke"
-curl -Ls $(minikube service service --url) | sh -s -- --token=${WEAVE_CLOUD_TOKEN} --gke --assume-yes
+echo "• Install Weave Cloud on the test cluster with --gke"
+curl -Ls $(get_ip):30080 | sh -s -- --token=${WEAVE_CLOUD_TOKEN} --gke --assume-yes --report-errors
 
 wait_for_wc_agents
 
