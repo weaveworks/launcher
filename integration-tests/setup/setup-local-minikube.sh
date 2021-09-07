@@ -34,4 +34,4 @@ kubectl apply -f $bootstrap_yaml
 
 ###
 echo -n "• Waiting for nginx-bootstrap service to be available"
-until curl -Ls $(minikube service nginx-bootstrap --url) >/dev/null 2>/dev/null; do sleep 1; done
+until curl -Ls -m1 $(minikube service nginx-bootstrap --url) ; do sleep 1; done
