@@ -136,6 +136,7 @@ jobs:
               - role: control-plane
             EOF
             kind create cluster --image=kindest/node:${KUBE_SERVER_VERSION} --config=kind-config.yaml
+            sed -i -E -e 's/localhost|0\.0\.0\.0/docker/g' "$HOME/.kube/config"
       - run:
           name: Wait for nodes & DNS to be ready
           command: |
