@@ -104,7 +104,6 @@ jobs:
         type: steps
     steps:
       - checkout
-      - setup_remote_docker
       - run:
           name: Install tools
           command: |
