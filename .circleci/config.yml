@@ -120,6 +120,7 @@ jobs:
       - run:
           name: Wait for nodes & DNS to be ready
           command: |
+            kind get kubeconfig
             kubectl config get-contexts
             kubectl cluster-info --context kind-kind
             JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'
