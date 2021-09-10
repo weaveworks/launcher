@@ -136,7 +136,8 @@ jobs:
               - role: control-plane
             EOF
             kind create cluster --image=kindest/node:${KUBE_SERVER_VERSION} --config=kind-config.yaml
-            sed -i -E -e 's/localhost|0\.0\.0\.0/docker/g' "$HOME/.kube/config"
+            HOST=$(echo $DOCKER_HOST | awk -F[/:] '{print $4}')
+            sed -i -E -e 's/localhost|0\.0\.0\.0/'$HOST'/g' "$HOME/.kube/config"
       - run:
           name: Wait for nodes & DNS to be ready
           command: |
@@ -219,24 +220,12 @@ workflows:
       - integration_testing:
           matrix:
             parameters:
-              k8s_version: ['echo v1.11.1', 'echo v1.14.2', 'curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt']
+              k8s_version: ['curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt']
               command:
                 -
                   - run:
                       name: "install update flow"
                       command: ./integration-tests/tests/install-update-flow.sh
-                -
-                  - run: |
-                      ./integration-tests/tests/e2e.sh
-                      go test -v ./integration-tests/e2e -args -log.verbose
-                -
-                  - run: ./integration-tests/tests/kube-system-migration.sh
-                -
-                  - run: ./integration-tests/tests/flux-config.sh
-                -
-                  - run: |
-                      # TODO setup
-                      ./integration-tests/tests/gke.sh
           requires:
             - agent
             - bootstrap
