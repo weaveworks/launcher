@@ -116,6 +116,7 @@ jobs:
           name: Create cluster
           command: |
             KUBE_SERVER_VERSION=$(<< parameters.k8s_version >>)
+            env
             kind create cluster --image=kindest/node:${KUBE_SERVER_VERSION}
       - run:
           name: Wait for nodes & DNS to be ready
