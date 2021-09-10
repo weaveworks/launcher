@@ -95,8 +95,8 @@ jobs:
 
 
   integration_testing:
-    docker:
-      - image: cimg/base:2021.04
+    machine:
+      image: ubuntu-2004:202107-02
     parameters:
       k8s_version:
         type: string
@@ -116,34 +116,10 @@ jobs:
           name: Create cluster
           command: |
             KUBE_SERVER_VERSION=$(<< parameters.k8s_version >>)
-            env
-            cat > kind-config.yaml \<<EOF
-            apiVersion: kind.x-k8s.io/v1alpha4
-            kind: Cluster
-            networking:
-              apiServerAddress: "0.0.0.0"
-
-            # add to the apiServer certSANs the name of the docker (dind) service in order to be able to reach the cluster through it
-            kubeadmConfigPatchesJSON6902:
-              - group: kubeadm.k8s.io
-                version: v1beta2
-                kind: ClusterConfiguration
-                patch: |
-                  - op: add
-                    path: /apiServer/certSANs/-
-                    value: docker
-            nodes:
-              - role: control-plane
-            EOF
-            kind create cluster --image=kindest/node:${KUBE_SERVER_VERSION} --config=kind-config.yaml
-            HOST=$(echo $DOCKER_HOST | awk -F[/:] '{print $4}')
-            sed -i -E -e 's/localhost|0\.0\.0\.0/'$HOST'/g' "$HOME/.kube/config"
+            kind create cluster --image=kindest/node:${KUBE_SERVER_VERSION}
       - run:
           name: Wait for nodes & DNS to be ready
           command: |
-            kind get kubeconfig
-            kubectl config get-contexts
-            kubectl cluster-info --context kind-kind
             JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'
             until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do
             kubectl get nodes
