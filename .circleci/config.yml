@@ -120,6 +120,8 @@ jobs:
       - run:
           name: Wait for nodes & DNS to be ready
           command: |
+            kubectl config get-contexts
+            kubectl cluster-info --context kind-kind
             JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'
             until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do
             kubectl get nodes
