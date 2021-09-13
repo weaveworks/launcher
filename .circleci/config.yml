@@ -287,62 +287,62 @@ jobs:
   # v1.14.2 jobs
 
   integration_kube_system_migration_v1_14_2:
-    <<: *integration_kube_system_migration
     <<: *job_environment_v1_14_2
+    <<: *integration_kube_system_migration
 
   integration_install_update_flow_v1_14_2:
-    <<: *integration_install_update_flow
     <<: *job_environment_v1_14_2
+    <<: *integration_install_update_flow
 
   integration_cloudwatch_v1_14_2:
-    <<: *integration_cloudwatch
     <<: *job_environment_v1_14_2
+    <<: *integration_cloudwatch
 
   integration_flux_config_v1_14_2:
-    <<: *integration_flux_config
     <<: *job_environment_v1_14_2
+    <<: *integration_flux_config
 
   integration_gke_v1_14_2:
-    <<: *integration_gke
     <<: *job_environment_v1_14_2
+    <<: *integration_gke
 
   healthcheck_dev_v1_14_2:
-    <<: *healthcheck_dev
     <<: *job_environment_v1_14_2
+    <<: *healthcheck_dev
 
   healthcheck_prod_v1_14_2:
-    <<: *healthcheck_prod
     <<: *job_environment_v1_14_2
+    <<: *healthcheck_prod
 
   # vstable jobs
 
   integration_kube_system_migration_vstable:
-    <<: *integration_kube_system_migration
     <<: *job_environment_vstable
+    <<: *integration_kube_system_migration
 
   integration_install_update_flow_vstable:
-    <<: *integration_install_update_flow
     <<: *job_environment_vstable
+    <<: *integration_install_update_flow
 
   integration_cloudwatch_vstable:
-    <<: *integration_cloudwatch
     <<: *job_environment_vstable
+    <<: *integration_cloudwatch
 
   integration_flux_config_vstable:
-    <<: *integration_flux_config
     <<: *job_environment_vstable
+    <<: *integration_flux_config
 
   integration_gke_vstable:
-    <<: *integration_gke
     <<: *job_environment_vstable
+    <<: *integration_gke
 
   healthcheck_dev_vstable:
-    <<: *healthcheck_dev
     <<: *job_environment_vstable
+    <<: *healthcheck_dev
 
   healthcheck_prod_vstable:
-    <<: *healthcheck_prod
     <<: *job_environment_vstable
+    <<: *healthcheck_prod
 
   sentry:
     <<: *defaults
