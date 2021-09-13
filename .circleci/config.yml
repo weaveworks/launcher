@@ -33,7 +33,7 @@ job_environment_vstable: &job_environment_vstable
     CHANGE_MINIKUBE_NONE_USER: true
     KUBE_SERVER_VERSION: curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt
     KUBECTL_VERSION: curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt
-    MINIKUBE_VERSION: echo v1.8.2
+    MINIKUBE_VERSION: echo v1.23.0
 
 workflow_job_defaults: &workflow_job_defaults
   requires:
