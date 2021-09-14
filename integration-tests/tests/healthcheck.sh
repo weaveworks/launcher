@@ -11,7 +11,7 @@ echo "####################################"
 echo "• Set WEAVE_CLOUD_TOKEN if it is not already set"
 [ -z "$WEAVE_CLOUD_TOKEN" ] && WEAVE_CLOUD_TOKEN="abcd1234"
 
-echo "• Install Weave Cloud on the minikube cluster"
+echo "• Install Weave Cloud on the test cluster"
 curl -Ls $1 | sh -s -- --token=${WEAVE_CLOUD_TOKEN} --assume-yes
 
 wait_for_wc_agents

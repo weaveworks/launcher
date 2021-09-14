@@ -11,7 +11,7 @@ echo "####################"
 echo "• Set WEAVE_CLOUD_TOKEN if it is not already set"
 [ -z "$WEAVE_CLOUD_TOKEN" ] && WEAVE_CLOUD_TOKEN="abcd1234"
 
-echo "• Start launcher/service on minikube"
+echo "• Start launcher/service on test cluster"
 service_yaml=${tests_root}/k8s/service.yaml
 templatinator "config.sh" $service_yaml
 kubectl apply -f $service_yaml
@@ -46,7 +46,7 @@ JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.ty
 until kubectl get pods -n weave -l name=weave-flux-agent -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1; done
 
 echo "• Install Weave Cloud"
-curl -Ls $(minikube service service --url) | sh -s -- --token=${WEAVE_CLOUD_TOKEN} --assume-yes
+curl -Ls $(get_ip):30080 | sh -s -- --token=${WEAVE_CLOUD_TOKEN} --assume-yes
 
 wait_for_wc_agents
 

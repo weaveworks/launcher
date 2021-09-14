@@ -123,8 +123,8 @@ build/static: service/static/* service/static/agent.yaml
 #
 
 integration-tests: all
-	./integration-tests/setup/reset-local-minikube.sh
-	./integration-tests/setup/setup-local-minikube.sh
+	./integration-tests/setup/reset-local-cluster.sh
+	./integration-tests/setup/setup-local-cluster.sh
 	./integration-tests/tests/install-update-flow.sh
 
 clean:

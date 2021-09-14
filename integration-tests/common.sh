@@ -1,4 +1,7 @@
 #!/bin/bash -e
+get_ip () {
+    kubectl --context=kind-launcher-tests get nodes -o=jsonpath='{range .items[*]}{.status.addresses[?(@.type=="InternalIP")].address}{end}'
+}
 
 wait_for_service () {
     echo "• Wait for launcher/service pod to become ready"
@@ -6,11 +9,11 @@ wait_for_service () {
     until kubectl get pods -l name=service -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1; done
 
     echo "• Wait for launcher/service to be fully reachable"
-    until curl -Ls -m1 $(minikube service service --url); do sleep 1; done
+    until curl -Ls -m1 $(get_ip):30080; do sleep 1; done
 }
 
 wait_for_wc_agents () {
-    echo -n "• Wait for weave pods to become ready"
+    echo "• Wait for weave pods to become ready"
     for name in weave-agent kube-state-metrics prom-node-exporter prometheus weave-flux-agent weave-flux-memcached weave-scope-agent
     do
         echo "    • Wait for weave/$name"
