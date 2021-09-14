@@ -253,7 +253,13 @@ jobs:
           k8s_version: << parameters.k8s_version >>
       - run:
           name: Execute healthcheck for << parameters.domain >>
-          command: WEAVE_CLOUD_TOKEN=$DEV_INSTANCE_TOKEN ./integration-tests/tests/healthcheck.sh << parameters.domain >>
+          command: |
+            if [[ << parameters.domain >> == "get.weave.works" ]]; then
+              export WEAVE_CLOUD_TOKEN=$PROD_INSTANCE_TOKEN
+            else
+              export WEAVE_CLOUD_TOKEN=$DEV_INSTANCE_TOKEN
+            fi
+            ./integration-tests/tests/healthcheck.sh << parameters.domain >>
       - grab_logs
 
 
