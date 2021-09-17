@@ -46,17 +46,17 @@ commands:
           name: Install tools
           command: |
             KUBERNETES_VERSION=<< parameters.k8s_version >>
-            if [ "<< parameters.k8s_version >>" == "latest" ]; then
-              KUBERNETES_VERSION=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)
-            fi
-            echo "export KUBERNETES_VERSION='$KUBERNETES_VERSION'" >> $BASH_ENV
             KIND_VERSION=v0.11.1
             if [[ $KUBERNETES_VERSION == v1.12* ]]; then
               KIND_VERSION=v0.8.1
             fi
-            curl --retry 5 -Lo kubectl "https://storage.googleapis.com/kubernetes-release/release/${KUBERNETES_VERSION}/bin/linux/amd64/kubectl" && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
             curl --retry 5 -Lo yq https://github.com/mikefarah/yq/releases/download/v4.12.2/yq_linux_amd64 && chmod +x yq && sudo mv yq /usr/local/bin/
             curl --retry 5 -Lo kind https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-linux-amd64 && chmod +x kind && sudo mv kind /usr/local/bin/
+            if [ $KUBERNETES_VERSION == "latest" ]; then
+              KUBERNETES_VERSION=$(curl -s https://registry.hub.docker.com/v1/repositories/kindest/node/tags | jq -r '.[].name' | sort -n | tail -n 1)
+            fi
+            curl --retry 5 -Lo kubectl "https://storage.googleapis.com/kubernetes-release/release/${KUBERNETES_VERSION}/bin/linux/amd64/kubectl" && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+            echo "export KUBERNETES_VERSION='$KUBERNETES_VERSION'" >> $BASH_ENV
       - run:
           name: Create cluster
           command: |
