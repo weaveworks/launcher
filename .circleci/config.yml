@@ -12,7 +12,7 @@ defaults: &defaults
   working_directory: /go/src/github.com/weaveworks/launcher
   docker:
     # 1.10.0 and dnsName: https://github.com/golang/go/issues/23995
-    - image: circleci/golang:1.9
+    - image: circleci/golang:1.16
 
 # Environment for integration testing
 integration_test_defaults: &integration_test_defaults
@@ -138,7 +138,7 @@ jobs:
           name: Push image
           command: |
             sudo apt-get update -qq
-            sudo apt-get -y -qq install python-pip
+            sudo apt-get -y -qq install python3-pip
             sudo pip install awscli # The apt package doesn't support --no-include-email
             mkdir ~/.aws
             echo $AWS_ECR_CREDENTIALS | base64 -d > ~/.aws/credentials
@@ -190,7 +190,6 @@ jobs:
     <<: *integration_test_defaults
     working_directory: "~/.go_workspace/src/github.com/weaveworks/launcher"
     environment:
-      GO111MODULE: "off"
       GOPATH: "/home/circleci/.go_workspace"
     steps:
       - start_integration_env:
