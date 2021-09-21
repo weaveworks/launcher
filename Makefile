@@ -48,8 +48,7 @@ build/.%.done: docker/Dockerfile.%
 #
 dep: build/dep.done
 build/dep.done:
-	go get -u github.com/golang/dep/cmd/dep
-	dep ensure -vendor-only
+	go mod download
 	mkdir -p ./build
 	touch $@
 

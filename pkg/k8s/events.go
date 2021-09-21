@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -64,12 +65,13 @@ event_loop:
 
 func (source *EventSource) setupWatcher() (<-chan kubewatch.Event, error) {
 	// Do not write old events.
-	events, err := source.eventClient.List(metav1.ListOptions{})
+	events, err := source.eventClient.List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
 	watcher, err := source.eventClient.Watch(
+		context.Background(),
 		metav1.ListOptions{
 			Watch:           true,
 			ResourceVersion: events.ResourceVersion,
