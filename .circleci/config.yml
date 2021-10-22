@@ -61,7 +61,7 @@ commands:
           name: Create cluster
           command: |
             kind create cluster --name=launcher-tests --image=kindest/node:${KUBERNETES_VERSION}
-            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
+            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "main" ]; then
               echo 'export SERVICE_IMAGE="weaveworks/launcher-service:'$(docker/image-tag)'"' >> $BASH_ENV
             else
               echo 'export SERVICE_IMAGE="weaveworks/build-tmp-public:launcher-service-'$(docker/image-tag)'"' >> $BASH_ENV
@@ -144,7 +144,7 @@ jobs:
             echo $AWS_ECR_CREDENTIALS | base64 -d > ~/.aws/credentials
             $(unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY && aws ecr get-login --no-include-email --region us-east-1)
             docker login -u "$DOCKER_REGISTRY_USER" -p "$DOCKER_REGISTRY_PASSWORD"
-            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
+            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "main" ]; then
               docker push "weaveworks/launcher-service:$(docker/image-tag)"
               docker push "weaveworks/launcher-service"
               docker tag "weaveworks/launcher-service:$(docker/image-tag)" "664268111851.dkr.ecr.us-east-1.amazonaws.com/launcher-service:$(docker/image-tag)"
@@ -166,7 +166,7 @@ jobs:
           name: Push image
           command: |
             docker login -u "$DOCKER_REGISTRY_USER" -p "$DOCKER_REGISTRY_PASSWORD"
-            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
+            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "main" ]; then
               docker push "weaveworks/launcher-agent:$(docker/image-tag)"
               docker push "weaveworks/launcher-agent"
             elif echo "${CIRCLE_TAG}" | grep -Eq "^[0-9]+(\.[0-9]+)*(-[a-z]+)?$"; then
@@ -327,7 +327,7 @@ workflows:
       - sentry:
           filters:
             branches:
-              only: master
+              only: main
 
   healthchecks:
     triggers:
@@ -336,7 +336,7 @@ workflows:
           filters:
             branches:
               only:
-                - master
+                - main
     jobs:
       - integration_healthcheck:
           matrix:
@@ -353,7 +353,7 @@ workflows:
           filters:
             branches:
               only:
-                - master
+                - main
     jobs:
       - agent:
           filters:
