@@ -1,0 +1,30 @@
+# Copy our required images from dockerhub to ghcr
+
+name: mirror images
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  mirror-images:
+    runs-on: ubuntu-latest
+    steps:
+      # Use crane to easily copy images from docker hub to GHCR
+      # https://github.com/google/go-containerregistry/tree/a0c4bd256482b8522065d5f6cf966281ef270680/cmd/crane#setup-on-github-actions
+      - name: Setup google/go-containerregistry/cmd/crane
+        uses: imjasonh/setup-crane@01d26682810dcd47bfc8eb1efe791558123a9373
+        with:
+          version: v0.6.0
+      - name: Copy weavecloud containers to GHCR
+        run: |
+          crane copy docker.io/fluxcd/flux:1.24.1 ghcr.io/${{ github.repository }}/flux:1.24.1
+          crane copy docker.io/fluxcd/flux:1.22.2 ghcr.io/${{ github.repository }}/flux:1.22.2
+          crane copy docker.io/memcached:1.4.39-alpine ghcr.io/${{ github.repository }}/memcached:1.4.39-alpine
+          crane copy docker.io/weaveworks/flux-adapter:0.1.1 ghcr.io/${{ github.repository }}/flux-adapter:0.1.1
+          crane copy docker.io/weaveworks/scope:1.13.2 ghcr.io/${{ github.repository }}/scope:1.13.2
+          crane copy docker.io/weaveworks/watch:master-85fdf1d ghcr.io/${{ github.repository }}/watch:master-85fdf1d
+          crane copy docker.io/weaveworks/weave-kube:git-34de0b10a69c ghcr.io/${{ github.repository }}/weave-kube:git-34de0b10a69c
+          crane copy docker.io/weaveworks/weave-npc:git-34de0b10a69c ghcr.io/${{ github.repository }}/weave-npc:git-34de0b10a69c
+
+          # for the prometheus images (prometheus, node-exporter, cloudwatch-exporter) we'll use the copies in quay.io
