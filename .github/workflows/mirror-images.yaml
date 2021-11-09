@@ -19,6 +19,7 @@ jobs:
       - name: Copy weavecloud containers to GHCR
         run: |
           crane copy docker.io/fluxcd/flux:1.24.1 ghcr.io/${{ github.repository }}/flux:1.24.1
+          crane copy docker.io/fluxcd/flux:1.22.2 ghcr.io/${{ github.repository }}/flux:1.22.2
           crane copy docker.io/memcached:1.4.39-alpine ghcr.io/${{ github.repository }}/memcached:1.4.39-alpine
           crane copy docker.io/weaveworks/flux-adapter:0.1.1 ghcr.io/${{ github.repository }}/flux-adapter:0.1.1
           crane copy docker.io/weaveworks/scope:1.13.2 ghcr.io/${{ github.repository }}/scope:1.13.2
