@@ -19,13 +19,9 @@ GIT_VERSION :=$(shell git describe --always --long --dirty)
 GIT_HASH :=$(shell git rev-parse HEAD)
 IMAGE_TAG:=$(shell ./docker/image-tag)
 
-# We can't install go packages on CircleCI without being root (or using sudo).
-# Because the compilation is done only once there, it doesn't matter if we
-# don't install the packages.
-ifneq ($(CI),true)
-INSTALL_FLAG := -i
-endif
-BUILDFLAGS   := $(INSTALL_FLAG)
+# Placeholder for build flags. Previously was -i but this is deprecated
+# and no longer needed with mod etc.
+BUILDFLAGS:=
 LDFLAGS:=-ldflags "-X github.com/weaveworks/launcher/pkg/version.Version=$(GIT_VERSION) -X github.com/weaveworks/launcher/pkg/version.Revision=$(GIT_HASH)"
 
 all: dep agent bootstrap service
@@ -66,7 +62,8 @@ build/.agent.done: build/agent build/kubectl
 
 build/agent: $(AGENT_DEPS)
 build/agent: agent/*.go
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(BUILDFLAGS) -o $@ $(LDFLAGS) ./agent
+# 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(BUILDFLAGS) -o $@ $(LDFLAGS) ./agent
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build $(BUILDFLAGS) -o $@ $(LDFLAGS) ./agent
 
 include docker/kubectl.version
 
@@ -84,11 +81,12 @@ cache/kubectl-$(KUBECTL_VERSION):
 
 build/.bootstrap.done: $(BOOTSTRAP_DEPS)
 build/.bootstrap.done: bootstrap/*.go
-	for arch in amd64; do \
-		for os in linux darwin; do \
-			CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build $(BUILDFLAGS) -o "build/bootstrap/bootstrap_"$$os"_"$$arch $(LDFLAGS) ./bootstrap; \
-		done; \
-	done
+	CGO_ENABLED=0 GOOS=$$os GOARCH=amd64 go build $(BUILDFLAGS) -o "build/bootstrap/bootstrap_"$$os"_"$$arch $(LDFLAGS) ./bootstrap; \
+# 	for arch in amd64; do \
+# 		for os in linux darwin; do \
+# 			CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build $(BUILDFLAGS) -o "build/bootstrap/bootstrap_"$$os"_"$$arch $(LDFLAGS) ./bootstrap; \
+# 		done; \
+# 	done
 	touch $@
 
 #
@@ -99,7 +97,8 @@ build/.service.done: build/service build/static
 
 build/service: $(SERVICE_DEPS)
 build/service: service/*.go
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(BUILDFLAGS) -o $@ $(LDFLAGS) ./service
+# 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(BUILDFLAGS) -o $@ $(LDFLAGS) ./service
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build $(BUILDFLAGS) -o $@ $(LDFLAGS) ./service
 
 # If we are not in CircleCI, we are local so use launcher-agent
 # If we are in CircleCI, only use launcher-agent if we are building main, otherwise

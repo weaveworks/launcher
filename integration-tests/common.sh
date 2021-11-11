@@ -1,6 +1,10 @@
 #!/bin/bash -e
 get_ip () {
-    kubectl --context=kind-launcher-tests get nodes -o=jsonpath='{range .items[*]}{.status.addresses[?(@.type=="InternalIP")].address}{end}'
+    if [[ $(uname) == "Darwin" ]]; then
+        echo "localhost"
+    else
+        kubectl --context=kind-launcher-tests get nodes -o=jsonpath='{range .items[*]}{.status.addresses[?(@.type=="InternalIP")].address}{end}'
+    fi
 }
 
 wait_for_service () {
