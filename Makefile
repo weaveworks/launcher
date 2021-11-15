@@ -1,4 +1,4 @@
-.PHONY: all clean dep lint agent bootstrap service
+.PHONY: all clean dep lint agent bootstrap service apps
 .SUFFIXES:
 
 DOCKER ?= docker
@@ -18,25 +18,32 @@ SERVICE_DEPS := $(call godeps,./service)
 GIT_VERSION :=$(shell git describe --always --long --dirty)
 GIT_HASH :=$(shell git rev-parse HEAD)
 IMAGE_TAG:=$(shell ./docker/image-tag)
+BASE_TAG?=${IMAGE_TAG}
 
 # Placeholder for build flags. Previously was -i but this is deprecated
 # and no longer needed with mod etc.
 BUILDFLAGS:=
 LDFLAGS:=-ldflags "-X github.com/weaveworks/launcher/pkg/version.Version=$(GIT_VERSION) -X github.com/weaveworks/launcher/pkg/version.Revision=$(GIT_HASH)"
 
-all: dep agent bootstrap service
-agent: build/.agent.done
-bootstrap: build/.bootstrap.done
-service: build/.service.done
+# The actual binaries are compiled as part of their dockerfiles
+all: base agent service
+base: build/.base.Dockerfile.done
+agent: base build/.agent.Dockerfile.done
+service: base build/.service.Dockerfile.done
 
 docker/Dockerfile.service: docker/Dockerfile.service.in Makefile
 	@echo Generating $@
 	@sed -e 's/@@GIT_HASH@@/$(GIT_HASH)/g' < $< > $@.tmp && mv $@.tmp $@
 
-build/.%.done: docker/Dockerfile.%
+build/.%.Dockerfile.done: docker/Dockerfile.%
 	mkdir -p ./build/docker/$*
 	cp -r $^ ./build/docker/$*/
-	${DOCKER} build --build-arg=revision=$(GIT_HASH) -t weaveworks/launcher-$* -t weaveworks/launcher-$*:$(IMAGE_TAG) -f build/docker/$*/Dockerfile.$* ./build/docker/$*
+	${DOCKER} build --build-arg=revision=$(GIT_HASH) \
+									--build-arg=base_tag=$(BASE_TAG) \
+									-t weaveworks/launcher-$* \
+								  -t weaveworks/launcher-$*:$(IMAGE_TAG) \
+								  -f build/docker/$*/Dockerfile.$* \
+								  .
 	touch $@
 
 #
@@ -58,12 +65,11 @@ lint:
 # Agent
 #
 
-build/.agent.done: build/agent build/kubectl
+build/.agent.done: dep build/agent build/kubectl
 
 build/agent: $(AGENT_DEPS)
 build/agent: agent/*.go
-# 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(BUILDFLAGS) -o $@ $(LDFLAGS) ./agent
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build $(BUILDFLAGS) -o $@ $(LDFLAGS) ./agent
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(BUILDFLAGS) -o $@ $(LDFLAGS) ./agent
 
 include docker/kubectl.version
 
@@ -79,26 +85,24 @@ cache/kubectl-$(KUBECTL_VERSION):
 # Bootstrap
 #
 
-build/.bootstrap.done: $(BOOTSTRAP_DEPS)
+build/.bootstrap.done: dep $(BOOTSTRAP_DEPS)
 build/.bootstrap.done: bootstrap/*.go
-	CGO_ENABLED=0 GOOS=$$os GOARCH=amd64 go build $(BUILDFLAGS) -o "build/bootstrap/bootstrap_"$$os"_"$$arch $(LDFLAGS) ./bootstrap; \
-# 	for arch in amd64; do \
-# 		for os in linux darwin; do \
-# 			CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build $(BUILDFLAGS) -o "build/bootstrap/bootstrap_"$$os"_"$$arch $(LDFLAGS) ./bootstrap; \
-# 		done; \
-# 	done
+	for arch in amd64; do \
+		for os in linux darwin; do \
+			CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build $(BUILDFLAGS) -o "build/bootstrap/bootstrap_"$$os"_"$$arch $(LDFLAGS) ./bootstrap; \
+		done; \
+	done
 	touch $@
 
 #
 # Service
 #
 
-build/.service.done: build/service build/static
+build/.service.done: dep build/service build/static
 
 build/service: $(SERVICE_DEPS)
 build/service: service/*.go
-# 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(BUILDFLAGS) -o $@ $(LDFLAGS) ./service
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build $(BUILDFLAGS) -o $@ $(LDFLAGS) ./service
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(BUILDFLAGS) -o $@ $(LDFLAGS) ./service
 
 # If we are not in CircleCI, we are local so use launcher-agent
 # If we are in CircleCI, only use launcher-agent if we are building main, otherwise

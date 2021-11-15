@@ -31,20 +31,23 @@ rm "${TMPFILE}"
 
 ###
 echo "• Building service image on test cluster"
-(cd $root/.. && rm -f ./build/.service.done && make service)
+(cd $root/.. && rm -f ./build/.service.Dockerfile.done && make service)
 kind load --name launcher-tests docker-image weaveworks/launcher-service:${IMAGE_TAG}
 
 ###
 echo "• Building agent image on test cluster"
-(cd $root/.. && rm -f ./build/.agent.done && make agent)
+(cd $root/.. && rm -f ./build/.agent.Dockerfile.done && make agent)
 kind load --name launcher-tests docker-image weaveworks/launcher-agent:${IMAGE_TAG}
 
 ###
 echo "• Building nginx image serving bootstrap"
-(cd $root/.. && rm -f ./build/.bootstrap.done && make bootstrap)
+(cd $root/.. && rm -f ./build/.bootstrap.Dockerfile.done && make bootstrap)
 dockerfile=$root/../build/Dockerfile.nginx-bootstrap
 cp $root/docker/Dockerfile.nginx-bootstrap ${dockerfile}
-docker build -t weaveworks/launcher-nginx-bootstrap:${IMAGE_TAG} --build-arg version=${GIT_HASH} -f ${dockerfile} $root/../build/
+docker build -t weaveworks/launcher-nginx-bootstrap:${IMAGE_TAG} \
+             --build-arg version=${GIT_HASH} \
+             --build-arg base_tag=${IMAGE_TAG} \
+             -f ${dockerfile} $root/..
 kind load --name launcher-tests docker-image weaveworks/launcher-nginx-bootstrap:${IMAGE_TAG}
 
 ###

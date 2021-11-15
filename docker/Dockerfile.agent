@@ -1,7 +1,13 @@
-FROM alpine:3.7
-RUN apk add --no-cache ca-certificates
-COPY ./agent /usr/bin/launcher-agent
-COPY ./kubectl /usr/bin/kubectl
+ARG base_tag
+FROM weaveworks/launcher-base:${base_tag} AS build
+
+RUN make build/.agent.done
+
+FROM alpine:3.14
+
+COPY --from=build /go/src/github.com/weaveworks/launcher/build/agent /usr/bin/launcher-agent
+COPY --from=build /go/src/github.com/weaveworks/launcher/build/kubectl /usr/bin/kubectl
+WORKDIR /
 ENTRYPOINT ["/usr/bin/launcher-agent"]
 CMD ["-help"]
 

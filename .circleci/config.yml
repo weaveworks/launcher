@@ -117,7 +117,7 @@ jobs:
       - setup_remote_docker
       - run: make dep
       - run: go test ./bootstrap
-      - run: make bootstrap
+      - run: make build/.bootstrap.done
       - deploy:
           name: Push binaries to S3
           command: |
