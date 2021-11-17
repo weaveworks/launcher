@@ -18,15 +18,22 @@ jobs:
           version: v0.6.0
       - name: Copy weavecloud containers to GHCR
         run: |
+          # Copy all the versions of flux we use (1.22 is for k8s < 1.16)
           crane copy docker.io/fluxcd/flux:1.22.2 ghcr.io/${{ github.repository }}/flux:1.22.2
           crane copy docker.io/fluxcd/flux:1.24.1 ghcr.io/${{ github.repository }}/flux:1.24.1
           crane copy docker.io/fluxcd/flux:1.24.2 ghcr.io/${{ github.repository }}/flux:1.24.2
 
+          # weave components may either be via gitsha or specific version
+          crane copy docker.io/weaveworks/weave-kube:git-34de0b10a69c ghcr.io/${{ github.repository }}/weave-kube:git-34de0b10a69c
+          crane copy docker.io/weaveworks/weave-kube:2.8.1 ghcr.io/${{ github.repository }}/weave-kube:2.8.1
+          crane copy docker.io/weaveworks/weave-npc:git-34de0b10a69c ghcr.io/${{ github.repository }}/weave-npc:git-34de0b10a69c
+          crane copy docker.io/weaveworks/weave-npc:2.8.1 ghcr.io/${{ github.repository }}/weave-npc:2.8.1
+
           crane copy docker.io/memcached:1.4.39-alpine ghcr.io/${{ github.repository }}/memcached:1.4.39-alpine
           crane copy docker.io/weaveworks/flux-adapter:0.1.1 ghcr.io/${{ github.repository }}/flux-adapter:0.1.1
           crane copy docker.io/weaveworks/scope:1.13.2 ghcr.io/${{ github.repository }}/scope:1.13.2
+
           crane copy docker.io/weaveworks/watch:master-85fdf1d ghcr.io/${{ github.repository }}/watch:master-85fdf1d
-          crane copy docker.io/weaveworks/weave-kube:git-34de0b10a69c ghcr.io/${{ github.repository }}/weave-kube:git-34de0b10a69c
-          crane copy docker.io/weaveworks/weave-npc:git-34de0b10a69c ghcr.io/${{ github.repository }}/weave-npc:git-34de0b10a69c
+
 
           # for the prometheus images (prometheus, node-exporter, cloudwatch-exporter) we'll use the copies in quay.io
