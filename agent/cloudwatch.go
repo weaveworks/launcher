@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -27,7 +28,7 @@ type cloudwatch struct {
 // Watch for CM creation.
 func watchConfigMaps(cfg *agentConfig) {
 	source := cache.NewListWatchFromClient(
-		cfg.KubeClient.Core().RESTClient(),
+		cfg.KubeClient.CoreV1().RESTClient(),
 		"configmaps",
 		"weave",
 		fields.SelectorFromSet(fields.Set{"metadata.name": "cloudwatch"}))
@@ -80,7 +81,7 @@ func (cfg *agentConfig) handleCMDelete(obj interface{}) {
 // Watch for Secret creation/update/deletion.
 func watchSecrets(cfg *agentConfig) {
 	source := cache.NewListWatchFromClient(
-		cfg.KubeClient.Core().RESTClient(),
+		cfg.KubeClient.CoreV1().RESTClient(),
 		"secrets",
 		"weave",
 		fields.Everything())
@@ -173,7 +174,7 @@ func (cfg *agentConfig) checkOrInstallCloudWatch(cm *apiv1.ConfigMap) {
 }
 
 func (cfg *agentConfig) getSecret(name string) (*apiv1.Secret, error) {
-	s, err := cfg.KubeClient.CoreV1().Secrets("weave").Get(name, metav1.GetOptions{})
+	s, err := cfg.KubeClient.CoreV1().Secrets("weave").Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +183,7 @@ func (cfg *agentConfig) getSecret(name string) (*apiv1.Secret, error) {
 }
 
 func (cfg *agentConfig) getConfigMap(name string) (*apiv1.ConfigMap, error) {
-	cm, err := cfg.KubeClient.CoreV1().ConfigMaps("weave").Get(name, metav1.GetOptions{})
+	cm, err := cfg.KubeClient.CoreV1().ConfigMaps("weave").Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}

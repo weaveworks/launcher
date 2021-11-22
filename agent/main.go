@@ -387,7 +387,7 @@ func mainImpl() {
 
 	// Close gracefully on SIGTERM
 	{
-		term := make(chan os.Signal)
+		term := make(chan os.Signal, 1)
 		signal.Notify(term, os.Interrupt, syscall.SIGTERM)
 		cancel := make(chan interface{})
 		g.Add(

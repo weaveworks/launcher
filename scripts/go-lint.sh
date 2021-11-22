@@ -2,18 +2,17 @@
 
 set -e
 
-if [ ! $(command -v gometalinter) ]
+if [ ! $(command -v golangci-lint) ]
 then
-    go get github.com/alecthomas/gometalinter
-    gometalinter --install --vendor
+    go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.42.1
 fi
 
 
-gometalinter --tests --vendor --disable-all --deadline=600s \
+golangci-lint run --tests --disable-all --deadline=600s \
     --enable=misspell \
     --enable=vet \
     --enable=ineffassign \
     --enable=gofmt \
-    --enable=gocyclo --cyclo-over=30 \
-    --enable=golint \
+    --enable=gocyclo \
+    --enable=revive \
     ./...
