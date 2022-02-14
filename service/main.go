@@ -9,6 +9,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/weaveworks/common/server"
 	"github.com/weaveworks/launcher/pkg/text"
 )
@@ -36,7 +39,7 @@ var (
 	agentManifest    = flag.String("agent-manifest", defaultAgentManifest, "File used to load agent k8s")
 	serverCfg        = server.Config{
 		MetricsNamespace:        "service",
-		RegisterInstrumentation: true,
+		RegisterInstrumentation: false,
 	}
 )
 
@@ -76,6 +79,10 @@ func main() {
 	server.HTTP.HandleFunc("/", handlers.install).Methods("GET").Name("install")
 	server.HTTP.HandleFunc("/bootstrap", handlers.bootstrap).Methods("GET").Name("bootstrap")
 	server.HTTP.HandleFunc("/k8s/agent.yaml", handlers.agentYAML).Methods("GET").Name("agentYAML")
+	server.HTTP.Handle("/metrics", promhttp.HandlerFor(prometheus.DefaultGatherer, promhttp.HandlerOpts{
+		EnableOpenMetrics: true,
+	}))
+
 	server.Run()
 }
 
