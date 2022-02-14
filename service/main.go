@@ -39,7 +39,7 @@ var (
 	agentManifest    = flag.String("agent-manifest", defaultAgentManifest, "File used to load agent k8s")
 	serverCfg        = server.Config{
 		MetricsNamespace:        "service",
-		RegisterInstrumentation: false,
+		RegisterInstrumentation: true, // This gets ignored by the parsing below
 	}
 )
 
@@ -49,6 +49,10 @@ func main() {
 
 	if *bootstrapVersion == "" {
 		log.Fatal("a bootstrap version is required")
+	}
+
+	if serverCfg.RegisterInstrumentation {
+		log.Printf("WARNING: RegisterInstrumentation is set. Do not run with this in production.")
 	}
 
 	// Load install.sh and agent.yaml into memory
