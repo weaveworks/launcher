@@ -1,9 +1,16 @@
-FROM alpine:3.7
-WORKDIR /
-COPY service /launcher-service
+ARG base_tag
+FROM weaveworks/launcher-base:${base_tag} AS build
+
+RUN make build/.service.done
+
+FROM alpine:3.14
+
+COPY --from=build /go/src/github.com/weaveworks/launcher/build/service /launcher-service
 RUN mkdir static
-COPY static/install.sh /static/
-COPY static/agent.yaml /static/
+COPY --from=build /go/src/github.com/weaveworks/launcher/build/static/install.sh /static/
+COPY --from=build /go/src/github.com/weaveworks/launcher/build/static/agent.yaml /static/
+
+WORKDIR /
 EXPOSE 80
 ENTRYPOINT ["/launcher-service", "--bootstrap-version=@@GIT_HASH@@"]
 

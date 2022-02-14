@@ -1,8 +1,14 @@
+ARG base_tag
+FROM weaveworks/launcher-base:${base_tag} AS build
+
+RUN make build/.bootstrap.done
+
 FROM nginx
+
 EXPOSE 80
 ARG version
 RUN mkdir -p /usr/share/nginx/html/bootstrap/${version}
-COPY ./bootstrap/* /usr/share/nginx/html/bootstrap/${version}/
+COPY --from=build /go/src/github.com/weaveworks/launcher/build/bootstrap/* /usr/share/nginx/html/bootstrap/${version}/
 
 LABEL maintainer="Weaveworks <help@weave.works>" \
       org.opencontainers.image.title="launcher-integration-tests" \

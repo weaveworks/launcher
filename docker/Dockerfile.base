@@ -1,0 +1,14 @@
+FROM golang:1.16.10-alpine3.14 AS build
+RUN apk add --no-cache ca-certificates make bash git curl binutils
+
+WORKDIR /go/src/github.com/weaveworks/launcher
+COPY . .
+
+RUN make dep
+
+ARG revision
+LABEL maintainer="Weaveworks <help@weave.works>" \
+      org.opencontainers.image.title="launcher-base" \
+      org.opencontainers.image.source="https://github.com/weaveworks/launcher" \
+      org.opencontainers.image.revision="${revision}" \
+      org.opencontainers.image.vendor="Weaveworks"
