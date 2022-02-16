@@ -229,9 +229,9 @@ jobs:
           name: Configure gcloud with launcher-integration-tests project
           command: |
             echo $GCLOUD_SERVICE_KEY | base64 --decode --ignore-garbage > ${HOME}/gcloud-service-key.json
-            /opt/google/google-cloud-sdk/bin/gcloud --quiet components update
-            /opt/google/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
-            /opt/google/google-cloud-sdk/bin/gcloud config set project $GCLOUD_PROJECT
+            /usr/bin/gcloud --quiet components update
+            /usr/bin/gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
+            /usr/bin/gcloud config set project $GCLOUD_PROJECT
       - start_integration_env:
           k8s_version: << parameters.k8s_version >>
       - run:
