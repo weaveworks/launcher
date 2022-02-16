@@ -17,7 +17,7 @@ defaults: &defaults
 # Environment for integration testing
 integration_test_defaults: &integration_test_defaults
   machine:
-    image: ubuntu-2004:202107-02
+    image: ubuntu-2004:202201-02
   parameters:
     k8s_version:
       type: string
@@ -84,6 +84,36 @@ commands:
               echo "waiting for kube-dns to be available"
               kubectl get pods -n kube-system
             done
+      - run:
+          name: Update gcloud
+          command: |
+            sudo apt-get update
+            sudo apt-get --only-upgrade install \
+                                        google-cloud-sdk \
+                                        google-cloud-sdk-datastore-emulator \
+                                        google-cloud-sdk-minikube \
+                                        google-cloud-sdk-cbt \
+                                        google-cloud-sdk-app-engine-python-extras \
+                                        google-cloud-sdk-spanner-emulator \
+                                        google-cloud-sdk-gke-gcloud-auth-plugin \
+                                        google-cloud-sdk-terraform-validator \
+                                        google-cloud-sdk-anthos-auth \
+                                        google-cloud-sdk-skaffold \
+                                        google-cloud-sdk-config-connector \
+                                        google-cloud-sdk-nomos \
+                                        google-cloud-sdk-pubsub-emulator \
+                                        google-cloud-sdk-app-engine-java \
+                                        google-cloud-sdk-cloud-build-local \
+                                        google-cloud-sdk-datalab \
+                                        google-cloud-sdk-app-engine-python \
+                                        google-cloud-sdk-firestore-emulator \
+                                        google-cloud-sdk-app-engine-grpc \
+                                        google-cloud-sdk-local-extract \
+                                        google-cloud-sdk-app-engine-go \
+                                        google-cloud-sdk-bigtable-emulator \
+                                        google-cloud-sdk-cloud-run-proxy \
+                                        google-cloud-sdk-kubectl-oidc \
+                                        google-cloud-sdk-kpt
 
   grab_logs:
     steps:
@@ -229,9 +259,9 @@ jobs:
           name: Configure gcloud with launcher-integration-tests project
           command: |
             echo $GCLOUD_SERVICE_KEY | base64 --decode --ignore-garbage > ${HOME}/gcloud-service-key.json
-            /opt/google/google-cloud-sdk/bin/gcloud --quiet components update
-            /opt/google/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
-            /opt/google/google-cloud-sdk/bin/gcloud config set project $GCLOUD_PROJECT
+            /usr/bin/gcloud --quiet components update
+            /usr/bin/gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
+            /usr/bin/gcloud config set project $GCLOUD_PROJECT
       - start_integration_env:
           k8s_version: << parameters.k8s_version >>
       - run:
