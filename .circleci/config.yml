@@ -17,7 +17,7 @@ defaults: &defaults
 # Environment for integration testing
 integration_test_defaults: &integration_test_defaults
   machine:
-    image: ubuntu-2004:202107-02
+    image: ubuntu-2004:202201-02
   parameters:
     k8s_version:
       type: string
