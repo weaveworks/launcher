@@ -11,7 +11,6 @@ notify:
 defaults: &defaults
   working_directory: /go/src/github.com/weaveworks/launcher
   docker:
-    # 1.10.0 and dnsName: https://github.com/golang/go/issues/23995
     - image: circleci/golang:1.16
 
 # Environment for integration testing
@@ -26,7 +25,7 @@ integration_test_defaults: &integration_test_defaults
 run_for_k8s_versions: &run_for_k8s_versions
   matrix:
     parameters:
-      k8s_version: ['v1.12.10', 'v1.14.10', 'latest']
+      k8s_version: ['v1.14.10', 'latest']
 
 # Integration tests should all depend on all main build jobs
 workflow_job_defaults: &workflow_job_defaults
@@ -46,10 +45,7 @@ commands:
           name: Install tools
           command: |
             KUBERNETES_VERSION=<< parameters.k8s_version >>
-            KIND_VERSION=v0.11.1
-            if [[ $KUBERNETES_VERSION == v1.12* ]]; then
-              KIND_VERSION=v0.8.1
-            fi
+            KIND_VERSION=v0.14.0
             curl --retry 5 -Lo yq https://github.com/mikefarah/yq/releases/download/v4.12.2/yq_linux_amd64 && chmod +x yq && sudo mv yq /usr/local/bin/
             curl --retry 5 -Lo kind https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-linux-amd64 && chmod +x kind && sudo mv kind /usr/local/bin/
             if [ $KUBERNETES_VERSION == "latest" ]; then
@@ -340,7 +336,7 @@ workflows:
       - integration_healthcheck:
           matrix:
             parameters:
-              k8s_version: ['v1.12.10', 'v1.14.10', 'latest']
+              k8s_version: ['v1.14.10', 'latest']
               domain: ['get.dev.weave.works', 'get.weave.works']
 
   # re-run $stable jobs once a day as a new
