@@ -25,7 +25,7 @@ integration_test_defaults: &integration_test_defaults
 run_for_k8s_versions: &run_for_k8s_versions
   matrix:
     parameters:
-      k8s_version: ['v1.14.10', 'latest']
+      k8s_version: ['v1.14.10']
 
 # Integration tests should all depend on all main build jobs
 workflow_job_defaults: &workflow_job_defaults
@@ -336,40 +336,5 @@ workflows:
       - integration_healthcheck:
           matrix:
             parameters:
-              k8s_version: ['v1.14.10', 'latest']
+              k8s_version: ['v1.14.10']
               domain: ['get.dev.weave.works', 'get.weave.works']
-
-  # re-run $stable jobs once a day as a new
-  # version of kubernetes might have been released
-  stable_kubernetes_still_works:
-    triggers:
-      - schedule:
-          cron: "0 0 * * *"
-          filters:
-            branches:
-              only:
-                - main
-    jobs:
-      - agent:
-          filters:
-            tags:
-              only: /[0-9]+(\.[0-9]+)*(-[a-z]+)?/
-      - bootstrap
-      - service:
-          context:
-            - ecr_upload
-
-      - integration_install_update_flow:
-          k8s_version: 'latest'
-
-      - integration_cloudwatch:
-          k8s_version: 'latest'
-
-      - integration_kube_system_migration:
-          k8s_version: 'latest'
-
-      - integration_flux_config:
-          k8s_version: 'latest'
-
-      - integration_gke:
-          k8s_version: 'latest'
