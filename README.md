@@ -1,7 +1,5 @@
 # Weave Cloud Launcher
 
-[![Circle CI](https://circleci.com/gh/weaveworks/launcher/tree/main.svg?style=shield)](https://circleci.com/gh/weaveworks/launcher/tree/main)
-
 <h3 align="center">
   <code>curl -Ls https://get.weave.works | sh -s -- --token=XXXXXX</code>
 </h3>
