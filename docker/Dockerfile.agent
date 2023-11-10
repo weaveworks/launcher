@@ -1,7 +1,7 @@
 FROM alpine:3.7
 RUN apk add --no-cache ca-certificates
-COPY ./agent /usr/bin/launcher-agent
-COPY ./kubectl /usr/bin/kubectl
+COPY ./build/agent /usr/bin/launcher-agent
+COPY ./build/kubectl /usr/bin/kubectl
 ENTRYPOINT ["/usr/bin/launcher-agent"]
 CMD ["-help"]
 
